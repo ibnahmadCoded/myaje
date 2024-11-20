@@ -14,24 +14,25 @@ export const UserMenu = () => {
     }
   }, []);
 
-  const handleLogout = async () => {
+  const handleLogout = async (e) => {
+    e.preventDefault();
     try {
-      const response = await fetch('http://localhost:5000/auth/logout', {
+      const response = await fetch('http://localhost:5000/logout', {
         method: 'POST',
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`, // Assuming you store the token in localStorage
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
         },
       });
       
+      const data = await response.json();
+      
       if (response.ok) {
-        // Handle successful logout, e.g., redirect to login page or clear user state
-        localStorage.removeItem('token'); // Remove the token from localStorage
-        router.push('/login'); // Redirect to the login page
+        localStorage.removeItem('token');
+        router.push('/login');
       } else {
-        // Handle error if logout fails
-        const errorData = await response.json();
-        console.error('Logout failed:', errorData);
+        console.error('Logout failed:', data);
       }
     } catch (error) {
       console.error('An error occurred during logout:', error);
