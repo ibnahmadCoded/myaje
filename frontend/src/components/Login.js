@@ -60,7 +60,7 @@ export default function Login() {
         const data = await response.json();
         
         // save token in local storage
-        localStorage.setItem('token', data.access_token);
+        localStorage.setItem('token', data.token);
         localStorage.setItem('user', JSON.stringify(data.user));
         
         
