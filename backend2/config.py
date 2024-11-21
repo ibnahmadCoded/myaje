@@ -23,6 +23,13 @@ logger = structlog.get_logger(__name__)
 # Environment variables and settings
 #UPLOAD_FOLDER = "./uploaded_docs/"
 #os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+UPLOAD_DIRECTORY = os.getenv('UPLOAD_DIRECTORY_PATH', "./uploaded_images/") 
+os.makedirs(UPLOAD_DIRECTORY, exist_ok=True)
+
+if not os.path.exists(UPLOAD_DIRECTORY):
+    os.makedirs(UPLOAD_DIRECTORY)
+
 SQLALCHEMY_DATABASE_URL = os.getenv('DB_TYPE')+os.getenv('DB_NAME')
 # Read secret key from file
 SECRET_KEY_PATH = os.getenv('SECRET_KEY_PATH', './secrets/appsecret.txt')
