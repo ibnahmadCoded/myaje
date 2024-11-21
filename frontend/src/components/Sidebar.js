@@ -99,13 +99,13 @@ const Sidebar = ({
         </nav>
 
         {/* Notifications Panel */}
-        <div className="absolute bottom-0 left-0 right-0 border-t bg-white">
+        <div className="absolute left-0 right-0 border-t bg-white" style={{ bottom: '5.75rem' }}>
           <div className="px-4 py-3">
             <div className="flex items-center justify-between text-gray-700 mb-2">
               <span className="text-sm font-medium">Notifications</span>
               <Badge variant="outline">{notifications.filter(n => n.isNew).length}</Badge>
             </div>
-            <div className="space-y-2 max-h-32 overflow-y-auto">
+            <div className="space-y-2 max-h-64 overflow-y-auto">
               {notifications.map(notification => (
                 <div 
                   key={notification.id}
@@ -117,8 +117,9 @@ const Sidebar = ({
               ))}
             </div>
           </div>
-          <UserMenu />
         </div>
+
+        <UserMenu />
       </div>
     </>
   );
