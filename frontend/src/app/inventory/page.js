@@ -32,8 +32,9 @@ const InventoryManagement = () => {
   });
 
   const fetchProducts = async () => {
+    console.log(localStorage.getItem('token'))
     try {
-      const response = await fetch('/api/inventory', {
+      const response = await fetch('http://localhost:5000/inventory', {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
@@ -55,7 +56,7 @@ const InventoryManagement = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const response = await fetch('/api/inventory', {
+      const response = await fetch('http://localhost:5000/inventory', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -88,7 +89,7 @@ const InventoryManagement = () => {
   const handleDelete = async (productId) => {
     if (window.confirm('Are you sure you want to delete this product?')) {
       try {
-        const response = await fetch(`/api/inventory/${productId}`, {
+        const response = await fetch(`http://localhost:5000/inventory/${productId}`, {
           method: 'DELETE',
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('token')}`

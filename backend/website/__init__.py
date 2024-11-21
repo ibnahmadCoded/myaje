@@ -19,7 +19,12 @@ def create_app():
     db.init_app(app)
     bcrypt.init_app(app)
     migrate.init_app(app, db)
-    CORS(app)
+    #CORS(app)
+    CORS(app, 
+     resources={r"/*": {"origins": "http://localhost:3000"}}, 
+     supports_credentials=True, 
+     allow_headers=["Content-Type", "Authorization"],
+     methods=["GET", "POST", "OPTIONS"])
 
     # Register blueprints
     from .auth import auth
