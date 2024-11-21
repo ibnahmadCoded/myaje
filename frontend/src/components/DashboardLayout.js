@@ -117,7 +117,7 @@ export default function DashboardLayout ({ children }) {
 
   const validateToken = async (token) => {
     try {
-      const response = await fetch('http://localhost:5000/validate-token', {
+      const response = await fetch('http://localhost:8000/auth/validate-token', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
