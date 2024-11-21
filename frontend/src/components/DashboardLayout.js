@@ -13,8 +13,66 @@ export default function DashboardLayout ({ children }) {
   const sidebarRef = useRef(null);
   const [isMobile, setIsMobile] = useState(false);
   const [notifications, setNotifications] = useState([
-    { id: 1, text: 'New order received', isNew: true },
-    { id: 2, text: 'Inventory low alert', isNew: true }
+    { 
+      id: 1, 
+      text: 'New order received #1045', 
+      isNew: true,
+      timestamp: Date.now() - 5000 // slightly older
+    },
+    { 
+      id: 2, 
+      text: 'Inventory low alert: Coffee Beans', 
+      isNew: true,
+      timestamp: Date.now() - 3000 
+    },
+    { 
+      id: 3, 
+      text: 'Payment processed for invoice #254', 
+      isNew: true,
+      timestamp: Date.now() - 7000
+    },
+    { 
+      id: 4, 
+      text: 'Customer support ticket #89 updated', 
+      isNew: true,
+      timestamp: Date.now() - 2000
+    },
+    { 
+      id: 5, 
+      text: 'New product review received', 
+      isNew: true,
+      timestamp: Date.now() - 4000
+    },
+    { 
+      id: 6, 
+      text: 'Monthly sales report ready', 
+      isNew: true,
+      timestamp: Date.now() - 8000
+    },
+    { 
+      id: 7, 
+      text: 'Shipping delay detected for order #1042', 
+      isNew: false,
+      timestamp: Date.now() - 24000
+    },
+    { 
+      id: 8, 
+      text: 'Refund processed for customer', 
+      isNew: false,
+      timestamp: Date.now() - 36000
+    },
+    { 
+      id: 9, 
+      text: 'New supplier contract signed', 
+      isNew: false,
+      timestamp: Date.now() - 48000
+    },
+    { 
+      id: 10, 
+      text: 'Quarterly inventory audit completed', 
+      isNew: false,
+      timestamp: Date.now() - 72000
+    }
   ]);
   const router = useRouter();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
