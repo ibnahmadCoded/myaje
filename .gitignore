@@ -61,3 +61,5 @@ latest-state.json
 downloads/
 **/__pycache__/
 .next/
+frontend/.next/
+frontend/.next
