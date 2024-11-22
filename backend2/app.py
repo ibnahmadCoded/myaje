@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from models import create_tables
-from routes import auth, inventory
+from routes import auth, inventory, storefront
 
 # Initialize FastAPI
 app = FastAPI()
@@ -27,6 +27,7 @@ async def startup_event():
 # Include route modules
 app.include_router(auth.router, prefix="/auth", tags=["auth"])
 app.include_router(inventory.router, prefix="/inventory", tags=["inventory"])
+app.include_router(storefront.router, prefix="/storefront", tags=["inventory"])
 
 if __name__ == "__main__":
     import uvicorn
