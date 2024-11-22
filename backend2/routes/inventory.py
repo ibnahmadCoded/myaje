@@ -2,7 +2,6 @@ from fastapi import APIRouter, Depends, HTTPException, File, UploadFile, Form
 from sqlalchemy.orm import Session
 from sql_database import get_db
 from models import Product, User, ProductImage
-from schemas import ProductCreate, ProductUpdate
 from uuid import uuid4
 from typing import List, Optional
 import os
