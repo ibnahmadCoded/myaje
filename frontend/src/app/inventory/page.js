@@ -464,30 +464,55 @@ const EditProductForm = ({ product, onSuccess, onClose }) => {
   const [filePreviews, setFilePreviews] = useState(
     product.images.map(img => `http://localhost:8000/${img.replace('./', '')}`)
   );
+  const [existingImages, setExistingImages] = useState(product.images);
 
   const handleFileChange = (e) => {
     const files = Array.from(e.target.files);
-    if (files.length > 3) {
-      alert('You can upload a maximum of 3 images');
+    
+    if (files.length + filePreviews.length > 3) {
+      alert("You can upload a maximum of 3 images");
       return;
     }
-    setSelectedFiles(files);
-    setFilePreviews([
-      ...filePreviews.slice(0, 3 - files.length),
-      ...files.map((file) => URL.createObjectURL(file))
-    ]);
+
+    const newFilePreviews = files.map((file) => URL.createObjectURL(file));
+    
+    setSelectedFiles(prevFiles => {
+      const updatedFiles = [...prevFiles, ...files];
+      console.log("Updated selected files:", updatedFiles);
+      return updatedFiles;
+    });
+
+    setFilePreviews(prevPreviews => {
+      const updatedPreviews = [...prevPreviews, ...newFilePreviews];
+      return updatedPreviews;
+    });
+
+    // Clear input value
+    e.target.value = null;
   };
 
   const handleRemoveImage = (indexToRemove) => {
-    setFilePreviews(filePreviews.filter((_, index) => index !== indexToRemove));
-    setSelectedFiles(selectedFiles.filter((_, index) => index !== indexToRemove));
+    // Check if the removed image is an existing image
+    const isExistingImage = indexToRemove < existingImages.length;
+
+    if (isExistingImage) {
+      // Remove from existing images
+      setExistingImages(prev => prev.filter((_, index) => index !== indexToRemove));
+      setFilePreviews(prev => prev.filter((_, index) => index !== indexToRemove));
+    } else {
+      // Adjust index for newly added files
+      const adjustedFileIndex = indexToRemove - existingImages.length;
+      setSelectedFiles(prev => prev.filter((_, index) => index !== adjustedFileIndex));
+      setFilePreviews(prev => prev.filter((_, index) => index !== indexToRemove));
+    }
+    
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     const formDataToSubmit = new FormData();
 
-    // Append formData
+    // Append form fields
     for (let key in formData) {
       if (key === "quantity" || key === "low_stock_threshold") {
         formDataToSubmit.append(key, parseInt(formData[key], 10));
@@ -498,8 +523,11 @@ const EditProductForm = ({ product, onSuccess, onClose }) => {
       }
     }
 
-    // Append files
-    selectedFiles.forEach((file) => {
+    // Append existing images that weren't removed
+    formDataToSubmit.append('existing_images', JSON.stringify(existingImages));
+
+    // Append new files
+    selectedFiles.forEach((file, index) => {
       formDataToSubmit.append('images', file);
     });
 
@@ -520,6 +548,7 @@ const EditProductForm = ({ product, onSuccess, onClose }) => {
         alert(data.detail);
       }
     } catch (error) {
+      console.error('Error updating product:', error);
       alert('Failed to update product');
     }
   };
