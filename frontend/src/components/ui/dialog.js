@@ -77,6 +77,14 @@ const DialogDescription = React.forwardRef(({ className, ...props }, ref) => (
 ));
 DialogDescription.displayName = "DialogDescription";
 
+const DialogFooter = ({ className, ...props }) => (
+  <div
+    className={`flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 ${className}`}
+    {...props}
+  />
+);
+DialogFooter.displayName = "DialogFooter";
+
 export {
   Dialog,
   DialogTrigger,
@@ -85,4 +93,5 @@ export {
   DialogTitle,
   DialogDescription,
   DialogClose,
+  DialogFooter
 };

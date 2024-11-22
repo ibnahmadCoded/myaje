@@ -66,11 +66,16 @@ class StoreSettings(Base):
     
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
-    store_name = Column(String(100), nullable=False)
     theme = Column(String(50), default='default')
     logo_url = Column(String(200))
     primary_color = Column(String(7))
     secondary_color = Column(String(7))
+    
+    # New fields for store details
+    tagline = Column(String(200))  # "Quality Products for Every Need"
+    street_address = Column(String(200))  # "123 Main St, City, Country"
+    phone_number = Column(String(20))  # "+1 234 567 8900"
+    contact_email = Column(String(120))  # "store@example.com"
     
     # Relationships
     owner = relationship('User', back_populates='store_settings')
@@ -81,6 +86,21 @@ class TokenBlacklist(Base):
     id = Column(Integer, primary_key=True)
     token = Column(String(500), nullable=False, unique=True)
     blacklisted_on = Column(DateTime, nullable=False)
+
+class StorefrontProduct(Base):
+    __tablename__ = "storefront_products"
+    
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
+    product_id = Column(Integer, ForeignKey('products.id'), nullable=False)
+    storefront_price = Column(Float, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    owner = relationship('User', backref='storefront_products')
+    product = relationship('Product')
+    
+    __table_args__ = (UniqueConstraint('user_id', 'product_id'),)
 
 # Create tables function
 async def create_tables():
