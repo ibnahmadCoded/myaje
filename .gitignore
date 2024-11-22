@@ -65,3 +65,4 @@ frontend/.next/
 frontend/.next
 myaje_app.db
 uploaded_images/
+backend2/uploaded_images/
