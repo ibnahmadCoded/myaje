@@ -110,6 +110,15 @@ async def delete_product_from_inventory(
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
     
+    # Delete images from the upload folder
+    product_images = db.query(ProductImage).filter_by(product_id=product.id).all()
+    for image in product_images:
+        try:
+            if os.path.exists(image.image_url):
+                os.remove(image.image_url)
+        except Exception as e:
+            print(f"Error deleting file {image.image_url}: {e}")
+    
     db.delete(product)
     db.commit()
     return {"message": "Product deleted successfully"}
@@ -170,9 +179,19 @@ async def update_product(
         if len(images) > 3:
             raise HTTPException(status_code=400, detail="You can upload a maximum of 3 images.")
         
-        # Delete existing images
+        # Delete existing images from the upload folder
+        existing_images = db.query(ProductImage).filter_by(product_id=product.id).all()
+        for image in existing_images:
+            try:
+                if os.path.exists(image.image_url):
+                    os.remove(image.image_url)
+            except Exception as e:
+                print(f"Error deleting file {image.image_url}: {e}")
+        
+        # Delete existing images from the database
         db.query(ProductImage).filter_by(product_id=product.id).delete()
         
+        # Add new images
         image_paths = []
         for image in images:
             ext = os.path.splitext(image.filename)[-1]
