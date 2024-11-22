@@ -34,8 +34,19 @@ class Product(Base):
     
     # Relationships
     owner = relationship('User', back_populates='products')
+    images = relationship('ProductImage', back_populates='product', cascade="all, delete-orphan")
     
     __table_args__ = (UniqueConstraint('user_id', 'sku'),)
+
+class ProductImage(Base):
+    __tablename__ = "product_images"
+    
+    id = Column(Integer, primary_key=True)
+    product_id = Column(Integer, ForeignKey('products.id'), nullable=False)
+    image_url = Column(String(255), nullable=False)  # Path or URL to the image
+    
+    # Relationships
+    product = relationship('Product', back_populates='images')
 
 class Transaction(Base):
     __tablename__ = "transactions"
