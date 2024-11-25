@@ -2,48 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import * as LucideIcons from 'lucide-react';
-import { ArrowRight, Brain, Zap } from 'lucide-react';
-
-const HeroSection = () => (
-  <div className="relative">
-    <div className="absolute inset-0 bg-gradient-to-br from-green-100/50 to-amber-100/50 opacity-50" />
-    <div className="absolute inset-0">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(104,211,145,0.15)_0%,rgba(255,255,255,0)_100%)]" />
-    </div>
-    <div className="relative">
-      <div className="grid lg:grid-cols-2 gap-12 items-center">
-        <div className="space-y-8">
-          <div className="inline-flex items-center px-4 py-2 bg-green-100 rounded-full text-green-700 text-sm font-medium">
-            <Zap className="h-4 w-4 mr-2" />
-            Comprehensive Business Solutions
-          </div>
-          <h1 className="text-6xl font-bold text-green-800 leading-tight">
-            Power Your Business with{' '}
-            <span className="relative inline-block">
-              Smart Features
-              <div className="absolute -bottom-2 left-0 right-0 h-3 bg-amber-200/50 -rotate-2 transform" />
-            </span>
-          </h1>
-          <p className="text-xl text-gray-600 leading-relaxed">
-            From inventory management to AI-powered analytics, we provide everything you need to run and grow your business efficiently.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4">
-            <button className="px-8 py-4 bg-green-700 text-white rounded-xl hover:bg-green-600 transition-all duration-300 flex items-center justify-center group shadow-lg shadow-green-700/20">
-              Get Started
-              <ArrowRight className="ml-2 h-5 w-5 transform group-hover:translate-x-1 transition-transform" />
-            </button>
-            <button className="px-8 py-4 bg-white text-green-700 rounded-xl hover:bg-green-50 transition-all duration-300 flex items-center justify-center border border-green-200">
-              View Demo
-            </button>
-          </div>
-        </div>
-        <div className="relative">
-          <HeroStats />
-        </div>
-      </div>
-    </div>
-  </div>
-);
+import { Brain, ArrowRight } from 'lucide-react';
 
 const HeroStats = () => (
   <div className="bg-white/95 backdrop-blur-md p-8 rounded-2xl shadow-2xl border border-green-100 transform hover:scale-105 transition-all duration-300">
@@ -80,6 +39,7 @@ const BusinessFeatures = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  // Features data remains the same as in your original code
   const features = {
     inventory: {
       iconName: 'Package',
@@ -300,40 +260,12 @@ const BusinessFeatures = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-green-50 to-amber-50">
-      {/* Navbar */}
-      <nav className={`fixed w-full z-50 transition-all duration-300 ${
-        scrolled ? 'bg-white/95 backdrop-blur-sm shadow-md' : 'bg-transparent'
-      }`}>
-        <div className="max-w-7xl mx-auto px-6 py-4">
-          <div className="flex justify-between items-center">
-            <div className="flex items-center space-x-2">
-              <div className="relative">
-                <Brain className="h-8 w-8 text-green-700" />
-                <div className="absolute -top-1 -right-1 h-3 w-3 bg-amber-400 rounded-full animate-pulse" />
-              </div>
-              <span className="text-2xl font-bold bg-gradient-to-r from-green-600 to-green-800 bg-clip-text text-transparent">Business Suite</span>
-            </div>
-            <div className="hidden md:flex items-center space-x-8">
-              <a href="#features" className="text-gray-600 hover:text-green-700 transition-colors duration-300">Features</a>
-              <a href="#pricing" className="text-gray-600 hover:text-green-700 transition-colors duration-300">Pricing</a>
-              <button className="px-6 py-2.5 bg-green-700 text-white rounded-xl hover:bg-green-600 transition-all duration-300 flex items-center shadow-lg shadow-green-700/20">
-                Get Started <ArrowRight className="ml-2 h-4 w-4" />
-              </button>
-            </div>
-          </div>
-        </div>
-      </nav>
+      
 
-      {/* Hero Section */}
-      <section className="pt-32 pb-24 px-6">
-        <div className="max-w-7xl mx-auto">
-          <HeroSection />
-        </div>
-      </section>
-
-      {/* Features Grid */}
-      <section id="features" className="py-24 px-6">
-        <div className="max-w-7xl mx-auto">
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto">
+        {/* Features Grid */}
+        <section id="features" className="pt-32 px-6">
           <div className="text-center mb-16">
             <h2 className="text-4xl font-bold text-green-700 mb-4">
               All-in-One Business Solutions
@@ -360,70 +292,70 @@ const BusinessFeatures = () => {
               </button>
             ))}
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* Feature Detail Modal */}
-      {activeFeature && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-3xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center gap-4">
-                  {renderIcon(features[activeFeature].iconName, {
-                    size: 32,
-                    className: "text-green-600"
-                  })}
-                  <div>
-                    <h2 className="text-2xl font-bold">{features[activeFeature].title}</h2>
-                    <p className="text-gray-600">{features[activeFeature].description}</p>
+        {/* Feature Detail Modal */}
+        {activeFeature && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-lg max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-4">
+                    {renderIcon(features[activeFeature].iconName, {
+                      size: 32,
+                      className: "text-green-600"
+                    })}
+                    <div>
+                      <h2 className="text-2xl font-bold">{features[activeFeature].title}</h2>
+                      <p className="text-gray-600">{features[activeFeature].description}</p>
+                    </div>
                   </div>
+                  <button 
+                    onClick={() => setActiveFeature(null)}
+                    className="text-gray-500 hover:text-gray-700"
+                  >
+                    ✕
+                  </button>
                 </div>
-                <button 
-                  onClick={() => setActiveFeature(null)}
-                  className="text-gray-500 hover:text-gray-700"
-                >
-                  ✕
-                </button>
-              </div>
 
-              <div className="space-y-8">
-                {features[activeFeature].details.map((detail, index) => (
-                  <div key={index} className="bg-gray-50 p-6 rounded-lg">
-                    <h3 className="text-xl font-semibold mb-2">{detail.title}</h3>
-                    <p className="text-gray-600 mb-4">{detail.description}</p>
-                    <ul className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {detail.benefits.map((benefit, benefitIndex) => (
-                        <li key={benefitIndex} className="flex items-center gap-2">
-                          <div className="w-1.5 h-1.5 rounded-full bg-green-600" />
-                          <span>{benefit}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                ))}
-              </div>
+                <div className="space-y-8">
+                  {features[activeFeature].details.map((detail, index) => (
+                    <div key={index} className="bg-gray-50 p-6 rounded-lg">
+                      <h3 className="text-xl font-semibold mb-2">{detail.title}</h3>
+                      <p className="text-gray-600 mb-4">{detail.description}</p>
+                      <ul className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {detail.benefits.map((benefit, benefitIndex) => (
+                          <li key={benefitIndex} className="flex items-center gap-2">
+                            <div className="w-1.5 h-1.5 rounded-full bg-green-600" />
+                            <span>{benefit}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
+                </div>
 
-              <div className="mt-8 flex justify-end space-x-4">
-                <button
-                  onClick={() => setActiveFeature(null)}
-                  className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-gray-700 transition-colors"
-                >
-                  Close
-                </button>
-                <button
-                  className="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg text-white transition-colors"
-                >
-                  Get Started
-                </button>
+                <div className="mt-8 flex justify-end space-x-4">
+                  <button
+                    onClick={() => setActiveFeature(null)}
+                    className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-gray-700 transition-colors"
+                  >
+                    Close
+                  </button>
+                  <button
+                    className="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg text-white transition-colors"
+                  >
+                    Get Started
+                  </button>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Footer */}
-      <footer className="bg-gray-900 text-white py-12 px-6">
+      <footer className="bg-gray-900 text-white py-12 px-6 mt-24">
         <div className="max-w-7xl mx-auto grid md:grid-cols-4 gap-8">
           <div>
             <div className="flex items-center space-x-2 mb-6">

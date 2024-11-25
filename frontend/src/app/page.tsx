@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { Search, ShoppingCart, MessageCircle, Store } from 'lucide-react';
 import MarketplaceView from '@/components/Marketplace';
 import BusinessFeatures from '@/components/BusinessFeatures';
+import Logo from '@/components/ui/logo'
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState('marketplace');
@@ -16,7 +17,7 @@ export default function Home() {
       <header className="sticky top-0 bg-white shadow-sm z-50">
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between h-16">
-            <div className="text-2xl font-bold text-green-600">Myaje</div>
+          <Logo />
             
             <div className="flex space-x-8">
               <button 
@@ -57,18 +58,7 @@ export default function Home() {
         {activeTab === 'marketplace' ? (
           <MarketplaceView />
         ) : (
-          <div className="container mx-auto px-4 py-8">
-            {/* Business View Hero */}
-            <div className="bg-gradient-to-r from-green-600 to-green-400 rounded-2xl p-8 text-white mb-8">
-              <h1 className="text-4xl font-bold mb-4">Your Complete Business Solution</h1>
-              <p className="text-lg mb-6">Everything you need to grow your business, powered by AI</p>
-              <button className="bg-white text-green-600 px-6 py-3 rounded-lg font-semibold hover:bg-gray-100">
-                Start Free Trial
-              </button>
-            </div>
-
             <BusinessFeatures />
-          </div>
         )}
       </main>
 
