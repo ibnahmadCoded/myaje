@@ -98,16 +98,21 @@ const SAMPLE_PRODUCTS = [
 
 const CATEGORIES = ['All', 'Electronics', 'Fashion', 'Home', 'Beauty', 'Sports'];
 
+// Hero Section SVG
 const ProductPlaceholder = () => (
-  <div className="relative w-full pb-[75%] bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg overflow-hidden">
-    <div 
-      className="absolute inset-0 animate-pulse bg-gradient-to-r from-transparent via-white/20 to-transparent"
-      style={{
-        backgroundSize: '200% 100%',
-        animation: 'shimmer 1.5s infinite'
-      }}
-    />
-  </div>
+  <svg viewBox="0 0 600 400" className="w-full h-full rounded-2xl transform hover:scale-105 transition-transform duration-300">
+    <defs>
+      <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="0%">
+        <stop offset="0%" style={{ stopColor: '#34D399', stopOpacity: 0.2 }} />
+        <stop offset="100%" style={{ stopColor: '#FCD34D', stopOpacity: 0.2 }} />
+      </linearGradient>
+    </defs>
+    <rect x="0" y="0" width="600" height="400" fill="url(#grad1)" rx="20" />
+    <circle cx="300" cy="200" r="80" fill="#34D399" fillOpacity="0.3" />
+    <path d="M250 180 Q300 120 350 180 T450 180" stroke="#059669" strokeWidth="4" fill="none" />
+    <rect x="150" y="250" width="300" height="40" fill="#059669" fillOpacity="0.1" rx="8" />
+    <rect x="150" y="300" width="200" height="40" fill="#059669" fillOpacity="0.1" rx="8" />
+  </svg>
 );
 
 const MarketplaceView = () => {
@@ -347,7 +352,7 @@ const MarketplaceView = () => {
       <Dialog open={isCartOpen} onOpenChange={setIsCartOpen}>
         <DialogContent className="sm:max-w-md">
 
-              <DialogTitle><h2 className="text-lg font-semibold">Shopping Cart</h2></DialogTitle>
+              <DialogTitle>Shopping Cart</DialogTitle>
 
           <div className="flex justify-between items-center mb-4">
             

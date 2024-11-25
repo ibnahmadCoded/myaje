@@ -2,30 +2,115 @@
 
 import React, { useState, useEffect } from 'react';
 import * as LucideIcons from 'lucide-react';
-import { Brain, ArrowRight } from 'lucide-react';
+import { Brain, ArrowRight, Users, Zap, Building2, Clock } from 'lucide-react';
 
+// Enhanced HeroStats with better design
 const HeroStats = () => (
-  <div className="bg-white/95 backdrop-blur-md p-8 rounded-2xl shadow-2xl border border-green-100 transform hover:scale-105 transition-all duration-300">
+  <div className="absolute -bottom-12 -right-12 bg-white/95 backdrop-blur-md p-8 rounded-2xl shadow-2xl border border-green-100 transform hover:scale-105 transition-all duration-300">
     <div className="grid grid-cols-2 gap-8">
       <div className="text-center">
-        <div className="text-3xl font-bold bg-gradient-to-r from-green-600 to-green-800 bg-clip-text text-transparent">24/7</div>
-        <div className="text-sm text-gray-600 font-medium mt-1">Support</div>
+        <div className="text-3xl font-bold bg-gradient-to-r from-green-600 to-green-800 bg-clip-text text-transparent">99.9%</div>
+        <div className="text-sm text-gray-600 font-medium mt-1">Uptime</div>
       </div>
       <div className="text-center">
-        <div className="text-3xl font-bold bg-gradient-to-r from-green-600 to-green-800 bg-clip-text text-transparent">10+</div>
-        <div className="text-sm text-gray-600 font-medium mt-1">Features</div>
+        <div className="text-3xl font-bold bg-gradient-to-r from-green-600 to-green-800 bg-clip-text text-transparent">2.5x</div>
+        <div className="text-sm text-gray-600 font-medium mt-1">ROI</div>
       </div>
       <div className="text-center">
-        <div className="text-3xl font-bold bg-gradient-to-r from-green-600 to-green-800 bg-clip-text text-transparent">99%</div>
-        <div className="text-sm text-gray-600 font-medium mt-1">Accuracy</div>
-      </div>
-      <div className="text-center">
-        <div className="text-3xl font-bold bg-gradient-to-r from-green-600 to-green-800 bg-clip-text text-transparent">50k+</div>
+        <div className="text-3xl font-bold bg-gradient-to-r from-green-600 to-green-800 bg-clip-text text-transparent">10k+</div>
         <div className="text-sm text-gray-600 font-medium mt-1">Users</div>
+      </div>
+      <div className="text-center">
+        <div className="text-3xl font-bold bg-gradient-to-r from-green-600 to-green-800 bg-clip-text text-transparent">95%</div>
+        <div className="text-sm text-gray-600 font-medium mt-1">Satisfaction</div>
       </div>
     </div>
   </div>
 );
+
+// Enhanced Hero Section with 3D-like elements
+const HeroSection = () => (
+  <div className="relative">
+    <div className="absolute bg-gradient-to-br from-green-100/50 to-amber-100/50 opacity-50" />
+    <div className="absolute">
+      <div className="absolute bg-[radial-gradient(circle_at_center,rgba(104,211,145,0.15)_0%,rgba(255,255,255,0)_100%)]" />
+    </div>
+    <div className="relative">
+      <div className="grid lg:grid-cols-2 gap-12 items-center">
+        <div className="space-y-8">
+          <div className="inline-flex items-center px-4 py-2 bg-green-100 rounded-full text-green-700 text-sm font-medium">
+            <Zap className="h-4 w-4 mr-2" />
+            Trusted by small and medium businesses worldwide
+          </div>
+          <h1 className="text-6xl font-bold text-green-800 leading-tight">
+            Empower Your Business with{' '}
+            <span className="relative inline-block">
+              Smart Solutions
+              <div className="absolute -bottom-2 left-0 right-0 h-3 bg-amber-200/50 -rotate-2 transform" />
+            </span>
+          </h1>
+          <p className="text-xl text-gray-600 leading-relaxed">
+            Manage your inventory, streamline operations, and grow your sales 
+            with our all-in-one platform. From smart storefronts to automated 
+            accounting, we have everything your business needs.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4">
+            <button className="px-8 py-4 bg-green-700 text-white rounded-xl hover:bg-green-600 transition-all duration-300 flex items-center justify-center group shadow-lg shadow-green-700/20">
+              Get Started
+              <ArrowRight className="ml-2 h-5 w-5 transform group-hover:translate-x-1 transition-transform" />
+            </button>
+            <button className="px-8 py-4 bg-white text-green-700 rounded-xl hover:bg-green-50 transition-all duration-300 flex items-center justify-center border border-green-200">
+              Learn More
+            </button>
+          </div>
+        </div>
+        <div className="relative">
+          <HeroIllustration />
+          <HeroStats />
+        </div>
+      </div>
+    </div>
+  </div>
+);
+
+// Hero Section SVG
+const HeroIllustration = () => (
+  <svg viewBox="0 0 600 400" className="w-full h-full rounded-2xl shadow-2xl transform hover:scale-105 transition-transform duration-300">
+    <defs>
+      <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="0%">
+        <stop offset="0%" style={{ stopColor: '#34D399', stopOpacity: 0.2 }} />
+        <stop offset="100%" style={{ stopColor: '#FCD34D', stopOpacity: 0.2 }} />
+      </linearGradient>
+    </defs>
+    <rect x="0" y="0" width="600" height="400" fill="url(#grad1)" rx="20" />
+    <circle cx="300" cy="200" r="80" fill="#34D399" fillOpacity="0.3" />
+    <path d="M250 180 Q300 120 350 180 T450 180" stroke="#059669" strokeWidth="4" fill="none" />
+    <rect x="150" y="250" width="300" height="40" fill="#059669" fillOpacity="0.1" rx="8" />
+    <rect x="150" y="300" width="200" height="40" fill="#059669" fillOpacity="0.1" rx="8" />
+  </svg>
+);
+
+// Enhanced MetricCard with better animation and design
+const MetricCard = ({ value, label, icon: Icon }) => {
+  const [isVisible, setIsVisible] = useState(false);
+
+  useEffect(() => {
+    setIsVisible(true);
+  }, []);
+
+  return (
+    <div className={`bg-white/90 backdrop-blur-sm p-8 rounded-2xl text-center transform transition-all duration-700 hover:scale-105 border border-green-100 ${
+      isVisible ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'
+    }`}>
+      <div className="relative">
+        <div className="absolute -inset-4 bg-green-100 rounded-full opacity-20" />
+        <Icon className="h-10 w-10 text-green-600 mx-auto mb-4 relative" />
+      </div>
+      <div className="text-4xl font-bold bg-gradient-to-r from-green-600 to-green-800 bg-clip-text text-transparent mb-2">{value}</div>
+      <div className="text-sm text-gray-600 font-medium">{label}</div>
+    </div>
+  );
+};
 
 const BusinessFeatures = () => {
   const [activeFeature, setActiveFeature] = useState(null);
@@ -260,7 +345,24 @@ const BusinessFeatures = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-green-50 to-amber-50">
-      
+      {/* Hero Section */}
+      <section className="pt-32 pb-24 px-6">
+        <div className="max-w-7xl mx-auto">
+          <HeroSection />
+        </div>
+      </section>
+
+      {/* Metrics Section */}
+      <section className="py-16 px-6 bg-gradient-to-r from-green-100 to-amber-100">
+        <div className="max-w-7xl mx-auto">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+            <MetricCard value="95%" label="User Satisfaction" icon={Users} />
+            <MetricCard value="30%" label="Efficiency Increase" icon={Zap} />
+            <MetricCard value="500+" label="Enterprise Clients" icon={Building2} />
+            <MetricCard value="24/7" label="AI Support" icon={Clock} />
+          </div>
+        </div>
+      </section>
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto">
