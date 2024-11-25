@@ -1,12 +1,121 @@
-'use client';
-
 import React, { useState } from 'react';
-import { Search, ShoppingCart, PackageSearch, Trash2, Star, Filter } from 'lucide-react';
+import { Search, ShoppingCart, PackageSearch, Trash2, Star, Filter, X } from 'lucide-react';
 import Link from 'next/link';
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+
+const SAMPLE_PRODUCTS = [
+  {
+    id: 1,
+    name: "Wireless Noise-Cancelling Headphones",
+    price: 15000,
+    rating: 4.5,
+    reviews: 128,
+    store: "TechHub",
+    category: "Electronics",
+  },
+  {
+    id: 2,
+    name: "Premium Cotton T-Shirt",
+    price: 5000,
+    rating: 4.2,
+    reviews: 89,
+    store: "FashionCore",
+    category: "Fashion",
+  },
+  {
+    id: 3,
+    name: "Smart Home Security Camera",
+    price: 25000,
+    rating: 4.8,
+    reviews: 256,
+    store: "SmartLife",
+    category: "Electronics",
+  },
+  {
+    id: 4,
+    name: "Comfortable Running Shoes",
+    price: 12000,
+    rating: 4.3,
+    reviews: 152,
+    store: "Sportify",
+    category: "Sports",
+  },
+  {
+    id: 5,
+    name: "Organic Skincare Set",
+    price: 20000,
+    rating: 4.7,
+    reviews: 110,
+    store: "BeautyNest",
+    category: "Beauty",
+  },
+  {
+    id: 6,
+    name: "Classic Wooden Dining Chair",
+    price: 18000,
+    rating: 4.1,
+    reviews: 74,
+    store: "HomeComfort",
+    category: "Home",
+  },
+  {
+    id: 7,
+    name: "Bluetooth Smartwatch",
+    price: 30000,
+    rating: 4.6,
+    reviews: 192,
+    store: "TechHub",
+    category: "Electronics",
+  },
+  {
+    id: 8,
+    name: "Formal Leather Belt",
+    price: 7000,
+    rating: 4.4,
+    reviews: 65,
+    store: "FashionCore",
+    category: "Fashion",
+  },
+  {
+    id: 9,
+    name: "Professional Yoga Mat",
+    price: 10000,
+    rating: 4.5,
+    reviews: 132,
+    store: "Sportify",
+    category: "Sports",
+  },
+  {
+    id: 10,
+    name: "Aromatherapy Candle Set",
+    price: 15000,
+    rating: 4.9,
+    reviews: 98,
+    store: "BeautyNest",
+    category: "Beauty",
+  },
+];
+
+const CATEGORIES = ['All', 'Electronics', 'Fashion', 'Home', 'Beauty', 'Sports'];
+
+const ProductPlaceholder = () => (
+  <div className="relative w-full pb-[75%] bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg overflow-hidden">
+    <div 
+      className="absolute inset-0 animate-pulse bg-gradient-to-r from-transparent via-white/20 to-transparent"
+      style={{
+        backgroundSize: '200% 100%',
+        animation: 'shimmer 1.5s infinite'
+      }}
+    />
+  </div>
+);
 
 const MarketplaceView = () => {
   const [cartItems, setCartItems] = useState([]);
   const [chatInput, setChatInput] = useState('');
+  const [isCartOpen, setIsCartOpen] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState('All');
+  const [isLoading, setIsLoading] = useState(false);
   const [chatMessages, setChatMessages] = useState([
     { 
       type: 'bot', 
@@ -21,20 +130,42 @@ const MarketplaceView = () => {
       ]
     }
   ]);
-  
+
   const addToCart = (product) => {
-    setCartItems(prev => [...prev, product]);
+    setCartItems(prev => [...prev, { ...product, cartId: Date.now() }]);
+    setIsCartOpen(true);
   };
 
-  const removeFromCart = (index) => {
-    setCartItems(prev => prev.filter((_, i) => i !== index));
+  const removeFromCart = (cartId) => {
+    setCartItems(prev => prev.filter(item => item.cartId !== cartId));
   };
+
+  const handleChatSubmit = (e) => {
+    e.preventDefault();
+    if (!chatInput.trim()) return;
+
+    setChatMessages(prev => [...prev, { type: 'user', text: chatInput }]);
+    setChatInput('');
+    setIsLoading(true);
+
+    // Simulate AI response
+    setTimeout(() => {
+      setChatMessages(prev => [...prev, {
+        type: 'bot',
+        text: "I'll help you find what you're looking for. Could you provide more details about what you're interested in?"
+      }]);
+      setIsLoading(false);
+    }, 1000);
+  };
+
+  const filteredProducts = SAMPLE_PRODUCTS.filter(product => 
+    selectedCategory === 'All' || product.category === selectedCategory
+  );
 
   return (
     <div className="flex h-[calc(100vh-4rem)]">
       {/* Left Column - Chat */}
       <div className="w-96 bg-white border-r hidden lg:flex flex-col">
-        {/* AI Assistant Chat */}
         <div className="flex-1 flex flex-col">
           <div className="p-4 bg-green-50 border-b">
             <div className="flex items-center gap-2">
@@ -46,12 +177,19 @@ const MarketplaceView = () => {
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-4">
+          <div 
+            className="flex-1 overflow-y-auto p-4 space-y-4"
+            role="log"
+            aria-live="polite"
+          >
             {chatMessages.map((message, index) => (
-              <div key={index} className="mb-4">
-                <div className={`inline-block p-3 rounded-lg ${
+              <div 
+                key={index} 
+                className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
+              >
+                <div className={`inline-block p-3 rounded-lg max-w-[80%] ${
                   message.type === 'user' 
-                    ? 'bg-green-600 text-white ml-auto' 
+                    ? 'bg-green-600 text-white' 
                     : 'bg-gray-100'
                 }`}>
                   <p>{message.text}</p>
@@ -60,7 +198,10 @@ const MarketplaceView = () => {
                       {message.options.map((option, i) => (
                         <button 
                           key={i}
-                          className="block w-full text-left px-3 py-2 rounded bg-white text-green-600 hover:bg-green-50 text-sm"
+                          className="block w-full text-left px-3 py-2 rounded bg-white text-green-600 hover:bg-green-50 text-sm transition-colors"
+                          onClick={() => {
+                            setChatInput(option);
+                          }}
                         >
                           {option}
                         </button>
@@ -70,9 +211,16 @@ const MarketplaceView = () => {
                 </div>
               </div>
             ))}
+            {isLoading && (
+              <div className="flex gap-2 items-center text-gray-500">
+                <div className="w-2 h-2 rounded-full bg-gray-400 animate-bounce" />
+                <div className="w-2 h-2 rounded-full bg-gray-400 animate-bounce [animation-delay:0.2s]" />
+                <div className="w-2 h-2 rounded-full bg-gray-400 animate-bounce [animation-delay:0.4s]" />
+              </div>
+            )}
           </div>
 
-          <div className="p-4 border-t">
+          <form onSubmit={handleChatSubmit} className="p-4 border-t">
             <div className="flex gap-2">
               <input
                 type="text"
@@ -80,30 +228,36 @@ const MarketplaceView = () => {
                 onChange={(e) => setChatInput(e.target.value)}
                 placeholder="Ask anything about products..."
                 className="flex-1 px-4 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-green-500"
+                aria-label="Chat input"
               />
-              <button className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700">
+              <button 
+                type="submit"
+                className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
+                disabled={isLoading}
+              >
                 Send
               </button>
             </div>
-          </div>
+          </form>
         </div>
 
-        {/* Cart Summary - Slides up from bottom */}
-        <div className="border-t bg-white">
-          <button className="w-full p-4 flex items-center justify-between hover:bg-gray-50">
-            <div className="flex items-center gap-2">
-              <ShoppingCart size={20} />
-              <span className="font-semibold">Shopping Cart</span>
-            </div>
-            <span className="bg-green-100 text-green-800 px-2 py-1 rounded">
-              {cartItems.length} items
-            </span>
-          </button>
-        </div>
+        <button 
+          onClick={() => setIsCartOpen(true)}
+          className="w-full p-4 flex items-center justify-between hover:bg-gray-50 border-t"
+          aria-label="Open shopping cart"
+        >
+          <div className="flex items-center gap-2">
+            <ShoppingCart size={20} />
+            <span className="font-semibold">Shopping Cart</span>
+          </div>
+          <span className="bg-green-100 text-green-800 px-2 py-1 rounded">
+            {cartItems.length} items
+          </span>
+        </button>
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto bg-gray-50">
         <div className="p-6">
           {/* Search and Filters */}
           <div className="mb-6">
@@ -113,10 +267,14 @@ const MarketplaceView = () => {
                   type="text"
                   placeholder="Search products..."
                   className="w-full px-4 py-2 pl-10 rounded-lg border focus:outline-none focus:ring-2 focus:ring-green-500"
+                  aria-label="Search products"
                 />
                 <Search className="absolute left-3 top-2.5 text-gray-400" size={20} />
               </div>
-              <button className="flex items-center gap-2 px-4 py-2 rounded-lg border hover:bg-gray-50">
+              <button 
+                className="flex items-center gap-2 px-4 py-2 rounded-lg border hover:bg-gray-50 bg-white"
+                aria-label="Open filters"
+              >
                 <Filter size={20} />
                 Filters
               </button>
@@ -124,10 +282,16 @@ const MarketplaceView = () => {
             
             {/* Category Pills */}
             <div className="flex gap-2 overflow-x-auto pb-2">
-              {['All', 'Electronics', 'Fashion', 'Home', 'Beauty', 'Sports'].map((category) => (
+              {CATEGORIES.map((category) => (
                 <button 
                   key={category}
-                  className="px-4 py-1 rounded-full bg-green-50 text-green-700 hover:bg-green-100 whitespace-nowrap"
+                  onClick={() => setSelectedCategory(category)}
+                  className={`px-4 py-1 rounded-full whitespace-nowrap transition-colors ${
+                    selectedCategory === category
+                      ? 'bg-green-600 text-white'
+                      : 'bg-green-50 text-green-700 hover:bg-green-100'
+                  }`}
+                  aria-pressed={selectedCategory === category}
                 >
                   {category}
                 </button>
@@ -137,34 +301,38 @@ const MarketplaceView = () => {
 
           {/* Product Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[...Array(9)].map((_, index) => (
-              <div key={index} className="bg-white rounded-lg shadow-md p-4 hover:shadow-lg transition-shadow">
+            {filteredProducts.map((product) => (
+              <div 
+                key={product.id} 
+                className="bg-white rounded-lg shadow-md p-4 hover:shadow-lg transition-all"
+              >
                 <div className="relative">
-                  <img 
-                    src="/api/placeholder/400/300" 
-                    alt="Product" 
-                    className="w-full h-48 object-cover rounded-lg mb-4"
-                  />
-                  <button className="absolute top-2 right-2 p-1.5 bg-white rounded-full shadow hover:bg-gray-50">
+                  <ProductPlaceholder />
+                  <button 
+                    className="absolute top-2 right-2 p-1.5 bg-white rounded-full shadow hover:bg-gray-50"
+                    aria-label="Add to favorites"
+                  >
                     <Star size={16} className="text-gray-400" />
                   </button>
                 </div>
-                <h3 className="text-lg font-semibold mb-2">Product Name</h3>
+                <h3 className="text-lg font-semibold mb-2">{product.name}</h3>
                 <div className="flex items-center mb-2">
                   <Star size={16} className="text-yellow-400 fill-current" />
-                  <span className="text-sm text-gray-600 ml-1">4.5 (128 reviews)</span>
+                  <span className="text-sm text-gray-600 ml-1">
+                    {product.rating} ({product.reviews} reviews)
+                  </span>
                 </div>
                 <Link 
-                  href="/store/store-name" 
+                  href={`/store/${product.store.toLowerCase()}`}
                   className="text-gray-600 hover:text-green-600 hover:underline mb-2 block"
                 >
-                  Store Name
+                  {product.store}
                 </Link>
                 <div className="flex justify-between items-center">
-                  <span className="text-lg font-bold">₦15,000</span>
+                  <span className="text-lg font-bold">₦{product.price.toLocaleString()}</span>
                   <button 
-                    onClick={() => addToCart({ name: 'Product Name', price: 15000 })}
-                    className="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700"
+                    onClick={() => addToCart(product)}
+                    className="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700 transition-colors"
                   >
                     Add to Cart
                   </button>
@@ -174,6 +342,56 @@ const MarketplaceView = () => {
           </div>
         </div>
       </div>
+
+      {/* Cart Dialog */}
+      <Dialog open={isCartOpen} onOpenChange={setIsCartOpen}>
+        <DialogContent className="sm:max-w-md">
+
+              <DialogTitle><h2 className="text-lg font-semibold">Shopping Cart</h2></DialogTitle>
+
+          <div className="flex justify-between items-center mb-4">
+            
+            <button
+              onClick={() => setIsCartOpen(false)}
+              className="rounded-full p-1 hover:bg-gray-100"
+              aria-label="Close cart"
+            >
+            </button>
+          </div>
+          {cartItems.length === 0 ? (
+            <p className="text-gray-500 text-center py-8">Your cart is empty</p>
+          ) : (
+            <>
+              <div className="space-y-4">
+                {cartItems.map((item) => (
+                  <div key={item.cartId} className="flex justify-between items-center">
+                    <div>
+                      <h3 className="font-medium">{item.name}</h3>
+                      <p className="text-sm text-gray-600">₦{item.price.toLocaleString()}</p>
+                    </div>
+                    <button
+                      onClick={() => removeFromCart(item.cartId)}
+                      className="text-red-500 hover:text-red-600 p-1"
+                      aria-label={`Remove ${item.name} from cart`}
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-4 pt-4 border-t">
+                <div className="flex justify-between font-semibold">
+                  <span>Total</span>
+                  <span>₦{cartItems.reduce((sum, item) => sum + item.price, 0).toLocaleString()}</span>
+                </div>
+                <button className="w-full mt-4 bg-green-600 text-white py-2 rounded hover:bg-green-700 transition-colors">
+                  Checkout
+                </button>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
