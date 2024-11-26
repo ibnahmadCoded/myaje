@@ -1,8 +1,10 @@
 from datetime import datetime
-from sqlalchemy import Column, Integer, String, Float, Text, DateTime, ForeignKey, UniqueConstraint
+from sqlalchemy import Column, Integer, String, Float, Text, DateTime, ForeignKey, UniqueConstraint, Enum, JSON
 from starlette.concurrency import run_in_threadpool
 from sqlalchemy.orm import relationship
 from sql_database import Base, engine
+from sqlalchemy.sql import func
+import enum
 
 class User(Base):
     __tablename__ = "users"
@@ -17,6 +19,7 @@ class User(Base):
     products = relationship('Product', back_populates='owner')
     transactions = relationship('Transaction', back_populates='owner')
     store_settings = relationship('StoreSettings', back_populates='owner', uselist=False)
+    orders = relationship("Order", back_populates="seller")
 
 class Product(Base):
     __tablename__ = "products"
@@ -101,6 +104,59 @@ class StorefrontProduct(Base):
     product = relationship('Product')
     
     __table_args__ = (UniqueConstraint('user_id', 'product_id'),)
+
+class OrderStatus(enum.Enum):
+    pending = "pending"
+    fulfilled = "fulfilled"
+    cancelled = "cancelled"
+
+class MarketplaceOrder(Base):
+    __tablename__ = "marketplace_orders"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    customer_name = Column(String)
+    customer_email = Column(String)
+    customer_phone = Column(String)
+    shipping_address = Column(String)
+    total_amount = Column(Float)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    payment_info = Column(JSON)  # Store payment details
+    
+    # Relationships
+    seller_orders = relationship("Order", back_populates="marketplace_order")
+
+class Order(Base):
+    __tablename__ = "orders"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    marketplace_order_id = Column(Integer, ForeignKey("marketplace_orders.id"))
+    seller_id = Column(Integer, ForeignKey("users.id"))  # The store owner
+    customer_name = Column(String)
+    customer_email = Column(String)
+    customer_phone = Column(String)
+    shipping_address = Column(String)
+    total_amount = Column(Float)
+    status = Column(Enum(OrderStatus), default=OrderStatus.pending)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    
+    # Relationships
+    seller = relationship("User", back_populates="orders")
+    marketplace_order = relationship("MarketplaceOrder", back_populates="seller_orders")
+    items = relationship("OrderItem", back_populates="order", cascade="all, delete-orphan")
+
+class OrderItem(Base):
+    __tablename__ = "order_items"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    order_id = Column(Integer, ForeignKey("orders.id"))
+    product_id = Column(Integer, ForeignKey("products.id"))
+    quantity = Column(Integer)
+    price = Column(Float)  # Price at time of purchase
+    
+    # Relationships
+    order = relationship("Order", back_populates="items")
+    product = relationship("Product")
 
 # Create tables function
 async def create_tables():

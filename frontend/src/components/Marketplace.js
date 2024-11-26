@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { Search, ShoppingCart, PackageSearch, Trash2, Star, Filter, X } from 'lucide-react';
 import Link from 'next/link';
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { CheckoutDialog } from '@/components/CheckoutDialog'
+import { CartDialog } from '@/components/CartDialog'
 
 const SAMPLE_PRODUCTS = [
   {
@@ -136,8 +138,27 @@ const MarketplaceView = () => {
     }
   ]);
 
+const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
+
+const updateQuantity = (cartId, newQuantity) => {
+  if (newQuantity < 1) return;
+  setCartItems(prev => prev.map(item => 
+    item.cartId === cartId ? { ...item, quantity: newQuantity } : item
+  ));
+};
+
+const handleCheckoutComplete = () => {
+  setCartItems([]);
+  setIsCartOpen(false);
+  setIsCheckoutOpen(false);
+};
+
   const addToCart = (product) => {
-    setCartItems(prev => [...prev, { ...product, cartId: Date.now() }]);
+    setCartItems(prev => [...prev, { 
+      ...product, 
+      cartId: Date.now(),
+      quantity: 1  // Add default quantity
+    }]);
     setIsCartOpen(true);
   };
 
@@ -349,54 +370,26 @@ const MarketplaceView = () => {
       </div>
 
       {/* Cart Dialog */}
-      <Dialog open={isCartOpen} onOpenChange={setIsCartOpen}>
-        <DialogContent className="sm:max-w-md">
+      <CartDialog
+        isOpen={isCartOpen}
+        onClose={() => setIsCartOpen(false)}
+        cartItems={cartItems}
+        removeFromCart={removeFromCart}
+        updateQuantity={updateQuantity}
+        onCheckout={() => {
+          setIsCartOpen(false);
+          setIsCheckoutOpen(true);
+        }}
+      />
 
-              <DialogTitle>Shopping Cart</DialogTitle>
+      {/* Checkout Dialog */}
+      <CheckoutDialog
+        isOpen={isCheckoutOpen}
+        onClose={() => setIsCheckoutOpen(false)}
+        cartItems={cartItems}
+        onCheckoutComplete={handleCheckoutComplete}
+      />
 
-          <div className="flex justify-between items-center mb-4">
-            
-            <button
-              onClick={() => setIsCartOpen(false)}
-              className="rounded-full p-1 hover:bg-gray-100"
-              aria-label="Close cart"
-            >
-            </button>
-          </div>
-          {cartItems.length === 0 ? (
-            <p className="text-gray-500 text-center py-8">Your cart is empty</p>
-          ) : (
-            <>
-              <div className="space-y-4">
-                {cartItems.map((item) => (
-                  <div key={item.cartId} className="flex justify-between items-center">
-                    <div>
-                      <h3 className="font-medium">{item.name}</h3>
-                      <p className="text-sm text-gray-600">₦{item.price.toLocaleString()}</p>
-                    </div>
-                    <button
-                      onClick={() => removeFromCart(item.cartId)}
-                      className="text-red-500 hover:text-red-600 p-1"
-                      aria-label={`Remove ${item.name} from cart`}
-                    >
-                      <Trash2 size={18} />
-                    </button>
-                  </div>
-                ))}
-              </div>
-              <div className="mt-4 pt-4 border-t">
-                <div className="flex justify-between font-semibold">
-                  <span>Total</span>
-                  <span>₦{cartItems.reduce((sum, item) => sum + item.price, 0).toLocaleString()}</span>
-                </div>
-                <button className="w-full mt-4 bg-green-600 text-white py-2 rounded hover:bg-green-700 transition-colors">
-                  Checkout
-                </button>
-              </div>
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };

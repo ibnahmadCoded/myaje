@@ -9,7 +9,8 @@ import {
   LineChart,
   X,
   Search,
-  Bell
+  Bell,
+  NotebookIcon
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -30,6 +31,7 @@ const Sidebar = ({
     { icon: <LayoutGrid size={20} />, label: 'Dashboard', href: '/dashboard', badge: '3' },
     { icon: <Package size={20} />, label: 'Inventory', href: '/inventory', badge: 'Low' },
     { icon: <Store size={20} />, label: 'Storefront', href: '/storefront' },
+    { icon: <NotebookIcon size={20} />, label: 'Invoicing', href: '/invoicing' },
     { icon: <LineChart size={20} />, label: 'Accounting', href: '/accounting', badge: 'New' },
   ];
 
