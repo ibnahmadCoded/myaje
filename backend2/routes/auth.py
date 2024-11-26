@@ -92,17 +92,26 @@ async def logout(request: Request, db: Session = Depends(get_db)):
     token = request.headers.get('Authorization', '')
     token = token.split()[1] if ' ' in token else token
 
-    if token:
-        try:
-            # Add token to blacklist
-            blacklisted_token = TokenBlacklist(token=token)
-            db.add(blacklisted_token)
-            db.commit()
-            return {"message": "Successfully logged out"}
-        except Exception as e:
-            raise HTTPException(status_code=400, detail=f"Error during logout: {str(e)}")
+    if not token:
+        raise HTTPException(status_code=401, detail="Token is required for logout")
+
+    try:
+        # First validate the token
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        
+        # Blacklist token
+        blacklisted_token = TokenBlacklist(token=token)
+        db.add(blacklisted_token)
+        db.commit()
+        return {"message": "Successfully logged out"}
     
-    raise HTTPException(status_code=401, detail="Token is required for logout")
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Token has expired")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Logout failed: {str(e)}")
 
 @router.post("/validate-token")
 async def validate_token(request: Request, db: Session = Depends(get_db)):

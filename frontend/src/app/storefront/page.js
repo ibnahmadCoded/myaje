@@ -60,7 +60,6 @@ const StorefrontManagement = () => {
         }
       });
       const data = await response.json();
-      console.log(data)
       setStoreProducts(data);
     } catch (error) {
       setError('Failed to fetch store products');
@@ -278,7 +277,7 @@ const StorefrontManagement = () => {
 
   const handleDeleteFromStore = async (productId) => {
     try {
-      await fetch(`/api/storefront/products/${productId}`, {
+      await fetch(`http://localhost:8000/storefront/delete_products/${productId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -319,6 +318,7 @@ const StorefrontManagement = () => {
             src={displayImages[currentImageIndex]}
             alt={product.name}
             className="absolute top-0 left-0 h-full w-full object-cover cursor-pointer"
+            onClick={() => setSelectedImage(displayImages[currentImageIndex])}
           />
           
           {displayImages.length > 1 && (
@@ -494,7 +494,7 @@ const StorefrontManagement = () => {
                 value={storeDetails.tagline}
                 onChange={(e) => setStoreDetails({...storeDetails, tagline: e.target.value})}
                 className="w-full p-2 border rounded"
-                placeholder={storeDetails.tagline || "Enter store tagline"}
+                placeholder={storeDetails?.tagline || "Enter store tagline"}
               />
             </div>
             <div>
@@ -503,7 +503,7 @@ const StorefrontManagement = () => {
                 value={storeDetails.street_address}
                 onChange={(e) => setStoreDetails({...storeDetails, street_address: e.target.value})}
                 className="w-full p-2 border rounded"
-                placeholder={storeDetails.street_address || "Enter street address"}
+                placeholder={storeDetails?.street_address || "Enter street address"}
               />
             </div>
             <div>
@@ -512,7 +512,7 @@ const StorefrontManagement = () => {
                 value={storeDetails.phone_number}
                 onChange={(e) => setStoreDetails({...storeDetails, phone_number: e.target.value})}
                 className="w-full p-2 border rounded"
-                placeholder={storeDetails.phone_number || "Enter phone number"}
+                placeholder={storeDetails?.phone_number || "Enter phone number"}
               />
             </div>
             <div>
@@ -521,7 +521,7 @@ const StorefrontManagement = () => {
                 value={storeDetails.contact_email}
                 onChange={(e) => setStoreDetails({...storeDetails, contact_email: e.target.value})}
                 className="w-full p-2 border rounded"
-                placeholder={storeDetails.contact_email || "Enter contact email"}
+                placeholder={storeDetails?.contact_email || "Enter contact email"}
               />
             </div>
           </div>
