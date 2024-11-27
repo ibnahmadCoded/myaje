@@ -25,12 +25,14 @@ const InvoicingPage = () => {
 
   const fetchInvoices = async () => {
     try {
-      const response = await fetch('http://localhost:8000/api/invoices/requests', {
+      const response = await fetch('http://localhost:8000/invoicing/requests', {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
         },
       });
       const data = await response.json();
+
+      console.log(data)
   
       // Ensure the data is an array before setting state
       if (Array.isArray(data)) {
@@ -136,13 +138,14 @@ const InvoicingPage = () => {
                 <td className="p-4">₦{invoice.amount.toLocaleString()}</td>
                 <td className="p-4">
                   <Badge variant={
-                    invoice.status === 'paid' ? 'success' :
-                    invoice.status === 'pending' ? 'warning' : 'default'
+                    invoice.status === 'paid' ? 'deafult' :
+                    invoice.status === 'sent' ? 'waiting' :
+                    invoice.status === 'pending' ? 'destructive' : 'default'
                   }>
                     {invoice.status}
                   </Badge>
                 </td>
-                <td className="p-4">{new Date(invoice.date).toLocaleDateString()}</td>
+                <td className="p-4">{new Date(invoice.created_at).toLocaleDateString()}</td>
                 <td className="p-4">
                   <div className="flex gap-2">
                     {invoice.status === 'pending' && (
