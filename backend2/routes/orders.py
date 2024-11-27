@@ -102,7 +102,8 @@ async def submit_marketplace_order(
                 customer_phone=order.customer_phone,
                 shipping_address=order.shipping_address,
                 total_amount=seller_total,
-                status=OrderStatus.pending
+                status=OrderStatus.pending,
+                order_type=order.order_type
             )
             db.add(seller_order)
             db.flush()
@@ -273,26 +274,42 @@ async def delete_seller_order(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    order = db.query(Order).filter(
-        Order.id == order_id,
-        Order.seller_id == current_user.id
-    ).first()
-    
-    if not order:
-        raise HTTPException(status_code=404, detail="Order not found")
-    
-    # Restore product quantities if order is being deleted
-    if order.status == OrderStatus.pending:
-        for item in order.items:
-            product = db.query(Product).filter(Product.id == item.product_id).first()
-            if product:
-                product.quantity += item.quantity
-    
-    db.delete(order)
-    
+    # Start a transaction
     try:
+        order = db.query(Order).filter(
+            Order.id == order_id,
+            Order.seller_id == current_user.id
+        ).first()
+        
+        if not order:
+            raise HTTPException(status_code=404, detail="Order not found")
+        
+        # Delete associated unpaid invoice requests
+        unpaid_invoices = db.query(InvoiceRequest).filter(
+            InvoiceRequest.order_id == order_id,
+            InvoiceRequest.status != InvoiceStatus.paid,
+            InvoiceRequest.paid_at.is_(None)
+        ).all()
+        
+        for invoice in unpaid_invoices:
+            db.delete(invoice)
+        
+        # Restore product quantities if order is being deleted
+        if order.status == OrderStatus.pending:
+            for item in order.items:
+                product = db.query(Product).filter(Product.id == item.product_id).first()
+                if product:
+                    product.quantity += item.quantity
+        
+        # Delete the order (this will cascade delete order items due to relationship config)
+        db.delete(order)
         db.commit()
-        return {"message": "Order deleted successfully"}
+        
+        return {
+            "message": "Order and associated unpaid invoices deleted successfully",
+            "deleted_invoices_count": len(unpaid_invoices)
+        }
+        
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))

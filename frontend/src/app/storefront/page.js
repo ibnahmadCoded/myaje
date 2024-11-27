@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Plus, Eye, ChevronLeft, ChevronRight, Bell, Edit, Trash2, Share2 } from 'lucide-react';
+import { Plus, Eye, ChevronLeft, ChevronRight, Bell, Edit, Trash2, Share2, CheckCircle } from 'lucide-react';
 import DashboardLayout from '@/components/DashboardLayout';
 import {
   Dialog,
@@ -36,6 +36,7 @@ const StorefrontManagement = () => {
     contact_email: ''
   });
   const [isEditingStoreDetails, setIsEditingStoreDetails] = useState(false);
+  const [orderToDelete, setOrderToDelete] = useState(null);
 
   // Fetch functions
   const fetchInventoryProducts = async () => {
@@ -201,6 +202,35 @@ const StorefrontManagement = () => {
     }
   };
 
+  const handleFulfillOrder = async (orderId) => {
+    try {
+      await fetch(`http://localhost:8000/orders/seller/${orderId}/fulfill`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      fetchOrders();
+    } catch (error) {
+      setError('Failed to fulfill order');
+    }
+  };
+
+  const handleDeleteOrder = async (orderId) => {
+    try {
+      await fetch(`http://localhost:8000/orders/seller/${orderId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      setOrderToDelete(null);
+      fetchOrders();
+    } catch (error) {
+      setError('Failed to delete order');
+    }
+  };
+
   const OrdersList = () => {
     return (
       <div className="space-y-4">
@@ -208,13 +238,33 @@ const StorefrontManagement = () => {
           <div key={order.id} className="border rounded-lg p-4">
             <div className="flex justify-between items-center mb-2">
               <span className="font-medium">Order #{order.id}</span>
-              <span className={`px-2 py-1 rounded text-sm ${
-                order.status === 'completed' ? 'bg-green-100 text-green-800' :
-                order.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                'bg-red-100 text-red-800'
-              }`}>
-                {order.status}
-              </span>
+              <div className="flex items-center gap-2">
+                <span className={`px-2 py-1 rounded text-sm ${
+                  order.status === 'completed' ? 'bg-green-100 text-green-800' :
+                  order.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                  'bg-red-100 text-red-800'
+                }`}>
+                  {order.status}
+                </span>
+                {order.status === 'pending' && (
+                  <Button 
+                    onClick={() => handleFulfillOrder(order.id)}
+                    className="flex items-center gap-1 bg-green-100 hover:bg-green-200 text-green-700"
+                    size="sm"
+                  >
+                    <CheckCircle size={16} />
+                    Fulfill
+                  </Button>
+                )}
+                <Button
+                  onClick={() => setOrderToDelete(order)}
+                  className="flex items-center gap-1 bg-red-100 hover:bg-red-200 text-red-700"
+                  size="sm"
+                >
+                  <Trash2 size={16} />
+                  Delete
+                </Button>
+              </div>
             </div>
             <div className="text-gray-600">
               <p>Total: ₦{order.total_amount}</p>
@@ -222,6 +272,37 @@ const StorefrontManagement = () => {
             </div>
           </div>
         ))}
+
+        {/* Delete Order Confirmation Dialog */}
+        {orderToDelete && (
+          <Dialog open={!!orderToDelete} onOpenChange={() => setOrderToDelete(null)}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Delete Order</DialogTitle>
+                <DialogDescription>
+                  Are you sure you want to delete Order #{orderToDelete.id}? 
+                  {orderToDelete.status === 'pending' && " This will restore the product quantities."}
+                </DialogDescription>
+              </DialogHeader>
+              <DialogFooter>
+                <div className="flex space-x-2 justify-end">
+                  <Button
+                    onClick={() => setOrderToDelete(null)}
+                    className="bg-gray-100 hover:bg-gray-200"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={() => handleDeleteOrder(orderToDelete.id)}
+                    className="bg-red-100 hover:bg-red-200 text-red-700"
+                  >
+                    Delete
+                  </Button>
+                </div>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
     );
   };
