@@ -88,7 +88,7 @@ class TokenBlacklist(Base):
     
     id = Column(Integer, primary_key=True)
     token = Column(String(500), nullable=False, unique=True)
-    blacklisted_on = Column(DateTime, nullable=False)
+    blacklisted_on = Column(DateTime, nullable=False, default=datetime.utcnow)
 
 class StorefrontProduct(Base):
     __tablename__ = "storefront_products"
@@ -121,6 +121,7 @@ class MarketplaceOrder(Base):
     total_amount = Column(Float)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     payment_info = Column(JSON)  # Store payment details
+    order_type=Column(String)  # "payment" or "invoice"
     
     # Relationships
     seller_orders = relationship("Order", back_populates="marketplace_order")
@@ -136,6 +137,8 @@ class Order(Base):
     customer_phone = Column(String)
     shipping_address = Column(String)
     total_amount = Column(Float)
+    payment_info = Column(JSON)  # Store payment details
+    order_type=Column(String)  # "payment" or "invoice"
     status = Column(Enum(OrderStatus), default=OrderStatus.pending)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
@@ -144,6 +147,8 @@ class Order(Base):
     seller = relationship("User", back_populates="orders")
     marketplace_order = relationship("MarketplaceOrder", back_populates="seller_orders")
     items = relationship("OrderItem", back_populates="order", cascade="all, delete-orphan")
+    payments = relationship("Payment", back_populates="order")
+    invoice_requests = relationship("InvoiceRequest", back_populates="order")
 
 class OrderItem(Base):
     __tablename__ = "order_items"
@@ -157,6 +162,96 @@ class OrderItem(Base):
     # Relationships
     order = relationship("Order", back_populates="items")
     product = relationship("Product")
+
+# payments
+class PaymentStatus(str, Enum):
+    pending = "pending"
+    processing = "processing"
+    completed = "completed"
+    failed = "failed"
+    refunded = "refunded"
+    cancelled = "cancelled"
+
+class InvoiceStatus(str, Enum):
+    pending = "pending"
+    generated = "generated"
+    sent = "sent"
+    paid = "paid"
+    cancelled = "cancelled"
+    overdue = "overdue"
+
+class Payment(Base):
+    __tablename__ = "payments"
+
+    id = Column(Integer, primary_key=True, index=True)
+    order_id = Column(Integer, ForeignKey("orders.id"), nullable=False)
+    amount = Column(Float, nullable=False)
+    payment_method = Column(String, nullable=False)  # e.g., "card", "bank_transfer"
+    status = Column(String, nullable=False, default=PaymentStatus.pending)
+    payment_details = Column(JSON)  # Store payment gateway response, transaction IDs, etc.
+    
+    # Timestamps
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+    completed_at = Column(DateTime, nullable=True)
+    
+    # Reference fields
+    transaction_id = Column(String, unique=True, nullable=True)  # Payment gateway transaction ID
+    reference_number = Column(String, unique=True, nullable=True)  # Internal reference number
+    
+    # Error handling
+    error_message = Column(String, nullable=True)
+    retry_count = Column(Integer, default=0)
+    
+    # Relationships
+    order = relationship("Order", back_populates="payments")
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        if not self.reference_number:
+            self.reference_number = f"PAY-{datetime.utcnow().strftime('%Y%m%d')}-{id:06d}"
+
+class InvoiceRequest(Base):
+    __tablename__ = "invoice_requests"
+
+    id = Column(Integer, primary_key=True, index=True)
+    order_id = Column(Integer, ForeignKey("orders.id"), nullable=False)
+    customer_name = Column(String, nullable=False)
+    customer_email = Column(String, nullable=False)
+    customer_phone = Column(String, nullable=True)
+    shipping_address = Column(String, nullable=False)
+    amount = Column(Float, nullable=False)
+    items = Column(JSON, nullable=False)  # Store list of items with details
+    status = Column(String, nullable=False, default=InvoiceStatus.pending)
+    
+    # Invoice specific fields
+    invoice_number = Column(String, unique=True, nullable=True)
+    notes = Column(String, nullable=True)
+    payment_terms = Column(String, nullable=True)  # e.g., "Net 30"
+    due_date = Column(DateTime, nullable=True)
+    
+    # Timestamps
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+    generated_at = Column(DateTime, nullable=True)
+    sent_at = Column(DateTime, nullable=True)
+    paid_at = Column(DateTime, nullable=True)
+    
+    # User tracking
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    generated_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    updated_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    
+    # Relationships
+    order = relationship("Order", back_populates="invoice_requests")
+    creator = relationship("User", foreign_keys=[created_by])
+    generator = relationship("User", foreign_keys=[generated_by])
+    updater = relationship("User", foreign_keys=[updated_by])
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        if not self.invoice_number and self.id:
+            self.invoice_number = f"INV-{datetime.utcnow().strftime('%Y%m%d')}-{self.id:06d}"
 
 # Create tables function
 async def create_tables():

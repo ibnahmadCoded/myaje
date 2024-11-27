@@ -200,7 +200,7 @@ const InventoryManagement = () => {
                           )}
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-500">${product.price.toFixed(2)}</td>
+                      <td className="px-6 py-4 text-sm text-gray-500">₦{product.price.toFixed(2)}</td>
                       <td className="px-6 py-4">
                         <div className="flex space-x-2">
                           <Button

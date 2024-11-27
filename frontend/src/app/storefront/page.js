@@ -60,7 +60,12 @@ const StorefrontManagement = () => {
         }
       });
       const data = await response.json();
-      setStoreProducts(data);
+
+      if (Array.isArray(data) && data.length === 0) {
+        setStoreProducts([]);
+      } else {
+        setStoreProducts(data);
+      }
     } catch (error) {
       setError('Failed to fetch store products');
     }
@@ -68,7 +73,7 @@ const StorefrontManagement = () => {
 
   const fetchOrders = async () => {
     try {
-      const response = await fetch('/api/orders', { // later
+      const response = await fetch('http://localhost:8000/orders/seller/list', { 
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
@@ -212,7 +217,7 @@ const StorefrontManagement = () => {
               </span>
             </div>
             <div className="text-gray-600">
-              <p>Total: ${order.total}</p>
+              <p>Total: ₦{order.total_amount}</p>
               <p>Date: {new Date(order.created_at).toLocaleDateString()}</p>
             </div>
           </div>
@@ -220,6 +225,22 @@ const StorefrontManagement = () => {
       </div>
     );
   };
+
+  const ProductImagePlaceholder = () => (
+    <svg viewBox="0 0 600 400" className="w-full h-full rounded-2xl transform hover:scale-105 transition-transform duration-300">
+      <defs>
+        <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" style={{ stopColor: '#34D399', stopOpacity: 0.2 }} />
+          <stop offset="100%" style={{ stopColor: '#FCD34D', stopOpacity: 0.2 }} />
+        </linearGradient>
+      </defs>
+      <rect x="0" y="0" width="600" height="400" fill="url(#grad1)" rx="20" />
+      <circle cx="300" cy="200" r="80" fill="#34D399" fillOpacity="0.3" />
+      <path d="M250 180 Q300 120 350 180 T450 180" stroke="#059669" strokeWidth="4" fill="none" />
+      <rect x="150" y="250" width="300" height="40" fill="#059669" fillOpacity="0.1" rx="8" />
+      <rect x="150" y="300" width="200" height="40" fill="#059669" fillOpacity="0.1" rx="8" />
+    </svg>
+  );
 
   const ProductSelector = () => (
     <div className="space-y-4">
@@ -246,7 +267,7 @@ const StorefrontManagement = () => {
               <div className="flex-grow">
                 <h3 className="font-medium">{product.name}</h3>
                 <p className="text-sm text-gray-500">
-                  Stock: {product.quantity} | Original Price: ${product.price}
+                  Stock: {product.quantity} | Original Price: ₦{product.price}
                 </p>
               </div>
               {selectedProducts.includes(product.id) && (
@@ -295,7 +316,7 @@ const StorefrontManagement = () => {
     const images = product.images || [];
     const displayImages = images.length > 0 
       ? images.map(img => `http://localhost:8000/${img.replace('./', '')}`)
-      : ['/api/placeholder/400/400'];
+      : [];
   
     const handleNextImage = (e) => {
       e.stopPropagation();
@@ -313,13 +334,19 @@ const StorefrontManagement = () => {
   
     return (
       <div className="bg-white rounded-lg shadow-md overflow-hidden transition-transform duration-200 hover:shadow-lg hover:-translate-y-1">
-        <div className="relative pb-[100%]">
+        <div className="relative pb-[100%]">         
+          {displayImages.length > 0 ? (
           <img
             src={displayImages[currentImageIndex]}
             alt={product.name}
             className="absolute top-0 left-0 h-full w-full object-cover cursor-pointer"
             onClick={() => setSelectedImage(displayImages[currentImageIndex])}
           />
+        ) : (
+          <div className="absolute top-0 left-0 h-full w-full">
+            <ProductImagePlaceholder />
+          </div>
+        )}
           
           {displayImages.length > 1 && (
             <>
@@ -364,7 +391,7 @@ const StorefrontManagement = () => {
           
           <div className="flex items-center justify-between">
             <span className="text-xl font-bold text-green-600">
-              ${product.storefront_price || product.price}
+            ₦{product.storefront_price || product.price}
             </span>
             
             {isPreview ? (

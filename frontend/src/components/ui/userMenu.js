@@ -25,9 +25,9 @@ export const UserMenu = () => {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
         },
       });
-      
+
       const data = await response.json();
-      
+
       if (response.ok) {
         localStorage.removeItem('token');
         router.push('/login');

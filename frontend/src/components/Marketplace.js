@@ -1,26 +1,30 @@
-import React, { useState } from 'react';
-import { Search, ShoppingCart, PackageSearch, Trash2, Star, Filter, X } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Search, ShoppingCart, PackageSearch, Star, Filter, ChevronLeft, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { CheckoutDialog } from '@/components/CheckoutDialog'
 import { CartDialog } from '@/components/CartDialog'
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 
 const SAMPLE_PRODUCTS = [
   {
-    id: 1,
+    id: 15,
+    product_id: 70,
     name: "Wireless Noise-Cancelling Headphones",
     price: 15000,
     rating: 4.5,
     reviews: 128,
+    images: null,
     store: "TechHub",
     category: "Electronics",
   },
   {
-    id: 2,
+    id: 25,
     name: "Premium Cotton T-Shirt",
     price: 5000,
     rating: 4.2,
     reviews: 89,
+    images: [],
     store: "FashionCore",
     category: "Fashion",
   },
@@ -30,6 +34,7 @@ const SAMPLE_PRODUCTS = [
     price: 25000,
     rating: 4.8,
     reviews: 256,
+    images: [],
     store: "SmartLife",
     category: "Electronics",
   },
@@ -39,6 +44,7 @@ const SAMPLE_PRODUCTS = [
     price: 12000,
     rating: 4.3,
     reviews: 152,
+    images: [],
     store: "Sportify",
     category: "Sports",
   },
@@ -47,6 +53,7 @@ const SAMPLE_PRODUCTS = [
     name: "Organic Skincare Set",
     price: 20000,
     rating: 4.7,
+    images: [],
     reviews: 110,
     store: "BeautyNest",
     category: "Beauty",
@@ -57,6 +64,7 @@ const SAMPLE_PRODUCTS = [
     price: 18000,
     rating: 4.1,
     reviews: 74,
+    images: [],
     store: "HomeComfort",
     category: "Home",
   },
@@ -66,6 +74,7 @@ const SAMPLE_PRODUCTS = [
     price: 30000,
     rating: 4.6,
     reviews: 192,
+    images: [],
     store: "TechHub",
     category: "Electronics",
   },
@@ -75,6 +84,7 @@ const SAMPLE_PRODUCTS = [
     price: 7000,
     rating: 4.4,
     reviews: 65,
+    images: [],
     store: "FashionCore",
     category: "Fashion",
   },
@@ -84,6 +94,7 @@ const SAMPLE_PRODUCTS = [
     price: 10000,
     rating: 4.5,
     reviews: 132,
+    images: [],
     store: "Sportify",
     category: "Sports",
   },
@@ -93,6 +104,7 @@ const SAMPLE_PRODUCTS = [
     price: 15000,
     rating: 4.9,
     reviews: 98,
+    images: [],
     store: "BeautyNest",
     category: "Beauty",
   },
@@ -101,7 +113,7 @@ const SAMPLE_PRODUCTS = [
 const CATEGORIES = ['All', 'Electronics', 'Fashion', 'Home', 'Beauty', 'Sports'];
 
 // Hero Section SVG
-const ProductPlaceholder = () => (
+const ProductImagePlaceholder = () => (
   <svg viewBox="0 0 600 400" className="w-full h-full rounded-2xl transform hover:scale-105 transition-transform duration-300">
     <defs>
       <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="0%">
@@ -139,6 +151,28 @@ const MarketplaceView = () => {
   ]);
 
 const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
+const [products, setProducts] = useState(SAMPLE_PRODUCTS); // Store merged products here. should just be empty at beginning
+const [selectedImage, setSelectedImage] = useState(null);
+const [activeImageIndices, setActiveImageIndices] = useState({});
+
+  // Fetch products from API
+  const fetchProducts = async () => {
+    try {
+      const response = await fetch('http://localhost:8000/marketplace/get_products'); // Adjust API endpoint as needed
+      if (!response.ok) {
+        throw new Error('Failed to fetch products');
+      }
+      const apiProducts = await response.json(); // Expecting an array of products from the API
+      setProducts((prevProducts) => [...apiProducts, ...prevProducts]); // Prepend API products
+    } catch (error) {
+      console.error('Error fetching products:', error);
+    }
+  };
+
+  // Fetch products when the component mounts
+  useEffect(() => {
+    fetchProducts();
+  }, []);
 
 const updateQuantity = (cartId, newQuantity) => {
   if (newQuantity < 1) return;
@@ -184,9 +218,35 @@ const handleCheckoutComplete = () => {
     }, 1000);
   };
 
-  const filteredProducts = SAMPLE_PRODUCTS.filter(product => 
+  // Handlers for image navigation
+  const handleNextImage = (productId, totalImages) => {
+    setActiveImageIndices((prev) => ({
+      ...prev,
+      [productId]: (prev[productId] + 1) % totalImages,
+    }));
+  };
+
+  const handlePrevImage = (productId, totalImages) => {
+    setActiveImageIndices((prev) => ({
+      ...prev,
+      [productId]: (prev[productId] - 1 + totalImages) % totalImages,
+    }));
+  };
+
+  const filteredProducts = products.filter(product => 
     selectedCategory === 'All' || product.category === selectedCategory
   );
+
+  useEffect(() => {
+    // Initialize active image index for products with images
+    const initialIndexes = {};
+    products.forEach(product => {
+      if (product.images && product.images.length > 0) {
+        initialIndexes[product.id] = 0;
+      }
+    });
+    setActiveImageIndices(initialIndexes);
+  }, [products]);
 
   return (
     <div className="flex h-[calc(100vh-4rem)]">
@@ -327,44 +387,66 @@ const handleCheckoutComplete = () => {
 
           {/* Product Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredProducts.map((product) => (
-              <div 
-                key={product.id} 
-                className="bg-white rounded-lg shadow-md p-4 hover:shadow-lg transition-all"
-              >
-                <div className="relative">
-                  <ProductPlaceholder />
-                  <button 
-                    className="absolute top-2 right-2 p-1.5 bg-white rounded-full shadow hover:bg-gray-50"
-                    aria-label="Add to favorites"
-                  >
-                    <Star size={16} className="text-gray-400" />
-                  </button>
+            {filteredProducts.map((product) => {
+              const totalImages = product.images?.length || 0;
+              const activeIndex = activeImageIndices[product.id] || 0;
+
+              return (
+                <div key={product.id} className="bg-white rounded-lg shadow-md p-4 hover:shadow-lg transition-all">
+                  <div className="relative">
+                    {totalImages > 0 ? (
+                      <div className="relative">
+                        <img
+                          src={`http://localhost:8000/${product.images[activeIndex].replace('./', '')}`}
+                          alt={product.name}
+                          className="w-full h-40 object-cover rounded-2xl transform hover:scale-105 transition-transform duration-300"
+                          onClick={() => setSelectedImage(`http://localhost:8000/${product.images[activeIndex].replace('./', '')}`)}
+                        />
+                        {totalImages > 1 && (
+                          <>
+                            <button
+                              onClick={() => handlePrevImage(product.id, totalImages)}
+                              className="absolute left-2 top-1/2 transform -translate-y-1/2 p-1 bg-white rounded-full shadow hover:bg-gray-50"
+                              aria-label="Previous image"
+                            >
+                              <ChevronLeft size={20} />
+                            </button>
+                            <button
+                              onClick={() => handleNextImage(product.id, totalImages)}
+                              className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1 bg-white rounded-full shadow hover:bg-gray-50"
+                              aria-label="Next image"
+                            >
+                              <ChevronRight size={20} />
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    ) : (
+                      <ProductImagePlaceholder />
+                    )}
+                  </div>
+                  <h3 className="text-lg font-semibold mb-2">{product.name}</h3>
+                  <div className="flex items-center mb-2">
+                    <Star size={16} className="text-yellow-400 fill-current" />
+                    <span className="text-sm text-gray-600 ml-1">
+                      {product.rating} ({product.reviews} reviews)
+                    </span>
+                  </div>
+                  <Link href={`/store/${product.store.toLowerCase()}`} className="text-gray-600 hover:text-green-600 hover:underline mb-2 block">
+                    {product.store}
+                  </Link>
+                  <div className="flex justify-between items-center">
+                    <span className="text-lg font-bold">₦{product.price.toLocaleString()}</span>
+                    <button
+                      onClick={() => addToCart(product)}
+                      className="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700 transition-colors"
+                    >
+                      Add to Cart
+                    </button>
+                  </div>
                 </div>
-                <h3 className="text-lg font-semibold mb-2">{product.name}</h3>
-                <div className="flex items-center mb-2">
-                  <Star size={16} className="text-yellow-400 fill-current" />
-                  <span className="text-sm text-gray-600 ml-1">
-                    {product.rating} ({product.reviews} reviews)
-                  </span>
-                </div>
-                <Link 
-                  href={`/store/${product.store.toLowerCase()}`}
-                  className="text-gray-600 hover:text-green-600 hover:underline mb-2 block"
-                >
-                  {product.store}
-                </Link>
-                <div className="flex justify-between items-center">
-                  <span className="text-lg font-bold">₦{product.price.toLocaleString()}</span>
-                  <button 
-                    onClick={() => addToCart(product)}
-                    className="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700 transition-colors"
-                  >
-                    Add to Cart
-                  </button>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </div>
@@ -389,6 +471,27 @@ const handleCheckoutComplete = () => {
         cartItems={cartItems}
         onCheckoutComplete={handleCheckoutComplete}
       />
+
+      {/* Modal for Image */}
+      {selectedImage && (
+        <Dialog open={!!selectedImage} onOpenChange={() => setSelectedImage(null)}>
+        <DialogContent>
+          <DialogTitle>Product Image</DialogTitle>
+          <DialogDescription>This is the image of the product</DialogDescription>
+          <img
+            src={selectedImage}
+            alt="Product"
+            className="w-full h-auto rounded-md shadow-md"
+          />
+          <Button
+            className="mt-4 w-full"
+            onClick={() => setSelectedImage(null)}
+          >
+            Close
+          </Button>
+        </DialogContent>
+      </Dialog>
+      )}
 
     </div>
   );

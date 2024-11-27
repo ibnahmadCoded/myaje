@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi.responses import JSONResponse
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 from jose import jwt, JWTError
@@ -103,12 +104,18 @@ async def logout(request: Request, db: Session = Depends(get_db)):
         blacklisted_token = TokenBlacklist(token=token)
         db.add(blacklisted_token)
         db.commit()
-        return {"message": "Successfully logged out"}
+        
+        # Prepare response and add CORS headers
+        response = JSONResponse(content={"message": "Successfully logged out"})
+        response.headers["Access-Control-Allow-Origin"] = "http://localhost:3000"  # Your frontend origin
+        response.headers["Access-Control-Allow-Credentials"] = "true"
+
+        return response
     
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="Token has expired")
-    except jwt.InvalidTokenError:
-        raise HTTPException(status_code=401, detail="Invalid token")
+    #except jwt.InvalidTokenError:
+    #    raise HTTPException(status_code=401, detail="Invalid token")
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Logout failed: {str(e)}")
@@ -144,7 +151,7 @@ async def validate_token(request: Request, db: Session = Depends(get_db)):
     
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="Token has expired")
-    except jwt.InvalidTokenError:
-        raise HTTPException(status_code=401, detail="Invalid token")
+    #except jwt.InvalidTokenError:
+        #raise HTTPException(status_code=401, detail="Invalid token")
     except Exception:
         raise HTTPException(status_code=400, detail="Token validation failed")

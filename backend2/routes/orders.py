@@ -2,9 +2,9 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import desc
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, Literal
 from datetime import datetime
-from models import MarketplaceOrder, Order, OrderItem, User, Product, OrderStatus, StorefrontProduct
+from models import MarketplaceOrder, Order, OrderItem, User, Product, OrderStatus, StorefrontProduct, InvoiceRequest, InvoiceStatus, Payment
 from sql_database import get_db
 from routes.auth import get_current_user
 from pydantic import BaseModel, EmailStr
@@ -17,12 +17,13 @@ class OrderItemCreate(BaseModel):
     quantity: int
 
 class MarketplaceOrderCreate(BaseModel):
+    order_type: Literal["payment", "invoice"]
     customer_name: str
     customer_email: EmailStr
-    customer_phone: Optional[str] = None
+    customer_phone: Optional[str]
     shipping_address: str
     items: List[OrderItemCreate]
-    payment_info: Dict  # Payment processing details
+    payment_info: Optional[dict] = None
 
 class OrderUpdate(BaseModel):
     status: OrderStatus
@@ -38,7 +39,6 @@ async def submit_marketplace_order(
     
     # Verify all products and group by seller
     for item in order.items:
-        # Get the storefront product (which includes the seller info)
         storefront_product = db.query(StorefrontProduct).join(Product).filter(
             Product.id == item.product_id
         ).first()
@@ -70,7 +70,8 @@ async def submit_marketplace_order(
         seller_items[seller_id].append({
             "product_id": item.product_id,
             "quantity": item.quantity,
-            "price": storefront_product.storefront_price
+            "price": storefront_product.storefront_price,
+            "name": product.name  # Added for invoice generation
         })
     
     try:
@@ -81,12 +82,13 @@ async def submit_marketplace_order(
             customer_phone=order.customer_phone,
             shipping_address=order.shipping_address,
             total_amount=total_amount,
-            payment_info=order.payment_info
+            payment_info=order.payment_info,
+            order_type=order.order_type  # "payment" or "invoice"
         )
         db.add(marketplace_order)
-        db.flush()  # Get the marketplace_order id
+        db.flush()
         
-        # Create individual seller orders
+        # Create individual seller orders and their corresponding payments/invoices
         seller_orders = []
         for seller_id, items in seller_items.items():
             seller_total = sum(item["price"] * item["quantity"] for item in items)
@@ -119,6 +121,37 @@ async def submit_marketplace_order(
                 product = db.query(Product).filter(Product.id == item["product_id"]).first()
                 product.quantity -= item["quantity"]
             
+            # Process payment or create invoice based on order type
+            if order.order_type == "payment":
+                # Create payment record for this seller's portion
+                payment = Payment(
+                    order_id=seller_order.id,
+                    amount=seller_total,
+                    payment_method=order.payment_info["method"],
+                    status="pending",
+                    payment_details=order.payment_info
+                )
+                db.add(payment)
+            else:  # invoice
+                # Create invoice request for this seller's portion
+                invoice_request = InvoiceRequest(
+                    order_id=seller_order.id,
+                    customer_name=order.customer_name,
+                    customer_email=order.customer_email,
+                    customer_phone=order.customer_phone,
+                    shipping_address=order.shipping_address,
+                    amount=seller_total,
+                    items=[{
+                        "product_id": item["product_id"],
+                        "quantity": item["quantity"],
+                        "price": item["price"],
+                        "name": item["name"]
+                    } for item in items],
+                    status=InvoiceStatus.pending,
+                    created_at=datetime.utcnow()
+                )
+                db.add(invoice_request)
+            
             seller_orders.append(seller_order)
         
         db.commit()
@@ -130,7 +163,8 @@ async def submit_marketplace_order(
                 {
                     "seller_id": order.seller_id,
                     "order_id": order.id,
-                    "total_amount": order.total_amount
+                    "total_amount": order.total_amount,
+                    "type": order.order_type
                 }
                 for order in seller_orders
             ]
