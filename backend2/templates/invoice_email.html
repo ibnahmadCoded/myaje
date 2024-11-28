@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Invoice</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #eee;
+        }
+        .company-info {
+            margin-bottom: 30px;
+        }
+        .invoice-info {
+            margin-bottom: 20px;
+        }
+        .customer-info {
+            margin-bottom: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+        th {
+            background-color: #f8f9fa;
+        }
+        .total {
+            text-align: right;
+            font-size: 1.2em;
+            margin-top: 20px;
+        }
+        .account-details {
+            margin-top: 30px;
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+        }
+        .account-details p {
+            margin: 5px 0;
+        }
+        .footer {
+            margin-top: 50px;
+            padding-top: 20px;
+            border-top: 2px solid #eee;
+            text-align: center;
+            color: #666;
+            font-size: 0.9em;
+        }
+        .powered-by {
+            font-size: 1em;
+            font-weight: bold;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>{{ company_name }}</h1>
+        <p>{{ company_address }}</p>
+        <p>{{ company_email }} | {{ company_phone }}</p>
+    </div>
+
+    <div class="invoice-info">
+        <h2>Invoice #{{ invoice.invoice_number }}</h2>
+        <p>Date: {{ generated_date }}</p>
+        <p>Due Date: {{ invoice.due_date }}</p>
+        <p>Payment Terms: {{ invoice.payment_terms }}</p>
+    </div>
+
+    <div class="customer-info">
+        <h3>Bill To:</h3>
+        <p>{{ invoice.customer_name }}</p>
+        <p>{{ invoice.customer_email }}</p>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Item</th>
+                <th>Quantity</th>
+                <th>Price</th>
+                <th>Total</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in invoice_items %}
+            <tr>
+                <td>{{ item.name }}</td>
+                <td>{{ item.quantity }}</td>
+                <td>₦{{ "{:,.2f}".format(item.price) }}</td>
+                <td>₦{{ "{:,.2f}".format(item.quantity * item.price) }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="total">
+        <p>Total Amount: ₦{{ "{:,.2f}".format(invoice.amount) }}</p>
+    </div>
+
+    <!-- Account Details Section (Move this after the items table) -->
+    <div class="account-details">
+        <h4>Account Details:</h4>
+        <p><strong>Account Name:</strong> {{ account.account_name }}</p>
+        <p><strong>Bank:</strong> {{ account.bank_name }}</p>
+        <p><strong>Sort Code:</strong> {{ account.sort_code }}</p>
+        <p><strong>Account Number:</strong> {{ account.account_number }}</p>
+        <p><strong>Account Type:</strong> {{ account.account_type }}</p>
+    </div>
+
+    <div class="footer">
+        <p>Thank you for your business!</p>
+        <p>If you have any questions, please contact us at {{ company_email }}</p>
+
+        <div class="powered-by">
+            <p>Powered by MyAje</p>
+        </div>
+    </div>
+</body>
+</html>

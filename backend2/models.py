@@ -20,6 +20,20 @@ class User(Base):
     transactions = relationship('Transaction', back_populates='owner')
     store_settings = relationship('StoreSettings', back_populates='owner', uselist=False)
     orders = relationship("Order", back_populates="seller")
+    bank_details = relationship("BankDetails", back_populates="user_data")
+
+class BankDetails(Base):
+    __tablename__ = 'bank_details'
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey('users.id'))  # Assuming you have a User model
+    bank_name = Column(String, index=True)
+    account_number = Column(String)
+    account_name = Column(String)
+    sort_code = Column(String)
+    account_type = Column(String)
+    
+    user_data = relationship("User", back_populates="bank_details") 
 
 class Product(Base):
     __tablename__ = "products"
@@ -252,6 +266,77 @@ class InvoiceRequest(Base):
         super().__init__(**kwargs)
         if not self.invoice_number and self.id:
             self.invoice_number = f"INV-{datetime.utcnow().strftime('%Y%m%d')}-{self.id:06d}"
+    
+    def to_dict(self, include_relationships=True):
+        """
+        Convert the invoice request to a dictionary.
+        
+        Args:
+            include_relationships (bool): Whether to include related objects data
+        
+        Returns:
+            dict: Dictionary representation of the invoice request
+        """
+        def format_datetime(dt):
+            return dt.isoformat() if dt else None
+
+        # Base dictionary with direct fields
+        result = {
+            "id": self.id,
+            "order_id": self.order_id,
+            "customer_name": self.customer_name,
+            "customer_email": self.customer_email,
+            "customer_phone": self.customer_phone,
+            "shipping_address": self.shipping_address,
+            "amount": float(self.amount),  # Ensure float serialization
+            "items": self.items,  # JSON field
+            "status": self.status,
+            "invoice_number": self.invoice_number,
+            "notes": self.notes,
+            "payment_terms": self.payment_terms,
+            "due_date": format_datetime(self.due_date),
+            
+            # Timestamps
+            "created_at": format_datetime(self.created_at),
+            "updated_at": format_datetime(self.updated_at),
+            "generated_at": format_datetime(self.generated_at),
+            "sent_at": format_datetime(self.sent_at),
+            "paid_at": format_datetime(self.paid_at),
+            
+            # User IDs
+            "created_by": self.created_by,
+            "generated_by": self.generated_by,
+            "updated_by": self.updated_by,
+        }
+        
+        # Include relationship data if requested
+        if include_relationships:
+            result.update({
+                "order": {
+                    "id": self.order.id,
+                    # Add other relevant order fields later
+                } if self.order else None,
+                
+                "creator": {
+                    "id": self.creator.id,
+                    "name": self.creator.name,
+                    "email": self.creator.email
+                } if self.creator else None,
+                
+                "generator": {
+                    "id": self.generator.id,
+                    "name": self.generator.name,
+                    "email": self.generator.email
+                } if self.generator else None,
+                
+                "updater": {
+                    "id": self.updater.id,
+                    "name": self.updater.name,
+                    "email": self.updater.email
+                } if self.updater else None
+            })
+        
+        return result
 
 # Create tables function
 async def create_tables():
