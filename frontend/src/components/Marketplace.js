@@ -5,110 +5,8 @@ import { CheckoutDialog } from '@/components/CheckoutDialog'
 import { CartDialog } from '@/components/CartDialog'
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-
-const SAMPLE_PRODUCTS = [
-  {
-    id: 15,
-    product_id: 70,
-    name: "Wireless Noise-Cancelling Headphones",
-    price: 15000,
-    rating: 4.5,
-    reviews: 128,
-    images: null,
-    store: "TechHub",
-    category: "Electronics",
-  },
-  {
-    id: 25,
-    name: "Premium Cotton T-Shirt",
-    price: 5000,
-    rating: 4.2,
-    reviews: 89,
-    images: [],
-    store: "FashionCore",
-    category: "Fashion",
-  },
-  {
-    id: 3,
-    name: "Smart Home Security Camera",
-    price: 25000,
-    rating: 4.8,
-    reviews: 256,
-    images: [],
-    store: "SmartLife",
-    category: "Electronics",
-  },
-  {
-    id: 4,
-    name: "Comfortable Running Shoes",
-    price: 12000,
-    rating: 4.3,
-    reviews: 152,
-    images: [],
-    store: "Sportify",
-    category: "Sports",
-  },
-  {
-    id: 5,
-    name: "Organic Skincare Set",
-    price: 20000,
-    rating: 4.7,
-    images: [],
-    reviews: 110,
-    store: "BeautyNest",
-    category: "Beauty",
-  },
-  {
-    id: 6,
-    name: "Classic Wooden Dining Chair",
-    price: 18000,
-    rating: 4.1,
-    reviews: 74,
-    images: [],
-    store: "HomeComfort",
-    category: "Home",
-  },
-  {
-    id: 7,
-    name: "Bluetooth Smartwatch",
-    price: 30000,
-    rating: 4.6,
-    reviews: 192,
-    images: [],
-    store: "TechHub",
-    category: "Electronics",
-  },
-  {
-    id: 8,
-    name: "Formal Leather Belt",
-    price: 7000,
-    rating: 4.4,
-    reviews: 65,
-    images: [],
-    store: "FashionCore",
-    category: "Fashion",
-  },
-  {
-    id: 9,
-    name: "Professional Yoga Mat",
-    price: 10000,
-    rating: 4.5,
-    reviews: 132,
-    images: [],
-    store: "Sportify",
-    category: "Sports",
-  },
-  {
-    id: 10,
-    name: "Aromatherapy Candle Set",
-    price: 15000,
-    rating: 4.9,
-    reviews: 98,
-    images: [],
-    store: "BeautyNest",
-    category: "Beauty",
-  },
-];
+import OpenAI from "openai";
+import axios from 'axios';
 
 const CATEGORIES = ['All', 'Electronics', 'Fashion', 'Home', 'Beauty', 'Sports'];
 
@@ -261,6 +159,7 @@ const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
 const [products, setProducts] = useState(initialProducts); 
 const [selectedImage, setSelectedImage] = useState(null);
 const [activeImageIndices, setActiveImageIndices] = useState({});
+const [filteredProducts, setFilteredProducts] = useState(products);
 
   // Fetch products from API
   const fetchProducts = async () => {
@@ -309,42 +208,194 @@ const handleCheckoutComplete = () => {
     setCartItems(prev => prev.filter(item => item.cartId !== cartId));
   };
 
-  const handleChatSubmit = (e) => {
+  const handleChatSubmit = async (e) => {
     e.preventDefault();
     if (!chatInput.trim()) return;
-
-    setChatMessages(prev => [...prev, { type: 'user', text: chatInput }]);
+  
+    const userMessage = chatInput;
+    setChatMessages(prev => [...prev, { type: 'user', text: userMessage }]);
     setChatInput('');
     setIsLoading(true);
+  
+    try {
+      // Call OpenAI to determine intent and parameters
+      const API_KEY = "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";
+      const response = await axios.post(
+        'https://api.openai.com/v1/chat/completions',
+        {
+          model: "gpt-4o-mini", // Use the appropriate model for your task
+          messages: [
+            {
+              role: "system",
+              content: `You are an assistant that determines the user's intent and any required parameters.
+      Here are the possible intents: 
+      1. greet: The user greets the assistant.
+      2. checkout: The user wants to initiate checkout.
+      3. add_to_cart: The user wants to add a product to their cart. Extract necessary parameters for this intent.
+      4. get_product: The user wants to search for products. Extract filtering parameters. Include support for both exact matching and range-based filtering. For range filtering, use an object structure with fields 'operator' and 'target' (e.g., { "price": { "operator": ">=", "target": 100 } }). Ensure that the parameter must be a product field! Do not return a parameter that is not a product field as presented in the sample product.
+      5. other: Any other intent that doesn't fit the above categories.
+      
+      Here is an example product to guide your understanding of product structure:
+      {
+          "id": 1,
+          "user_id": 1,
+          "product_id": 2,
+          "price": 2500,
+          "created_at": "2024-12-09T09:49:04.311959",
+          "name": "shirt",
+          "description": "this is a shirt",
+          "category": "Fashion",
+          "images": ["./uploaded_images/bf677294faf94f1290abec3b9c703e3b.PNG"],
+          "store": "NabRash"
+      }
+      
+      Here is a list of possible product categories: ${CATEGORIES.join(", ")}.
+      
+      Analyze the user's message: "${userMessage}". Return a JSON object with fields 'intent' and 'parameters' that describes the intent and any relevant parameters for the detected intent.`,
+            },
+          ],
+          temperature: 0.7,
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${API_KEY}`,
+          },
+        }
+      );
+  
+      const result = response.data.choices[0].message.content.trim();
 
-    // Simulate AI response
-    setTimeout(() => {
-      setChatMessages(prev => [...prev, {
-        type: 'bot',
-        text: "I'll help you find what you're looking for. Could you provide more details about what you're interested in?"
-      }]);
+      console.log(result)
+
+      const { intent, parameters } = JSON.parse(result); // Parse intent and parameters
+
+      const normalizedIntent = intent.trim().toLowerCase();
+  
+      if (normalizedIntent === "get_product") {
+        // Filter products based on parameters
+        const filtered = products.filter(product =>
+          Object.entries(parameters).every(([key, value]) => {
+            if (typeof value === "object" && value !== null) {
+              // Check for range or condition object
+              const { operator, target } = value;
+              switch (operator) {
+                case ">=":
+                  return product[key] >= target;
+                case "<=":
+                  return product[key] <= target;
+                case ">":
+                  return product[key] > target;
+                case "<":
+                  return product[key] < target;
+                case "==":
+                  return product[key] == target;
+                case "=":
+                  return product[key] == target;
+                case "!=":
+                  return product[key] != target;
+                default:
+                  throw new Error(`Unsupported operator: ${operator}`);
+              }
+            } else {
+              // Default to string matching
+              return String(product[key]).toLowerCase().includes(String(value).toLowerCase());
+            }
+          })
+        );
+  
+        // Update the products state
+        //setFilteredProducts(filtered);
+        if (filtered.length > 0 && JSON.stringify(filtered) !== JSON.stringify(filteredProducts)) {
+          setFilteredProducts(filtered);
+        }
+  
+        // Add a confirmation message to the chat
+        setChatMessages(prev => [
+          ...prev,
+          {
+            type: 'bot',
+            text: filtered.length > 0
+              ? "I've filtered the products based on your query. Check the main window."
+              : "I couldn't find any products matching your query.",
+          },
+        ]);
+      } else if (normalizedIntent === "add_to_cart") {
+        // Handle "add to cart" logic
+        const productToAdd = products[parameters.index - 1]; // Assuming parameters.index is 1-based
+        if (productToAdd) {
+          addToCart(productToAdd);
+          setChatMessages(prev => [
+            ...prev,
+            { type: 'bot', text: `Added ${productToAdd.name} to your cart.` },
+          ]);
+        } else {
+          setChatMessages(prev => [
+            ...prev,
+            { type: 'bot', text: "I couldn't find the product to add to your cart." },
+          ]);
+        }
+      } else if (normalizedIntent === "checkout") {
+        // Handle "checkout" logic
+        setIsCheckoutOpen(true);
+        setChatMessages(prev => [
+          ...prev,
+          { type: 'bot', text: "I've opened the checkout for you." },
+        ]);
+      }  else if (normalizedIntent === "greet") {
+        // Step 3: Fetch greeting reply from OpenAI
+        const greetingResponse = await axios.post(
+          'https://api.openai.com/v1/chat/completions',
+          {
+            model: "gpt-4o-mini",
+            messages: [
+              { role: "system", content: "You are a polite and friendly assistant." },
+              { role: "user", content: `Reply to this greeting: "${userMessage}"` },
+            ],
+            temperature: 0.7,
+          },
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${API_KEY}`,
+            },
+          }
+        );
+  
+        const greetingReply = greetingResponse.data.choices[0].message.content.trim();
+  
+        setChatMessages((prev) => [
+          ...prev,
+          { type: 'bot', text: greetingReply },
+        ]);
+      } else {
+        setChatMessages(prev => [
+          ...prev,
+          { type: 'bot', text: "Sorry, I didn't understand that request." },
+        ]);
+      }
+    } catch (error) {
+      console.error("Error handling chat input:", error);
+      setChatMessages(prev => [
+        ...prev,
+        { type: 'bot', text: "Something went wrong while processing your request." },
+      ]);
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
   };
 
-  // Handlers for image navigation
-  const handleNextImage = (productId, totalImages) => {
-    setActiveImageIndices((prev) => ({
-      ...prev,
-      [productId]: (prev[productId] + 1) % totalImages,
-    }));
-  };
-
-  const handlePrevImage = (productId, totalImages) => {
-    setActiveImageIndices((prev) => ({
-      ...prev,
-      [productId]: (prev[productId] - 1 + totalImages) % totalImages,
-    }));
-  };
-
-  const filteredProducts = products.filter(product => 
-    selectedCategory === 'All' || product.category === selectedCategory
-  );
+  //const filteredProducts = products.filter(product => 
+  //  selectedCategory === 'All' || product.category === selectedCategory
+  //);
+  // Default filter logic
+  useEffect(() => {
+    setFilteredProducts(
+      products.filter(
+        (product) => selectedCategory === 'All' || product.category === selectedCategory
+      )
+    );
+  }, [products, selectedCategory]);
 
   useEffect(() => {
     // Initialize active image index for products with images
@@ -360,8 +411,9 @@ const handleCheckoutComplete = () => {
   return (
     <div className="flex h-[calc(100vh-4rem)]">
       {/* Left Column - Chat */}
-      <div className="w-96 bg-white border-r hidden lg:flex flex-col">
+      <div className="w-96 bg-white border-r hidden lg:flex flex-col h-full">
         <div className="flex-1 flex flex-col">
+          {/* Header */}
           <div className="p-4 bg-green-50 border-b">
             <div className="flex items-center gap-2">
               <PackageSearch size={24} className="text-green-600" />
@@ -372,26 +424,30 @@ const handleCheckoutComplete = () => {
             </div>
           </div>
 
-          <div 
+          {/* Chat Messages */}
+          <div
             className="flex-1 overflow-y-auto p-4 space-y-4"
+            style={{ maxHeight: "calc(100vh - 4rem - 8rem)" }} // Adjust for header/footer
             role="log"
             aria-live="polite"
           >
             {chatMessages.map((message, index) => (
-              <div 
-                key={index} 
-                className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
+              <div
+                key={index}
+                className={`flex ${message.type === "user" ? "justify-end" : "justify-start"}`}
               >
-                <div className={`inline-block p-3 rounded-lg max-w-[80%] ${
-                  message.type === 'user' 
-                    ? 'bg-green-600 text-white' 
-                    : 'bg-gray-100'
-                }`}>
+                <div
+                  className={`inline-block p-3 rounded-lg max-w-[80%] ${
+                    message.type === "user"
+                      ? "bg-green-600 text-white"
+                      : "bg-gray-100"
+                  }`}
+                >
                   <p>{message.text}</p>
                   {message.options && (
                     <div className="mt-2 space-y-2">
                       {message.options.map((option, i) => (
-                        <button 
+                        <button
                           key={i}
                           className="block w-full text-left px-3 py-2 rounded bg-white text-green-600 hover:bg-green-50 text-sm transition-colors"
                           onClick={() => {
@@ -415,6 +471,7 @@ const handleCheckoutComplete = () => {
             )}
           </div>
 
+          {/* Chat Input */}
           <form onSubmit={handleChatSubmit} className="p-4 border-t">
             <div className="flex gap-2">
               <input
@@ -425,7 +482,7 @@ const handleCheckoutComplete = () => {
                 className="flex-1 px-4 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-green-500"
                 aria-label="Chat input"
               />
-              <button 
+              <button
                 type="submit"
                 className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
                 disabled={isLoading}
@@ -436,7 +493,8 @@ const handleCheckoutComplete = () => {
           </form>
         </div>
 
-        <button 
+        {/* Shopping Cart Button */}
+        <button
           onClick={() => setIsCartOpen(true)}
           className="w-full p-4 flex items-center justify-between hover:bg-gray-50 border-t"
           aria-label="Open shopping cart"
