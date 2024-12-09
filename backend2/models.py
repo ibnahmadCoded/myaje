@@ -4,6 +4,7 @@ from starlette.concurrency import run_in_threadpool
 from sqlalchemy.orm import relationship
 from sql_database import Base, engine
 from sqlalchemy.sql import func
+from slugify import slugify
 import enum
 
 class User(Base):
@@ -13,6 +14,7 @@ class User(Base):
     email = Column(String(120), unique=True, nullable=False)
     password = Column(String(60), nullable=False)
     business_name = Column(String(100), nullable=False)
+    store_slug = Column(String(150), unique=True, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     
     # Relationships
@@ -21,6 +23,20 @@ class User(Base):
     store_settings = relationship('StoreSettings', back_populates='owner', uselist=False)
     orders = relationship("Order", back_populates="seller")
     bank_details = relationship("BankDetails", back_populates="user_data")
+
+    def generate_store_slug(self, db):
+        base_slug = slugify(self.business_name)
+        slug = base_slug
+        counter = 1
+        
+        while True:
+            existing = db.query(User).filter_by(store_slug=slug).first()
+            if not existing or existing.id == self.id:
+                break
+            slug = f"{base_slug}-{counter}"
+            counter += 1
+        
+        self.store_slug = slug
 
 class BankDetails(Base):
     __tablename__ = 'bank_details'

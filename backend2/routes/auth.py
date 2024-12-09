@@ -65,8 +65,18 @@ async def signup(request: Request, db: Session = Depends(get_db)):
         password=hashed_password,
         business_name=data['business_name']
     )
-    db.add(user)
-    db.commit()
+
+    # Generate the store slug
+    user.generate_store_slug(db=db)
+
+    # Save the user to the database
+    try:
+        db.add(user)
+        db.commit()
+        db.refresh(user)  # Refresh the user instance with the committed data
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail="Error creating user")
 
     return {"message": "User created successfully"}
 

@@ -193,8 +193,15 @@ const ProductCard = ({ product, onAddToCart, onImageClick }) => {
           </div>
           <span className="text-sm text-gray-500">({product.reviews} reviews)</span>
         </div>
+        {/* 
         <Link 
           href={`/store/${product.store.toLowerCase()}`} 
+          className="text-sm text-gray-600 hover:text-green-600 hover:underline mb-3 inline-block"
+        >
+          {product.store}
+        </Link> */}
+        <Link 
+          href={`/store/${product.store.toLowerCase().replace(/\s+/g, '-')}`} 
           className="text-sm text-gray-600 hover:text-green-600 hover:underline mb-3 inline-block"
         >
           {product.store}
@@ -229,7 +236,7 @@ const SearchBar = ({ onSearch }) => (
   </div>
 );
 
-const MarketplaceView = () => {
+const MarketplaceView = ({ products: initialProducts = [], isStorePage = false }) => { // should be initial_products = []
   const [cartItems, setCartItems] = useState([]);
   const [chatInput, setChatInput] = useState('');
   const [isCartOpen, setIsCartOpen] = useState(false);
@@ -251,7 +258,7 @@ const MarketplaceView = () => {
   ]);
 
 const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
-const [products, setProducts] = useState(SAMPLE_PRODUCTS); // Store merged products here. should just be empty at beginning
+const [products, setProducts] = useState(initialProducts); 
 const [selectedImage, setSelectedImage] = useState(null);
 const [activeImageIndices, setActiveImageIndices] = useState({});
 
@@ -263,16 +270,18 @@ const [activeImageIndices, setActiveImageIndices] = useState({});
         throw new Error('Failed to fetch products');
       }
       const apiProducts = await response.json(); // Expecting an array of products from the API
-      setProducts((prevProducts) => [...apiProducts, ...prevProducts]); // Prepend API products
+      //setProducts((prevProducts) => [...apiProducts, ...prevProducts]); // Prepend API products
+      setProducts(apiProducts); 
     } catch (error) {
       console.error('Error fetching products:', error);
     }
   };
 
-  // Fetch products when the component mounts
   useEffect(() => {
-    fetchProducts();
-  }, []);
+    if (!isStorePage && initialProducts.length === 0) {
+      fetchProducts();
+    }
+  }, [isStorePage]);
 
 const updateQuantity = (cartId, newQuantity) => {
   if (newQuantity < 1) return;
