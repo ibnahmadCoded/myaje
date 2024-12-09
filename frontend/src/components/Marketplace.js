@@ -219,7 +219,7 @@ const handleCheckoutComplete = () => {
   
     try {
       // Call OpenAI to determine intent and parameters
-
+      const API_KEY = "";
       const response = await axios.post(
         'https://api.openai.com/v1/chat/completions',
         {
