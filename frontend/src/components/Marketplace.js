@@ -10,7 +10,7 @@ import axios from 'axios';
 
 const CATEGORIES = ['All', 'Electronics', 'Fashion', 'Home', 'Beauty', 'Sports'];
 
-const openai = new OpenAI({ apiKey: 'sk-proj-0EniH43RL23qNaCBYlQS5I5JPVVrBUPZF7UX-iixXxxyML-Zfgobxb5tmmB766F1njxsXpk8MZT3BlbkFJx1h07HJHMucY5MeaLQVJF7rQcY9l8rxCJuLyHHoVu6GkFrYiQYcB3_gaL4uFWi4T-Rwm69B7YA', dangerouslyAllowBrowser: true })
+const openai = ""
 
 // product image SVG
 const ProductImagePlaceholder = () => (
