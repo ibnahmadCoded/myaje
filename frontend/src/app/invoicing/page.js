@@ -1,7 +1,7 @@
 'use client';
 
 import DashboardLayout from '@/components/DashboardLayout';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, memo } from 'react';
 import { Search, FileText, Mail, Download, Loader2, PenLine, AlertCircle, RefreshCw, Building, Building2, CreditCard, Hash, Wallet } from 'lucide-react';
 import { Table } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
@@ -28,11 +28,10 @@ const InvoicingPage = () => {
   const [generateInvoiceId, setGenerateInvoiceId] = useState(null);
   const [paymentTerms, setPaymentTerms] = useState('Net 30');
   const [dueDate, setDueDate] = useState('');
-  const [showAccountDialog, setShowAccountDialog] = useState(false);
   const [accountDetails, setAccountDetails] = useState({
     bankName: '',
-    accountNumber: '',
     accountName: '',
+    accountNumber: '',
     sortCode: '',
     accountType: ''
   });
@@ -40,41 +39,11 @@ const InvoicingPage = () => {
 
   const { toast } = useToast();
 
-  // Function to handle account details update (should send to db backend)
-  const handleAccountUpdate = async () => {
-    try {
-      const response = await fetch('http://localhost:8000/invoicing/save_bank_details', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(accountDetails),
-      });
-      const data = await response.json();
-      if (response.ok) {
-        toast({
-          title: "Success",
-          description: "Account details updated successfully",
-        });
-        setIsEditingAccount(false);
-      } else {
-        throw new Error(data.detail);
-      }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to update account details",
-        variant: "destructive",
-      });
-    }
-  };
-
 
   useEffect(() => {
     fetchInvoices();
     fetchBankDetails();
-  }, []);
+  }, []); 
 
   const fetchInvoices = async () => {
     try {
@@ -104,7 +73,9 @@ const InvoicingPage = () => {
         },
       });
       const data = await response.json();
+      console.log(data)
       setAccountDetails(data);
+      console.log(accountDetails)
 
     } catch (error) {
       toast({
@@ -302,28 +273,184 @@ const InvoicingPage = () => {
     </Card>
   );
 
-  const AccountField = ({ label, value, id, icon: IconComponent }) => (
-    <div className="relative">
-      <Label htmlFor={id} className="flex items-center gap-2 text-gray-600">
-        {IconComponent && <IconComponent className="h-4 w-4" />}
-        {label}
-      </Label>
-      {isEditingAccount ? (
-        <Input
-          id={id}
-          value={value}
-          onChange={(e) => setAccountDetails(prev => ({
-            ...prev,
-            [id]: e.target.value
-          }))}
-          className="mt-1"
-        />
-      ) : (
-        <div className="mt-2 p-3 bg-gray-50 rounded-lg border">
-          <p className="font-medium">{value || 'Not set'}</p>
+  const handleAccountUpdate = async (formData) => {
+    try {
+      const response = await fetch('http://localhost:8000/invoicing/save_bank_details', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      });
+      
+      if (!response.ok) throw new Error('Failed to update account details');
+      
+      //const data = await response.json();
+      fetchBankDetails();
+      setIsEditingAccount(false);
+      toast({
+        title: "Success",
+        description: "Account details updated successfully",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update account details",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const AccountDetailsForm = ({ onSubmit, onCancel, initialData }) => {
+    const [formData, setFormData] = useState({
+      accountName: initialData.accountName || "",
+      accountNumber: initialData.accountNumber || "",
+      bankName: initialData.bankName || "",
+      sortCode: initialData.sortCode || "",
+      accountType: initialData.accountType || "",
+    });
+  
+    const handleChange = (field) => (e) => {
+      setFormData(prev => ({
+        ...prev,
+        [field]: e.target.value
+      }));
+    };
+  
+    const handleSubmit = (e) => {
+      e.preventDefault();
+      onSubmit(formData);
+    };
+  
+    return (
+      <form onSubmit={handleSubmit}>
+        <Card className="p-6">
+          <div className="grid gap-6 md:grid-cols-2">
+            <div className="relative">
+              <Label htmlFor="accountName" className="flex items-center gap-2 text-gray-600">
+                <Building className="h-4 w-4" />
+                Account Name
+              </Label>
+              <Input
+                id="accountName"
+                value={formData.accountName}
+                onChange={handleChange("accountName")}
+                className="mt-1"
+              />
+            </div>
+            <div className="relative">
+              <Label htmlFor="accountNumber" className="flex items-center gap-2 text-gray-600">
+                <CreditCard className="h-4 w-4" />
+                Account Number
+              </Label>
+              <Input
+                id="accountNumber"
+                value={formData.accountNumber}
+                onChange={handleChange("accountNumber")}
+                className="mt-1"
+              />
+            </div>
+            <div className="relative">
+              <Label htmlFor="bankName" className="flex items-center gap-2 text-gray-600">
+                <Building2 className="h-4 w-4" />
+                Bank Name
+              </Label>
+              <Input
+                id="bankName"
+                value={formData.bankName}
+                onChange={handleChange("bankName")}
+                className="mt-1"
+              />
+            </div>
+            <div className="relative">
+              <Label htmlFor="sortCode" className="flex items-center gap-2 text-gray-600">
+                <Hash className="h-4 w-4" />
+                Sort Code
+              </Label>
+              <Input
+                id="sortCode"
+                value={formData.sortCode}
+                onChange={handleChange("sortCode")}
+                className="mt-1"
+              />
+            </div>
+            <div className="relative">
+              <Label htmlFor="accountType" className="flex items-center gap-2 text-gray-600">
+                <Wallet className="h-4 w-4" />
+                Account Type
+              </Label>
+              <Input
+                id="accountType"
+                value={formData.accountType}
+                onChange={handleChange("accountType")}
+                className="mt-1"
+              />
+            </div>
+          </div>
+          <div className="flex justify-end gap-4 mt-6">
+            <Button type="button" variant="outline" onClick={onCancel}>
+              Cancel
+            </Button>
+            <Button type="submit">
+              Save Changes
+            </Button>
+          </div>
+        </Card>
+      </form>
+    );
+  };
+
+  const AccountDetailsView = ({ accountDetails, onEdit }) => (
+    <Card className="p-6">
+      <div className="grid gap-6 md:grid-cols-2">
+        <div className="relative">
+          <Label className="flex items-center gap-2 text-gray-600">
+            <Building className="h-4 w-4" />
+            Account Name
+          </Label>
+          <div className="mt-2 p-3 bg-gray-50 rounded-lg border">
+            <p className="font-medium">{accountDetails.accountName || "Not set"}</p>
+          </div>
         </div>
-      )}
-    </div>
+        <div className="relative">
+          <Label className="flex items-center gap-2 text-gray-600">
+            <CreditCard className="h-4 w-4" />
+            Account Number
+          </Label>
+          <div className="mt-2 p-3 bg-gray-50 rounded-lg border">
+            <p className="font-medium">{accountDetails.accountNumber || "Not set"}</p>
+          </div>
+        </div>
+        <div className="relative">
+          <Label className="flex items-center gap-2 text-gray-600">
+            <Building2 className="h-4 w-4" />
+            Bank Name
+          </Label>
+          <div className="mt-2 p-3 bg-gray-50 rounded-lg border">
+            <p className="font-medium">{accountDetails.bankName || "Not set"}</p>
+          </div>
+        </div>
+        <div className="relative">
+          <Label className="flex items-center gap-2 text-gray-600">
+            <Hash className="h-4 w-4" />
+            Sort Code
+          </Label>
+          <div className="mt-2 p-3 bg-gray-50 rounded-lg border">
+            <p className="font-medium">{accountDetails.sortCode || "Not set"}</p>
+          </div>
+        </div>
+        <div className="relative">
+          <Label className="flex items-center gap-2 text-gray-600">
+            <Wallet className="h-4 w-4" />
+            Account Type
+          </Label>
+          <div className="mt-2 p-3 bg-gray-50 rounded-lg border">
+            <p className="font-medium">{accountDetails.accountType || "Not set"}</p>
+          </div>
+        </div>
+      </div>
+    </Card>
   );
 
   return (
@@ -518,85 +645,18 @@ const InvoicingPage = () => {
                 </Alert>
               )}
 
-              <div className="grid gap-6">
-                <Card className="p-6">
-                  <div className="grid gap-6 md:grid-cols-2">
-                    <AccountField 
-                      label="Account Name"
-                      value={accountDetails.accountName}
-                      id="accountName"
-                      icon={Building}
-                    />
-                    <AccountField 
-                      label="Account Number"
-                      value={accountDetails.accountNumber}
-                      id="accountNumber"
-                      icon={CreditCard}
-                    />
-                    <AccountField 
-                      label="Bank Name"
-                      value={accountDetails.bankName}
-                      id="bankName"
-                      icon={Building2}
-                    />
-                    <AccountField 
-                      label="Sort Code"
-                      value={accountDetails.sortCode}
-                      id="sortCode"
-                      icon={Hash}
-                    />
-                    <AccountField 
-                      label="Account Type"
-                      value={accountDetails.accountType}
-                      id="accountType"
-                      icon={Wallet}
-                    />
-                  </div>
-
-                  {isEditingAccount && (
-                    <div className="flex justify-end mt-6">
-                      <Button onClick={handleAccountUpdate} className="gap-2">
-                        Save Changes
-                      </Button>
-                    </div>
-                  )}
-                </Card>
-
-                <Card className="p-6">
-                  <h3 className="text-lg font-semibold mb-4">Recent Activity</h3>
-                  <div className="space-y-4">
-                    <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 rounded-full bg-blue-100">
-                          <FileText className="h-4 w-4 text-blue-600" />
-                        </div>
-                        <div>
-                          <p className="font-medium">Last Invoice Generated</p>
-                          <p className="text-sm text-gray-600">
-                            {invoices.length > 0 
-                              ? new Date(invoices[0].created_at).toLocaleDateString()
-                              : 'No invoices yet'
-                            }
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 rounded-full bg-green-100">
-                          <Download className="h-4 w-4 text-green-600" />
-                        </div>
-                        <div>
-                          <p className="font-medium">Total Invoices Generated</p>
-                          <p className="text-sm text-gray-600">
-                            {invoices.filter(i => i.status !== 'pending').length} invoices
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </Card>
-              </div>
+              {isEditingAccount ? (
+                <AccountDetailsForm
+                  initialData={accountDetails}
+                  onSubmit={handleAccountUpdate}
+                  onCancel={() => setIsEditingAccount(false)}
+                />
+              ) : (
+                <AccountDetailsView
+                  accountDetails={accountDetails}
+                  onEdit={() => setIsEditingAccount(true)}
+                />
+              )}
             </div>
           </TabsContent>
         </Tabs>

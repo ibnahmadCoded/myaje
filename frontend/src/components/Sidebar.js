@@ -10,7 +10,8 @@ import {
   X,
   Search,
   Bell,
-  NotebookIcon
+  NotebookIcon,
+  PackageOpen
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -32,7 +33,8 @@ const Sidebar = ({
     { icon: <Package size={20} />, label: 'Inventory', href: '/inventory', badge: 'Low' },
     { icon: <Store size={20} />, label: 'Storefront', href: '/storefront' },
     { icon: <NotebookIcon size={20} />, label: 'Invoicing', href: '/invoicing' },
-    { icon: <LineChart size={20} />, label: 'Accounting', href: '/accounting', badge: 'New' },
+    { icon: <PackageOpen size={20} />, label: 'Restock', href: '/restock' },
+    { icon: <LineChart size={20} />, label: 'Accounting', href: '/accounting', badge: 'Coming Soon' },
   ];
 
   return (

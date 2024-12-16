@@ -25,3 +25,15 @@ export const CardTitle = ({ children }) => (
     {children}
   </h2>
 );
+
+export const CardDescription = ({ children }) => (
+  <p className="text-sm text-gray-600">
+    {children}
+  </p>
+);
+
+export const CardFooter = ({ children }) => (
+  <div className="border-t mt-2 pt-2">
+    {children}
+  </div>
+);

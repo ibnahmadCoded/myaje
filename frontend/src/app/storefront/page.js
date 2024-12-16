@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { Plus, Eye, ChevronLeft, ChevronRight, Bell, Edit, Trash2, Share2, CheckCircle } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Plus, Eye, ChevronLeft, ChevronRight, Bell, Edit, Trash2, Share2, PackageSearch, ShoppingCart } from 'lucide-react';
 import DashboardLayout from '@/components/DashboardLayout';
 import {
   Dialog,
@@ -22,7 +22,7 @@ const StorefrontManagement = () => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [selectedProducts, setSelectedProducts] = useState([]);
+  //const [selectedProducts, setSelectedProducts] = useState([]);
   const [previewMode, setPreviewMode] = useState(false);
   const [productPrices, setProductPrices] = useState({});
   const [editingProduct, setEditingProduct] = useState(null);
@@ -154,31 +154,7 @@ const StorefrontManagement = () => {
     fetchData();
   }, []);
 
-  const handleAddToStore = async () => {
-    try {
-      for (const productId of selectedProducts) {
-        const price = productPrices[productId];
-        if (!price) continue;
-
-        await fetch('http://localhost:8000/storefront/add_products', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          },
-          body: JSON.stringify({ 
-            product_id: productId,
-            storefront_price: parseFloat(price)
-          })
-        });
-      }
-      fetchStoreProducts();
-      setSelectedProducts([]);
-      setProductPrices({});
-    } catch (error) {
-      setError('Failed to add products to store');
-    }
-  };
+  
 
   const handleUpdatePrice = async () => {
     if (!editingProduct) return;
@@ -307,75 +283,120 @@ const StorefrontManagement = () => {
     );
   };
 
+  // product image SVG
   const ProductImagePlaceholder = () => (
-    <svg viewBox="0 0 600 400" className="w-full h-full rounded-2xl transform hover:scale-105 transition-transform duration-300">
-      <defs>
-        <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="0%">
-          <stop offset="0%" style={{ stopColor: '#34D399', stopOpacity: 0.2 }} />
-          <stop offset="100%" style={{ stopColor: '#FCD34D', stopOpacity: 0.2 }} />
-        </linearGradient>
-      </defs>
-      <rect x="0" y="0" width="600" height="400" fill="url(#grad1)" rx="20" />
-      <circle cx="300" cy="200" r="80" fill="#34D399" fillOpacity="0.3" />
-      <path d="M250 180 Q300 120 350 180 T450 180" stroke="#059669" strokeWidth="4" fill="none" />
-      <rect x="150" y="250" width="300" height="40" fill="#059669" fillOpacity="0.1" rx="8" />
-      <rect x="150" y="300" width="200" height="40" fill="#059669" fillOpacity="0.1" rx="8" />
-    </svg>
-  );
-
-  const ProductSelector = () => (
-    <div className="space-y-4">
-      <div className="grid grid-cols-1 gap-4">
-        {inventoryProducts
-          .filter(p => !storeProducts.find(sp => sp.product_id === p.id))
-          .map(product => (
-            <div
-              key={product.id}
-              className="flex items-center p-4 border rounded-lg hover:bg-gray-50"
-            >
-              <input
-                type="checkbox"
-                className="mr-4"
-                checked={selectedProducts.includes(product.id)}
-                onChange={(e) => {
-                  if (e.target.checked) {
-                    setSelectedProducts([...selectedProducts, product.id]);
-                  } else {
-                    setSelectedProducts(selectedProducts.filter(id => id !== product.id));
-                  }
-                }}
-              />
-              <div className="flex-grow">
-                <h3 className="font-medium">{product.name}</h3>
-                <p className="text-sm text-gray-500">
-                  Stock: {product.quantity} | Original Price: ₦{product.price}
-                </p>
-              </div>
-              {selectedProducts.includes(product.id) && (
-                <input
-                  type="number"
-                  className="w-24 p-2 border rounded"
-                  placeholder="Price"
-                  value={productPrices[product.id] || ''}
-                  onChange={(e) => setProductPrices({
-                    ...productPrices,
-                    [product.id]: e.target.value
-                  })}
-                />
-              )}
-            </div>
-          ))}
-      </div>
-      <button
-        onClick={handleAddToStore}
-        disabled={selectedProducts.length === 0 || 
-          !selectedProducts.every(id => productPrices[id])}
-        className="w-full bg-green-100 hover:bg-green-200 text-gray-700 font-bold py-2 px-4 rounded disabled:opacity-50"
-      >
-        Add Selected Products to Store
-      </button>
+    <div className="aspect-[4/3] w-full relative bg-green-100 rounded-2xl flex items-center justify-center">
+      <PackageSearch size={48} className="text-green-300" />
     </div>
   );
+
+  const ProductSelector = () => {
+    const [selectedProducts, setSelectedProducts] = useState([]);
+    const [productPrices, setProductPrices] = useState({});
+    const inputRefs = useRef({}); // Store references to inputs
+  
+    const handleCheckboxChange = (productId, isChecked) => {
+      if (isChecked) {
+        setSelectedProducts((prev) => [...prev, productId]);
+      } else {
+        setSelectedProducts((prev) => prev.filter((id) => id !== productId));
+        setProductPrices((prev) => {
+          const updatedPrices = { ...prev };
+          delete updatedPrices[productId];
+          return updatedPrices;
+        });
+      }
+    };
+  
+    const handlePriceChange = (productId, newPrice) => {
+      setProductPrices((prev) => ({
+        ...prev,
+        [productId]: newPrice,
+      }));
+    };
+
+    const handleAddToStore = async () => {
+      try {
+        for (const productId of selectedProducts) {
+          const price = productPrices[productId];
+          if (!price) continue;
+  
+          await fetch('http://localhost:8000/storefront/add_products', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${localStorage.getItem('token')}`
+            },
+            body: JSON.stringify({ 
+              product_id: productId,
+              storefront_price: parseFloat(price)
+            })
+          });
+        }
+        fetchStoreProducts();
+        setSelectedProducts([]);
+        setProductPrices({});
+      } catch (error) {
+        setError('Failed to add products to store');
+      }
+    };
+  
+    return (
+      <div className="space-y-4">
+        <div className="grid grid-cols-1 gap-4">
+          {inventoryProducts
+            .filter((p) => !storeProducts.find((sp) => sp.product_id === p.id))
+            .map((product) => {
+              const isSelected = selectedProducts.includes(product.id);
+  
+              return (
+                <div
+                  key={product.id}
+                  className="flex items-center p-4 border rounded-lg hover:bg-gray-50"
+                >
+                  <input
+                    type="checkbox"
+                    className="mr-4"
+                    checked={isSelected}
+                    onChange={(e) => handleCheckboxChange(product.id, e.target.checked)}
+                  />
+                  <div className="flex-grow">
+                    <h3 className="font-medium">{product.name}</h3>
+                    <p className="text-sm text-gray-500">
+                      Stock: {product.quantity} | Original Price: ₦{product.price}
+                    </p>
+                  </div>
+                  {isSelected && (
+                    <input
+                      type="number"
+                      ref={(el) => (inputRefs.current[product.id] = el)} // Store the reference
+                      className="w-24 p-2 border rounded"
+                      placeholder="Price"
+                      value={productPrices[product.id] || ""}
+                      onChange={(e) => handlePriceChange(product.id, e.target.value)}
+                      onFocus={() => {
+                        // Restore focus if re-rendered
+                        inputRefs.current[product.id]?.focus();
+                      }}
+                    />
+                  )}
+                </div>
+              );
+            })}
+        </div>
+        <button
+          onClick={handleAddToStore}
+          disabled={
+            selectedProducts.length === 0 ||
+            !selectedProducts.every((id) => productPrices[id])
+          }
+          className="w-full bg-green-100 hover:bg-green-200 text-gray-700 font-bold py-2 px-4 rounded disabled:opacity-50"
+        >
+          Add Selected Products to Store
+        </button>
+      </div>
+    );
+  };
 
   const handleDeleteFromStore = async (productId) => {
     try {
@@ -414,70 +435,64 @@ const StorefrontManagement = () => {
     };
   
     return (
-      <div className="bg-white rounded-lg shadow-md overflow-hidden transition-transform duration-200 hover:shadow-lg hover:-translate-y-1">
-        <div className="relative pb-[100%]">         
-          {displayImages.length > 0 ? (
-          <img
-            src={displayImages[currentImageIndex]}
-            alt={product.name}
-            className="absolute top-0 left-0 h-full w-full object-cover cursor-pointer"
-            onClick={() => setSelectedImage(displayImages[currentImageIndex])}
-          />
-        ) : (
-          <div className="absolute top-0 left-0 h-full w-full">
-            <ProductImagePlaceholder />
-          </div>
-        )}
-          
-          {displayImages.length > 1 && (
-            <>
-              <button 
-                onClick={handlePrevImage}
-                className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/50 rounded-full p-1 hover:bg-white/75"
-              >
-                <ChevronLeft size={24} />
-              </button>
-              <button 
-                onClick={handleNextImage}
-                className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/50 rounded-full p-1 hover:bg-white/75"
-              >
-                <ChevronRight size={24} />
-              </button>
-            </>
-          )}
-  
-          {!isPreview && product.quantity <= product.low_stock_threshold && (
-            <div className="absolute top-2 right-2 bg-red-100 text-red-600 px-2 py-1 rounded text-sm">
-              Low Stock
-            </div>
-          )}
-  
-          {displayImages.length > 1 && (
-            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex space-x-1">
-              {displayImages.map((_, index) => (
-                <div 
-                  key={index} 
-                  className={`h-1.5 w-1.5 rounded-full ${
-                    index === currentImageIndex ? 'bg-white/90' : 'bg-white/50'
-                  }`}
+      <div className="bg-white rounded-lg shadow-md hover:shadow-lg transition-all duration-300 flex flex-col">
+        <div className="p-4 flex-1">
+          <div className="relative aspect-[4/3] mb-4">
+            {displayImages.length > 0 ? (
+              <div className="w-full h-full relative cursor-pointer">
+                <img
+                  src={displayImages[currentImageIndex]}
+                  alt={product.name}
+                  className="w-full h-full object-cover rounded-2xl transform hover:scale-105 transition-transform duration-300"
+                  onClick={() => setSelectedImage(displayImages[currentImageIndex])}
                 />
-              ))}
-            </div>
-          )}
-        </div>
-        
-        <div className="p-4">
-          <h3 className="text-lg font-semibold mb-2">{product.name}</h3>
+                {displayImages.length > 1 && (
+                  <>
+                    <button
+                      onClick={handlePrevImage}
+                      className="absolute left-2 top-1/2 transform -translate-y-1/2 p-1.5 bg-white/90 rounded-full shadow-md hover:bg-white transition-colors"
+                      aria-label="Previous image"
+                    >
+                      <ChevronLeft size={18} />
+                    </button>
+                    <button
+                      onClick={handleNextImage}
+                      className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1.5 bg-white/90 rounded-full shadow-md hover:bg-white transition-colors"
+                      aria-label="Next image"
+                    >
+                      <ChevronRight size={18} />
+                    </button>
+                  </>
+                )}
+                <div className="absolute bottom-2 right-2 bg-black/50 text-white text-xs px-2 py-1 rounded-full">
+                  {currentImageIndex + 1}/{displayImages.length}
+                </div>
+              </div>
+            ) : (
+              <div className="w-full h-full">
+                <ProductImagePlaceholder />
+              </div>
+            )}
+  
+            {!isPreview && product.quantity <= product.low_stock_threshold && (
+              <div className="absolute top-2 right-2 bg-red-100 text-red-600 px-2 py-1 rounded text-sm">
+                Low Stock
+              </div>
+            )}
+          </div>
+  
+          <h3 className="text-lg font-semibold mb-2 line-clamp-2">{product.name}</h3>
           <p className="text-gray-600 text-sm mb-3 line-clamp-2">{product.description}</p>
-          
+        </div>
+  
+        <div className="p-4 border-t mt-auto">
           <div className="flex items-center justify-between">
-            <span className="text-xl font-bold text-green-600">
-            ₦{product.storefront_price || product.price}
-            </span>
+            <span className="text-lg font-bold">₦{product.storefront_price || product.price}</span>
             
             {isPreview ? (
-              <button className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-full text-sm transition-colors">
-                Add to Cart
+              <button className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2">
+                <ShoppingCart size={16} />
+                Add
               </button>
             ) : (
               <div className="flex space-x-2">
