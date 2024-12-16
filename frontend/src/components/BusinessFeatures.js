@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import * as LucideIcons from 'lucide-react';
-import { Brain, ArrowRight, Users, Zap, Building2, Clock } from 'lucide-react';
+import { Brain, ArrowRight, Users, Zap, Building2, Clock, Check, X, HelpCircle, PackageSearch, Shield, Building, Landmark } from 'lucide-react';
 
 // Enhanced HeroStats with better design
 const HeroStats = () => (
@@ -335,13 +335,221 @@ const BusinessFeatures = () => {
           ]
         }
       ]
+    },
+    banking: {
+      iconName: 'Building',
+      title: "Business Banking",
+      description: "Integrated banking solutions for your business",
+      details: [
+        {
+          title: "Smart Banking",
+          description: "Comprehensive banking solutions",
+          benefits: [
+            "Business accounts",
+            "Payment processing",
+            "Multi-currency support",
+            "International transfers"
+          ]
+        },
+        {
+          title: "Financial Tools",
+          description: "Advanced banking features",
+          benefits: [
+            "Expense cards",
+            "Automated reconciliation",
+            "Payment scheduling",
+            "Integration with accounting"
+          ]
+        }
+      ]
+    },
+    financing: {
+      iconName: 'Landmark',
+      title: "Business Financing",
+      description: "Flexible financing solutions for growth",
+      details: [
+        {
+          title: "Invoice Financing",
+          description: "Get paid early on your invoices",
+          benefits: [
+            "Same-day funding",
+            "Competitive rates",
+            "No collateral required",
+            "Simple application"
+          ]
+        },
+        {
+          title: "Business Loans",
+          description: "Growth capital for your business",
+          benefits: [
+            "Flexible terms",
+            "Quick approval",
+            "Custom payment plans",
+            "No hidden fees"
+          ]
+        }
+      ]
     }
   };
+
+  const plans = [
+    {
+      name: "Free Plan",
+      price: "₦0",
+      description: "Perfect for individuals just starting their business journey",
+      icon: <PackageSearch className="w-8 h-8 text-green-600" />,
+      popular: false,
+      features: {
+        users: "1 user",
+        inventory: true,
+        storefront: true,
+        invoicing: false,
+        support: false,
+        restocking: false,
+        payment: true,
+        delivery: "Pay per trip",
+        financing: false,
+        accounting: false,
+        banking: true,
+        analytics: false
+      }
+    },
+    {
+      name: "Basic Plan",
+      price: "₦10,000",
+      description: "Great for small businesses looking to grow",
+      icon: <Users className="w-8 h-8 text-green-600" />,
+      popular: false,
+      features: {
+        users: "1 user",
+        inventory: true,
+        storefront: true,
+        invoicing: true,
+        support: false,
+        restocking: true,
+        payment: true,
+        delivery: "Pay per trip",
+        financing: false,
+        accounting: false,
+        banking: true,
+        analytics: false
+      }
+    },
+    {
+      name: "Small Plan",
+      price: "₦50,000",
+      description: "Perfect for growing businesses with a small team",
+      icon: <Clock className="w-8 h-8 text-green-600" />,
+      popular: true,
+      features: {
+        users: "3 users",
+        inventory: true,
+        storefront: true,
+        invoicing: true,
+        support: "Chat support",
+        restocking: true,
+        payment: true,
+        delivery: "3 deliveries/month",
+        financing: false,
+        accounting: false,
+        banking: true,
+        analytics: false
+      }
+    },
+    {
+      name: "Medium Plan",
+      price: "₦250,000",
+      description: "Ideal for established businesses seeking growth",
+      icon: <Shield className="w-8 h-8 text-green-600" />,
+      popular: false,
+      features: {
+        users: "5 users",
+        inventory: true,
+        storefront: true,
+        invoicing: true,
+        support: "Chat & call support",
+        restocking: true,
+        payment: true,
+        delivery: "10 deliveries/month",
+        financing: true,
+        accounting: true,
+        banking: true,
+        analytics: false
+      }
+    },
+    {
+      name: "Enterprise Plan",
+      price: "Custom",
+      description: "For large businesses requiring complete customization",
+      icon: <Shield className="w-8 h-8 text-green-600" />,
+      popular: false,
+      features: {
+        users: "Unlimited users",
+        inventory: true,
+        storefront: true,
+        invoicing: true,
+        support: "Dedicated support officer",
+        restocking: true,
+        payment: true,
+        delivery: "Unlimited deliveries",
+        financing: true,
+        accounting: true,
+        banking: true,
+        analytics: true
+      }
+    }
+  ];
+
+  const featureDescriptionsForPlan = {
+    users: "The number of users supported",
+    inventory: "Manage your stock levels, track items, and get low stock alerts",
+    storefront: "Custom digital storefront to showcase your products online",
+    invoicing: "Automatically generate and send professional invoices",
+    support: "Access to customer support services",
+    restocking: "Make requests to restock your existing products or stock a new product. Automated inventory replenishment suggestions",
+    payment: "Accept various payment methods from customers",
+    delivery: "Access to delivery services for your products",
+    financing: "Get financing based on your invoice history",
+    accounting: "Automated bookkeeping and financial reporting",
+    banking: "Business banking services and account management",
+    analytics: "Detailed business insights and performance reports"
+  };
+
+  // Add Trusted By section data
+  const trustedCompanies = [
+    { name: "TechCorp", logo: "/api/placeholder/150/50" },
+    { name: "Global Industries", logo: "/api/placeholder/150/50" },
+    { name: "Innovation Ltd", logo: "/api/placeholder/150/50" },
+    { name: "Future Systems", logo: "/api/placeholder/150/50" },
+    { name: "Smart Solutions", logo: "/api/placeholder/150/50" },
+    { name: "Digital Ventures", logo: "/api/placeholder/150/50" }
+  ];
 
   const renderIcon = (iconName, props) => {
     const Icon = LucideIcons[iconName];
     return Icon ? <Icon {...props} /> : null;
   };
+
+  // Company Logo Placeholder SVG
+  const CompanyLogoPlaceholder = ({ name }) => (
+    <div className="w-40 h-12 bg-gradient-to-r from-green-100 to-green-50 rounded-lg flex items-center justify-center group transition-all hover:scale-105">
+      <Building2 className="w-6 h-6 text-green-600 mr-2 group-hover:scale-110 transition-transform" />
+      <span className="text-green-700 font-medium">{name}</span>
+    </div>
+  );
+
+  // Enhanced Tooltip styling
+  const Tooltip = ({ content, children }) => (
+    <div className="relative group">
+      {children}
+      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+        <div className="bg-gray-900 text-white p-3 rounded-lg shadow-xl max-w-xs w-64">
+          <div className="text-sm leading-relaxed">{content}</div>
+        </div>
+        <div className="w-3 h-3 bg-gray-900 transform rotate-45 absolute -bottom-1.5 left-1/2 -translate-x-1/2"></div>
+      </div>
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-green-50 to-amber-50">
@@ -349,6 +557,20 @@ const BusinessFeatures = () => {
       <section className="pt-32 pb-24 px-6">
         <div className="max-w-7xl mx-auto">
           <HeroSection />
+        </div>
+      </section>
+
+      {/* Trusted By Section */}
+      <section className="py-16 px-6 bg-gradient-to-b from-green-50/80 to-amber-50/80 backdrop-blur-sm">
+        <div className="max-w-7xl mx-auto">
+          <h2 className="text-2xl font-bold text-center text-gray-800 mb-12">
+            Trusted By Industry Leaders
+          </h2>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-8 items-center">
+            {trustedCompanies.map((company, index) => (
+              <CompanyLogoPlaceholder key={index} name={company.name} />
+            ))}
+          </div>
         </div>
       </section>
 
@@ -366,10 +588,11 @@ const BusinessFeatures = () => {
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto">
+
         {/* Features Grid */}
         <section id="features" className="pt-32 px-6">
           <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-green-700 mb-4">
+            <h2 className="text-4xl font-bold bg-gradient-to-r from-green-700 to-green-500 bg-clip-text text-transparent mb-4">
               All-in-One Business Solutions
             </h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
@@ -381,40 +604,41 @@ const BusinessFeatures = () => {
               <button
                 key={key}
                 onClick={() => setActiveFeature(key)}
-                className="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow text-left group"
+                className="bg-white/80 backdrop-blur-sm p-6 rounded-xl border border-green-100 hover:border-green-200 shadow-sm hover:shadow-lg transition-all duration-300 text-left group"
               >
                 <div className="flex items-center gap-4 mb-4">
                   {renderIcon(feature.iconName, {
                     size: 32,
-                    className: "text-green-600 group-hover:scale-110 transition-transform"
+                    className: "text-green-600 group-hover:scale-110 transition-transform duration-300"
                   })}
-                  <h3 className="text-lg font-semibold">{feature.title}</h3>
+                  <h3 className="text-lg font-semibold group-hover:text-green-700 transition-colors">{feature.title}</h3>
                 </div>
-                <p className="text-gray-600">{feature.description}</p>
+                <p className="text-gray-600 group-hover:text-gray-700 transition-colors">{feature.description}</p>
               </button>
             ))}
           </div>
         </section>
 
-        {/* Feature Detail Modal */}
         {activeFeature && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-lg max-w-3xl w-full max-h-[90vh] overflow-y-auto">
-              <div className="p-6">
-                <div className="flex items-center justify-between mb-6">
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+            <div className="bg-white/95 backdrop-blur-sm rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto border border-green-100 shadow-2xl">
+              <div className="p-8">
+                <div className="flex items-center justify-between mb-8">
                   <div className="flex items-center gap-4">
                     {renderIcon(features[activeFeature].iconName, {
-                      size: 32,
+                      size: 40,
                       className: "text-green-600"
                     })}
                     <div>
-                      <h2 className="text-2xl font-bold">{features[activeFeature].title}</h2>
-                      <p className="text-gray-600">{features[activeFeature].description}</p>
+                      <h2 className="text-3xl font-bold bg-gradient-to-r from-green-700 to-green-500 bg-clip-text text-transparent">
+                        {features[activeFeature].title}
+                      </h2>
+                      <p className="text-gray-600 text-lg">{features[activeFeature].description}</p>
                     </div>
                   </div>
                   <button 
                     onClick={() => setActiveFeature(null)}
-                    className="text-gray-500 hover:text-gray-700"
+                    className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors"
                   >
                     ✕
                   </button>
@@ -422,14 +646,14 @@ const BusinessFeatures = () => {
 
                 <div className="space-y-8">
                   {features[activeFeature].details.map((detail, index) => (
-                    <div key={index} className="bg-gray-50 p-6 rounded-lg">
-                      <h3 className="text-xl font-semibold mb-2">{detail.title}</h3>
-                      <p className="text-gray-600 mb-4">{detail.description}</p>
+                    <div key={index} className="bg-gradient-to-r from-green-50 to-amber-50/30 p-8 rounded-xl border border-green-100">
+                      <h3 className="text-xl font-semibold mb-3 text-green-700">{detail.title}</h3>
+                      <p className="text-gray-600 mb-6 text-lg">{detail.description}</p>
                       <ul className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {detail.benefits.map((benefit, benefitIndex) => (
-                          <li key={benefitIndex} className="flex items-center gap-2">
-                            <div className="w-1.5 h-1.5 rounded-full bg-green-600" />
-                            <span>{benefit}</span>
+                          <li key={benefitIndex} className="flex items-center gap-3 group">
+                            <div className="w-2 h-2 rounded-full bg-green-600 group-hover:scale-150 transition-transform" />
+                            <span className="text-gray-700 group-hover:text-green-700 transition-colors">{benefit}</span>
                           </li>
                         ))}
                       </ul>
@@ -440,12 +664,12 @@ const BusinessFeatures = () => {
                 <div className="mt-8 flex justify-end space-x-4">
                   <button
                     onClick={() => setActiveFeature(null)}
-                    className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-gray-700 transition-colors"
+                    className="px-6 py-3 bg-gray-100 hover:bg-gray-200 rounded-xl text-gray-700 transition-colors font-medium"
                   >
                     Close
                   </button>
                   <button
-                    className="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg text-white transition-colors"
+                    className="px-6 py-3 bg-gradient-to-r from-green-600 to-green-500 hover:from-green-700 hover:to-green-600 rounded-xl text-white transition-colors font-medium"
                   >
                     Get Started
                   </button>
@@ -455,6 +679,96 @@ const BusinessFeatures = () => {
           </div>
         )}
       </div>
+      
+      {/* Pricing Section */}
+      <section className="py-24 px-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl font-bold text-green-700 mb-4">
+              Choose Your Plan
+            </h2>
+            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+              Scale your business with our flexible pricing options. All plans include core features to help you grow.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
+            {plans.map((plan) => (
+              <div 
+                key={plan.name} 
+                className={`bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-all relative ${
+                  plan.popular ? 'border-2 border-green-600' : ''
+                }`}
+              >
+                {plan.popular && (
+                  <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
+                    <span className="bg-green-600 text-white px-4 py-1 rounded-full text-sm font-medium">
+                      Most Popular
+                    </span>
+                  </div>
+                )}
+
+                <div className="text-center mb-6">
+                  <div className="mx-auto mb-4">{plan.icon}</div>
+                  <h3 className="text-xl font-semibold mb-2">{plan.name}</h3>
+                  <p className="text-gray-600 min-h-12">{plan.description}</p>
+                  <div className="mt-4">
+                    <div className="text-3xl font-bold text-green-700">{plan.price}</div>
+                    {plan.price !== "Custom" && plan.price !== "Free" && (
+                      <div className="text-sm text-gray-500">per month</div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="space-y-4 mb-6">
+                  {Object.entries(plan.features).map(([key, value]) => (
+                    <div key={key} className="flex items-center gap-2 text-gray-700">
+                      {typeof value === 'boolean' ? (
+                        value ? (
+                          <Check className="text-green-600" size={20} />
+                        ) : (
+                          <X className="text-gray-300" size={20} />
+                        )
+                      ) : (
+                        <Check className="text-green-600" size={20} />
+                      )}
+                      <div className="flex items-center gap-1">
+                        <span className="capitalize">
+                          {typeof value === 'string' ? value : key.replace(/_/g, ' ')}
+                        </span>
+                        <Tooltip 
+                          content={featureDescriptionsForPlan[key]}
+                        >
+                          <HelpCircle size={14} className="text-gray-400 hover:text-gray-600 transition-colors" />
+                        </Tooltip>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <button 
+                  className={`w-full py-3 px-4 rounded-lg transition-colors ${
+                    plan.popular 
+                      ? 'bg-green-600 text-white hover:bg-green-700' 
+                      : 'bg-white text-green-600 border-2 border-green-600 hover:bg-green-50'
+                  }`}
+                >
+                  {plan.price === "Custom" ? "Contact Sales" : "Get Started"}
+                </button>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-12 text-center">
+            <p className="text-gray-600">
+              Need help choosing the right plan?{' '}
+              <button className="text-green-600 font-medium hover:underline">
+                Contact our sales team
+              </button>
+            </p>
+          </div>
+        </div>
+      </section>
 
       {/* Footer */}
       <footer className="bg-gray-900 text-white py-12 px-6 mt-24">
@@ -462,7 +776,7 @@ const BusinessFeatures = () => {
           <div>
             <div className="flex items-center space-x-2 mb-6">
               <Brain className="h-8 w-8 text-green-400" />
-              <span className="text-2xl font-bold">Business Suite</span>
+              <span className="text-2xl font-bold">Myaje</span>
             </div>
             <p className="text-gray-400">
               Complete business management solution for modern enterprises.
@@ -497,7 +811,7 @@ const BusinessFeatures = () => {
           </div>
         </div>
         <div className="max-w-7xl mx-auto border-t border-gray-800 mt-12 pt-8 text-center text-gray-400">
-          <p>&copy; 2024 Business Suite. All rights reserved.</p>
+          <p>&copy; 2024 Myaje. All rights reserved.</p>
         </div>
       </footer>
     </div>

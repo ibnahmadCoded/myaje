@@ -10,22 +10,12 @@ import axios from 'axios';
 
 const CATEGORIES = ['All', 'Electronics', 'Fashion', 'Home', 'Beauty', 'Sports'];
 
-// Hero Section SVG
+const openai = ""
+
+// product image SVG
 const ProductImagePlaceholder = () => (
-  <div className="aspect-[4/3] w-full relative">
-    <svg viewBox="0 0 600 400" className="w-full h-full rounded-2xl absolute inset-0">
-      <defs>
-        <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="0%">
-          <stop offset="0%" style={{ stopColor: '#34D399', stopOpacity: 0.2 }} />
-          <stop offset="100%" style={{ stopColor: '#FCD34D', stopOpacity: 0.2 }} />
-        </linearGradient>
-      </defs>
-      <rect x="0" y="0" width="600" height="400" fill="url(#grad1)" rx="20" />
-      <circle cx="300" cy="200" r="80" fill="#34D399" fillOpacity="0.3" />
-      <path d="M250 180 Q300 120 350 180 T450 180" stroke="#059669" strokeWidth="4" fill="none" />
-      <rect x="150" y="250" width="300" height="40" fill="#059669" fillOpacity="0.1" rx="8" />
-      <rect x="150" y="300" width="200" height="40" fill="#059669" fillOpacity="0.1" rx="8" />
-    </svg>
+  <div className="aspect-[4/3] w-full relative bg-green-100 rounded-2xl flex items-center justify-center">
+    <PackageSearch size={48} className="text-green-300" />
   </div>
 );
 
@@ -213,56 +203,41 @@ const handleCheckoutComplete = () => {
     if (!chatInput.trim()) return;
   
     const userMessage = chatInput;
+
+    console.log(userMessage)
     setChatMessages(prev => [...prev, { type: 'user', text: userMessage }]);
     setChatInput('');
     setIsLoading(true);
   
     try {
       // Call OpenAI to determine intent and parameters
-      const API_KEY = "";
-      const response = await axios.post(
-        'https://api.openai.com/v1/chat/completions',
-        {
-          model: "gpt-4o-mini", // Use the appropriate model for your task
-          messages: [
-            {
-              role: "system",
-              content: `You are an assistant that determines the user's intent and any required parameters.
-      Here are the possible intents: 
-      1. greet: The user greets the assistant.
-      2. checkout: The user wants to initiate checkout.
-      3. add_to_cart: The user wants to add a product to their cart. Extract necessary parameters for this intent.
-      4. get_product: The user wants to search for products. Extract filtering parameters. Include support for both exact matching and range-based filtering. For range filtering, use an object structure with fields 'operator' and 'target' (e.g., { "price": { "operator": ">=", "target": 100 } }). Ensure that the parameter must be a product field! Do not return a parameter that is not a product field as presented in the sample product.
-      5. other: Any other intent that doesn't fit the above categories.
-      
-      Here is an example product to guide your understanding of product structure:
-      {
-          "id": 1,
-          "user_id": 1,
-          "product_id": 2,
-          "price": 2500,
-          "created_at": "2024-12-09T09:49:04.311959",
-          "name": "shirt",
-          "description": "this is a shirt",
-          "category": "Fashion",
-          "images": ["./uploaded_images/bf677294faf94f1290abec3b9c703e3b.PNG"],
-          "store": "NabRash"
-      }
-      
-      Here is a list of possible product categories: ${CATEGORIES.join(", ")}.
-      
-      Analyze the user's message: "${userMessage}". Return a JSON object with fields 'intent' and 'parameters' that describes the intent and any relevant parameters for the detected intent.`,
-            },
-          ],
-          temperature: 0.7,
-        },
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${API_KEY}`,
+      //const API_KEY = "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";
+      const response = await openai.chat.completions.create({
+        model: "gpt-3.5-turbo",
+        messages: [
+          {
+            "role": "system",
+            "content": [
+              {
+                "type": "text",
+                "text": `
+                  You are a helpful assistant that answers programming questions 
+                  in the style of a southern belle from the southeast United States.
+                `
+              }
+            ]
           },
-        }
-      );
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "Are semicolons optional in JavaScript?"
+              }
+            ]
+          }
+        ]
+      });
   
       const result = response.data.choices[0].message.content.trim();
 
@@ -347,7 +322,7 @@ const handleCheckoutComplete = () => {
         const greetingResponse = await axios.post(
           'https://api.openai.com/v1/chat/completions',
           {
-            model: "gpt-4o-mini",
+            model: "gpt-3.5-turbo",
             messages: [
               { role: "system", content: "You are a polite and friendly assistant." },
               { role: "user", content: `Reply to this greeting: "${userMessage}"` },
@@ -385,10 +360,6 @@ const handleCheckoutComplete = () => {
     }
   };
 
-  //const filteredProducts = products.filter(product => 
-  //  selectedCategory === 'All' || product.category === selectedCategory
-  //);
-  // Default filter logic
   useEffect(() => {
     setFilteredProducts(
       products.filter(
