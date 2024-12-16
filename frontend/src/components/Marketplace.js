@@ -5,12 +5,8 @@ import { CheckoutDialog } from '@/components/CheckoutDialog'
 import { CartDialog } from '@/components/CartDialog'
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import OpenAI from "openai";
-import axios from 'axios';
 
 const CATEGORIES = ['All', 'Electronics', 'Fashion', 'Home', 'Beauty', 'Sports'];
-
-const openai = ""
 
 // product image SVG
 const ProductImagePlaceholder = () => (
@@ -194,8 +190,23 @@ const handleCheckoutComplete = () => {
     setIsCartOpen(true);
   };
 
+  const addToCartThroughChat = (product, quantity = 1) => {
+    setCartItems(prev => [
+      ...prev,
+      {
+        ...product,
+        cartId: Date.now(), 
+        quantity,          
+      },
+    ]);
+  };
+
   const removeFromCart = (cartId) => {
     setCartItems(prev => prev.filter(item => item.cartId !== cartId));
+  };
+
+  const clearCart = () => {
+    setCartItems([]);
   };
 
   const handleChatSubmit = async (e) => {
@@ -203,162 +214,188 @@ const handleCheckoutComplete = () => {
     if (!chatInput.trim()) return;
   
     const userMessage = chatInput;
-
-    console.log(userMessage)
     setChatMessages(prev => [...prev, { type: 'user', text: userMessage }]);
     setChatInput('');
     setIsLoading(true);
   
     try {
-      // Call OpenAI to determine intent and parameters
-      //const API_KEY = "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";
-      const response = await openai.chat.completions.create({
-        model: "gpt-3.5-turbo",
-        messages: [
-          {
-            "role": "system",
-            "content": [
-              {
-                "type": "text",
-                "text": `
-                  You are a helpful assistant that answers programming questions 
-                  in the style of a southern belle from the southeast United States.
-                `
-              }
-            ]
-          },
-          {
-            "role": "user",
-            "content": [
-              {
-                "type": "text",
-                "text": "Are semicolons optional in JavaScript?"
-              }
-            ]
-          }
-        ]
+      const response = await fetch('http://localhost:8000/chat/chat_inference', {
+        method: 'POST', 
+        headers: {
+          'Content-Type': 'application/json', // Inform the server of the data format
+        },
+        body: JSON.stringify({ text: userMessage }), // Send userMessage as part of the POST body
       });
-  
-      const result = response.data.choices[0].message.content.trim();
+    
+      if (!response.ok) {
+        throw new Error('Failed to fetch response from chat inference API');
+      }
+      
+      const result = await response.json(); 
 
-      console.log(result)
+      console.log('Chat inference result:', result);
 
-      const { intent, parameters } = JSON.parse(result); // Parse intent and parameters
-
-      const normalizedIntent = intent.trim().toLowerCase();
-  
-      if (normalizedIntent === "get_product") {
-        // Filter products based on parameters
-        const filtered = products.filter(product =>
-          Object.entries(parameters).every(([key, value]) => {
-            if (typeof value === "object" && value !== null) {
-              // Check for range or condition object
-              const { operator, target } = value;
-              switch (operator) {
-                case ">=":
-                  return product[key] >= target;
-                case "<=":
-                  return product[key] <= target;
-                case ">":
-                  return product[key] > target;
-                case "<":
-                  return product[key] < target;
-                case "==":
-                  return product[key] == target;
-                case "=":
-                  return product[key] == target;
-                case "!=":
-                  return product[key] != target;
-                default:
-                  throw new Error(`Unsupported operator: ${operator}`);
-              }
-            } else {
-              // Default to string matching
-              return String(product[key]).toLowerCase().includes(String(value).toLowerCase());
-            }
-          })
-        );
-  
-        // Update the products state
-        //setFilteredProducts(filtered);
-        if (filtered.length > 0 && JSON.stringify(filtered) !== JSON.stringify(filteredProducts)) {
-          setFilteredProducts(filtered);
-        }
-  
-        // Add a confirmation message to the chat
-        setChatMessages(prev => [
-          ...prev,
-          {
-            type: 'bot',
-            text: filtered.length > 0
-              ? "I've filtered the products based on your query. Check the main window."
-              : "I couldn't find any products matching your query.",
-          },
-        ]);
-      } else if (normalizedIntent === "add_to_cart") {
-        // Handle "add to cart" logic
-        const productToAdd = products[parameters.index - 1]; // Assuming parameters.index is 1-based
-        if (productToAdd) {
-          addToCart(productToAdd);
-          setChatMessages(prev => [
-            ...prev,
-            { type: 'bot', text: `Added ${productToAdd.name} to your cart.` },
-          ]);
-        } else {
-          setChatMessages(prev => [
-            ...prev,
-            { type: 'bot', text: "I couldn't find the product to add to your cart." },
-          ]);
-        }
-      } else if (normalizedIntent === "checkout") {
-        // Handle "checkout" logic
-        setIsCheckoutOpen(true);
-        setChatMessages(prev => [
-          ...prev,
-          { type: 'bot', text: "I've opened the checkout for you." },
-        ]);
-      }  else if (normalizedIntent === "greet") {
-        // Step 3: Fetch greeting reply from OpenAI
-        const greetingResponse = await axios.post(
-          'https://api.openai.com/v1/chat/completions',
-          {
-            model: "gpt-3.5-turbo",
-            messages: [
-              { role: "system", content: "You are a polite and friendly assistant." },
-              { role: "user", content: `Reply to this greeting: "${userMessage}"` },
-            ],
-            temperature: 0.7,
-          },
-          {
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${API_KEY}`,
-            },
+      // Handle different intents based on the result
+      switch (result.intent) {
+        case 'find_products':
+        case 'filter_products':
+          let filteredResults = [...products];
+          
+          // Filter by name if provided
+          if (result.product?.product_name !== undefined) {
+            filteredResults = filteredResults.filter(product =>
+              product.name.toLowerCase().includes(result.product.product_name.toLowerCase())
+            );
           }
-        );
-  
-        const greetingReply = greetingResponse.data.choices[0].message.content.trim();
-  
-        setChatMessages((prev) => [
-          ...prev,
-          { type: 'bot', text: greetingReply },
-        ]);
-      } else {
-        setChatMessages(prev => [
-          ...prev,
-          { type: 'bot', text: "Sorry, I didn't understand that request." },
-        ]);
+          
+          // Filter by price range
+          if (result.min_price !== undefined) {
+            filteredResults = filteredResults.filter(product =>
+              product.price >= result.min_price
+            );
+          }
+          if (result.max_price !== undefined) {
+            filteredResults = filteredResults.filter(product =>
+              product.price <= result.max_price
+            );
+          }
+          
+          // Filter by category if provided
+          if (result.category) {
+            filteredResults = filteredResults.filter(product =>
+              product.category.toLowerCase() === result.category.toLowerCase()
+            );
+          }
+
+          setFilteredProducts(filteredResults);
+          
+          setChatMessages(prev => [...prev, {
+            type: 'bot',
+            text: filteredResults.length > 0
+              ? "Here are the products matching your criteria."
+              : "I couldn't find any products matching your criteria."
+          }]);
+          break;
+
+        case 'greeting':
+          setChatMessages(prev => [...prev, {
+            type: 'bot',
+            text: "Hello! How may I help you today?"
+          }]);
+          break;
+
+        case 'add_to_cart':
+          const productIndex = result.position; // Now using zero-based index
+          const productToAdd = filteredProducts[productIndex - 1]; // if user says, add the first product, the position returned would be 1, but in array, it will be 0th position.
+          const quantity = result.quantity || 1;
+          
+          if (productToAdd) {
+            // Add the product to cart
+            addToCartThroughChat(productToAdd, quantity);
+            
+            setChatMessages(prev => [...prev, {
+              type: 'bot',
+              text: `Added ${quantity} ${quantity > 1 ? 'units' : 'unit'} of ${productToAdd.name} to your cart.`
+            }]);
+          } else {
+            setChatMessages(prev => [...prev, {
+              type: 'bot',
+              text: "I couldn't find the product you wanted to add to your cart."
+            }]);
+          }
+          break;
+
+        case 'checkout':
+          setIsCheckoutOpen(true);
+          setChatMessages(prev => [...prev, {
+            type: 'bot',
+            text: "I've opened the checkout for you."
+          }]);
+          break;
+
+        case 'show_cart':
+          setIsCartOpen(true);
+          setChatMessages(prev => [...prev, {
+            type: 'bot',
+            text: "I've opened your cart for you."
+          }]);
+          break;
+
+        case 'remove_from_cart':
+          if (result.remove_all) {
+            clearCart();
+            setChatMessages(prev => [
+              ...prev,
+              {
+                type: 'bot',
+                text: "I've removed all items from your cart.",
+              },
+            ]);
+          } else if (result.position !== undefined) {
+            setCartItems(prevCartItems => {
+              // Retrieve all current cart items
+              const updatedCart = [...prevCartItems];
+              
+              // Adjust the position to be zero-based
+              const position = result.position - 1;
+        
+              if (position >= 0 && position < updatedCart.length) {
+                // Remove the item at the specified position
+                const removedItem = updatedCart.splice(position, 1)[0]; // Get the removed item
+        
+                // Provide bot feedback
+                setChatMessages(prev => [
+                  ...prev,
+                  {
+                    type: 'bot',
+                    text: `I've removed ${removedItem.name} from your cart.`,
+                  },
+                ]);
+              } else {
+                // Handle invalid position
+                setChatMessages(prev => [
+                  ...prev,
+                  {
+                    type: 'bot',
+                    text: "I couldn't find an item at that position in your cart.",
+                  },
+                ]);
+              }
+        
+              return updatedCart; // Return the updated cart
+            });
+          }
+          break;
+
+        case 'save_for_later':
+          if (result.index !== undefined) {
+            const itemToSave = products[result.index];
+            if (itemToSave) {
+              addToWishlist(itemToSave);
+              setChatMessages(prev => [...prev, {
+                type: 'bot',
+                text: `I've saved ${itemToSave.name} to your wishlist.`
+              }]);
+            }
+          }
+          break;
+
+        default:
+          setChatMessages(prev => [...prev, {
+            type: 'bot',
+            text: "I'm not sure how to help with that request. Could you please rephrase it?"
+          }]);
       }
     } catch (error) {
       console.error("Error handling chat input:", error);
-      setChatMessages(prev => [
-        ...prev,
-        { type: 'bot', text: "Something went wrong while processing your request." },
-      ]);
+      setChatMessages(prev => [...prev, {
+        type: 'bot',
+        text: "Sorry, I encountered an error while processing your request."
+      }]);
     } finally {
       setIsLoading(false);
     }
-  };
+};
 
   useEffect(() => {
     setFilteredProducts(
