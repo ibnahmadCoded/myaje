@@ -411,7 +411,8 @@ const BusinessFeatures = () => {
         financing: false,
         accounting: false,
         banking: true,
-        analytics: false
+        analytics: false,
+        sms: false
       }
     },
     {
@@ -432,7 +433,8 @@ const BusinessFeatures = () => {
         financing: false,
         accounting: false,
         banking: true,
-        analytics: false
+        analytics: false,
+        sms: false
       }
     },
     {
@@ -453,7 +455,8 @@ const BusinessFeatures = () => {
         financing: false,
         accounting: false,
         banking: true,
-        analytics: false
+        analytics: false,
+        sms: true
       }
     },
     {
@@ -474,7 +477,8 @@ const BusinessFeatures = () => {
         financing: true,
         accounting: true,
         banking: true,
-        analytics: false
+        analytics: false,
+        sms: true
       }
     },
     {
@@ -495,7 +499,8 @@ const BusinessFeatures = () => {
         financing: true,
         accounting: true,
         banking: true,
-        analytics: true
+        analytics: true,
+        sms: true
       }
     }
   ];
@@ -512,7 +517,8 @@ const BusinessFeatures = () => {
     financing: "Get financing based on your invoice history",
     accounting: "Automated bookkeeping and financial reporting",
     banking: "Business banking services and account management",
-    analytics: "Detailed business insights and performance reports"
+    analytics: "Detailed business insights and performance reports",
+    sms: "receive notifications via SMS messages. No need to always have internet connection to recive orders."
   };
 
   // Add Trusted By section data
