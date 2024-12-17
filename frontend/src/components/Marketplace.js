@@ -4,14 +4,16 @@ import Link from 'next/link';
 import { CheckoutDialog } from '@/components/CheckoutDialog'
 import { CartDialog } from '@/components/CartDialog'
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { ProductModal } from '@/components/ProductModal'
 
 const CATEGORIES = ['All', 'Electronics', 'Fashion', 'Home', 'Beauty', 'Sports'];
 
 // product image SVG
-const ProductImagePlaceholder = () => (
-  <div className="aspect-[4/3] w-full relative bg-green-100 rounded-2xl flex items-center justify-center group hover:bg-green-200 transition-colors duration-300">
+const ProductImagePlaceholder = ({ onClick }) => (
+  <div 
+    className="aspect-[4/3] w-full relative bg-green-100 rounded-2xl flex items-center justify-center group hover:bg-green-200 transition-colors duration-300 cursor-pointer"
+    onClick={onClick}
+  >
     <PackageSearch size={48} className="text-green-300 group-hover:scale-110 transition-transform duration-300" />
   </div>
 );
@@ -31,6 +33,10 @@ const ProductCard = ({ product, onAddToCart, onImageClick }) => {
     setActiveIndex((prev) => (prev + 1) % totalImages);
   };
 
+  const handleImageClick = () => {
+    onImageClick({ product });
+  };
+
   return (
     <div 
       className="bg-white rounded-lg shadow-md hover:shadow-lg transition-all duration-300 flex flex-col"
@@ -42,7 +48,7 @@ const ProductCard = ({ product, onAddToCart, onImageClick }) => {
           {totalImages > 0 ? (
             <div 
               className="w-full h-full relative cursor-pointer"
-              onClick={() => onImageClick(`http://localhost:8000/${product.images[activeIndex].replace('./', '')}`)}
+              onClick={handleImageClick}
             >
               <img
                 src={`http://localhost:8000/${product.images[activeIndex].replace('./', '')}`}
@@ -74,9 +80,10 @@ const ProductCard = ({ product, onAddToCart, onImageClick }) => {
               </div>
             </div>
           ) : (
-            <ProductImagePlaceholder />
+            <ProductImagePlaceholder onClick={handleImageClick} />
           )}
         </div>
+        {/* Rest of the product card content remains the same */}
         <h3 className="text-lg font-semibold mb-2 line-clamp-2 hover:line-clamp-none transition-all duration-300">
           {product.name}
         </h3>
@@ -642,12 +649,12 @@ const addToCartWithQuantity = (product) => {
 
       {/* Modal for Product */}
       <ProductModal 
-        isOpen={!!selectedImage}
-        onClose={() => setSelectedImage(null)}
-        product={products.find(p => p.images.includes(selectedImage?.replace('http://localhost:8000/', './')))}
+        isOpen={!!selectedImage}  // Ensure it only opens when selectedImage is truthy
+        onClose={() => setSelectedImage(undefined)}
+        product={selectedImage?.product}
         onAddToCart={(productWithQuantity) => {
           addToCartWithQuantity(productWithQuantity);
-          setSelectedImage(null); // Optionally close the modal after adding to cart
+          setSelectedImage(undefined);
         }}
       />
 
