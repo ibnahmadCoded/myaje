@@ -4,6 +4,8 @@ import Link from 'next/link';
 import { CheckoutDialog } from '@/components/CheckoutDialog'
 import { CartDialog } from '@/components/CartDialog'
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { ProductModal } from '@/components/ProductModal'
 
 const CATEGORIES = ['All', 'Electronics', 'Fashion', 'Home', 'Beauty', 'Sports'];
 
@@ -193,31 +195,54 @@ const handleCheckoutComplete = () => {
 };
 
 const addToCart = (product) => {
-  setCartItems(prev => [...prev, { 
-    ...product, 
-    cartId: Date.now(),
-    quantity: 1  // Add default quantity
-  }]);
-  setIsCartOpen(true);
+  setCartItems((prev) => {
+    const existingProductIndex = prev.findIndex((item) => item.id === product.id);
+
+    if (existingProductIndex !== -1) {
+      // Product exists, increment its current quantity
+      return prev.map((item, index) => 
+        index === existingProductIndex 
+          ? { ...item, quantity: item.quantity + 1 }
+          : item
+      );
+    }
+
+    // Product does not exist, add it as a new entry with quantity 1
+    return [
+      ...prev,
+      {
+        ...product,
+        cartId: Date.now(),
+        quantity: 1,
+      },
+    ];
+  });
+
+  setIsCartOpen(true); // Open the cart after adding
 };
 
 const addToCartWithQuantity = (product) => {
   setCartItems((prev) => {
-    // Check if product already exists in the cart (optional logic)
+    // Check if product already exists in the cart
     const existingProductIndex = prev.findIndex((item) => item.id === product.id);
-    
+
     if (existingProductIndex !== -1) {
       // Update quantity if the product exists
-      const updatedCart = [...prev];
-      updatedCart[existingProductIndex].quantity += product.quantity;
-      return updatedCart;
+      return prev.map((item, index) =>
+        index === existingProductIndex
+          ? { ...item, quantity: item.quantity + product.quantity }
+          : item
+      );
     }
-    
+
     // Add new product with the selected quantity
-    return [...prev, { 
-      ...product, 
-      cartId: Date.now(), // Unique identifier for cart items
-    }];
+    return [
+      ...prev,
+      { 
+        ...product, 
+        cartId: Date.now(), // Unique identifier for cart items
+      },
+    ];
   });
 
   setIsCartOpen(true); // Optionally open the cart after adding
@@ -616,7 +641,15 @@ const addToCartWithQuantity = (product) => {
       />
 
       {/* Modal for Product */}
-      
+      <ProductModal 
+        isOpen={!!selectedImage}
+        onClose={() => setSelectedImage(null)}
+        product={products.find(p => p.images.includes(selectedImage?.replace('http://localhost:8000/', './')))}
+        onAddToCart={(productWithQuantity) => {
+          addToCartWithQuantity(productWithQuantity);
+          setSelectedImage(null); // Optionally close the modal after adding to cart
+        }}
+      />
 
     </div>
   );
