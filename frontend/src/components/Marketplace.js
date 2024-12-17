@@ -4,19 +4,19 @@ import Link from 'next/link';
 import { CheckoutDialog } from '@/components/CheckoutDialog'
 import { CartDialog } from '@/components/CartDialog'
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 
 const CATEGORIES = ['All', 'Electronics', 'Fashion', 'Home', 'Beauty', 'Sports'];
 
 // product image SVG
 const ProductImagePlaceholder = () => (
-  <div className="aspect-[4/3] w-full relative bg-green-100 rounded-2xl flex items-center justify-center">
-    <PackageSearch size={48} className="text-green-300" />
+  <div className="aspect-[4/3] w-full relative bg-green-100 rounded-2xl flex items-center justify-center group hover:bg-green-200 transition-colors duration-300">
+    <PackageSearch size={48} className="text-green-300 group-hover:scale-110 transition-transform duration-300" />
   </div>
 );
 
 const ProductCard = ({ product, onAddToCart, onImageClick }) => {
   const [activeIndex, setActiveIndex] = useState(0);
+  const [isHovered, setIsHovered] = useState(false);
   const totalImages = product.images?.length || 0;
 
   const handlePrevImage = (e) => {
@@ -30,9 +30,13 @@ const ProductCard = ({ product, onAddToCart, onImageClick }) => {
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-md hover:shadow-lg transition-all duration-300 flex flex-col">
+    <div 
+      className="bg-white rounded-lg shadow-md hover:shadow-lg transition-all duration-300 flex flex-col"
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
       <div className="p-4 flex-1">
-        <div className="relative aspect-[4/3] mb-4">
+        <div className="relative aspect-[4/3] mb-4 overflow-hidden rounded-2xl">
           {totalImages > 0 ? (
             <div 
               className="w-full h-full relative cursor-pointer"
@@ -41,20 +45,22 @@ const ProductCard = ({ product, onAddToCart, onImageClick }) => {
               <img
                 src={`http://localhost:8000/${product.images[activeIndex].replace('./', '')}`}
                 alt={product.name}
-                className="w-full h-full object-cover rounded-2xl transform hover:scale-105 transition-transform duration-300"
+                className={`w-full h-full object-cover rounded-2xl transition-transform duration-500 ${
+                  isHovered ? 'scale-110' : 'scale-100'
+                }`}
               />
               {totalImages > 1 && (
                 <>
                   <button
                     onClick={handlePrevImage}
-                    className="absolute left-2 top-1/2 transform -translate-y-1/2 p-1.5 bg-white/90 rounded-full shadow-md hover:bg-white transition-colors"
+                    className="absolute left-2 top-1/2 transform -translate-y-1/2 p-1.5 bg-white/90 rounded-full shadow-md hover:bg-white transition-colors opacity-0 group-hover:opacity-100 transition-opacity duration-300"
                     aria-label="Previous image"
                   >
                     <ChevronLeft size={18} />
                   </button>
                   <button
                     onClick={handleNextImage}
-                    className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1.5 bg-white/90 rounded-full shadow-md hover:bg-white transition-colors"
+                    className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1.5 bg-white/90 rounded-full shadow-md hover:bg-white transition-colors opacity-0 group-hover:opacity-100 transition-opacity duration-300"
                     aria-label="Next image"
                   >
                     <ChevronRight size={18} />
@@ -69,7 +75,9 @@ const ProductCard = ({ product, onAddToCart, onImageClick }) => {
             <ProductImagePlaceholder />
           )}
         </div>
-        <h3 className="text-lg font-semibold mb-2 line-clamp-2">{product.name}</h3>
+        <h3 className="text-lg font-semibold mb-2 line-clamp-2 hover:line-clamp-none transition-all duration-300">
+          {product.name}
+        </h3>
         <div className="flex items-center gap-2 mb-2">
           <div className="flex items-center">
             <Star size={16} className="text-yellow-400 fill-current" />
@@ -77,29 +85,22 @@ const ProductCard = ({ product, onAddToCart, onImageClick }) => {
           </div>
           <span className="text-sm text-gray-500">({product.reviews} reviews)</span>
         </div>
-        {/* 
-        <Link 
-          href={`/store/${product.store.toLowerCase()}`} 
-          className="text-sm text-gray-600 hover:text-green-600 hover:underline mb-3 inline-block"
-        >
-          {product.store}
-        </Link> */}
         <Link 
           href={`/store/${product.store.toLowerCase().replace(/\s+/g, '-')}`} 
-          className="text-sm text-gray-600 hover:text-green-600 hover:underline mb-3 inline-block"
+          className="text-sm text-gray-600 hover:text-green-600 hover:underline mb-3 inline-block transition-colors duration-300"
         >
           {product.store}
         </Link>
       </div>
-      <div className="p-4 border-t mt-auto">
+      <div className="p-4 border-t mt-auto bg-gray-50">
         <div className="flex justify-between items-center">
           <span className="text-lg font-bold">₦{product.price.toLocaleString()}</span>
           <button
             onClick={() => onAddToCart(product)}
-            className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
+            className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-all duration-300 flex items-center gap-2 hover:gap-3"
           >
             <ShoppingCart size={16} />
-            Add
+            Add to Cart
           </button>
         </div>
       </div>
@@ -107,18 +108,28 @@ const ProductCard = ({ product, onAddToCart, onImageClick }) => {
   );
 };
 
-const SearchBar = ({ onSearch }) => (
-  <div className="flex-1 relative">
-    <input 
-      type="text"
-      placeholder="Search products..."
-      onChange={(e) => onSearch(e.target.value)}
-      className="w-full px-4 py-3 pl-11 rounded-lg border bg-white focus:outline-none focus:ring-2 focus:ring-green-500 transition-shadow"
-      aria-label="Search products"
-    />
-    <Search className="absolute left-3 top-3.5 text-gray-400" size={20} />
-  </div>
-);
+const SearchBar = ({ onSearch }) => {
+  const [isFocused, setIsFocused] = useState(false);
+  
+  return (
+    <div className="flex-1 relative">
+      <input 
+        type="text"
+        placeholder="Search products..."
+        onChange={(e) => onSearch(e.target.value)}
+        onFocus={() => setIsFocused(true)}
+        onBlur={() => setIsFocused(false)}
+        className={`w-full px-4 py-3 pl-11 rounded-lg border bg-white focus:outline-none focus:ring-2 focus:ring-green-500 transition-all duration-300 ${
+          isFocused ? 'shadow-lg' : 'shadow-none'
+        }`}
+        aria-label="Search products"
+      />
+      <Search className={`absolute left-3 top-3.5 transition-colors duration-300 ${
+        isFocused ? 'text-green-500' : 'text-gray-400'
+      }`} size={20} />
+    </div>
+  );
+};
 
 const MarketplaceView = ({ products: initialProducts = [], isStorePage = false }) => { // should be initial_products = []
   const [cartItems, setCartItems] = useState([]);
@@ -181,14 +192,36 @@ const handleCheckoutComplete = () => {
   setIsCheckoutOpen(false);
 };
 
-  const addToCart = (product) => {
-    setCartItems(prev => [...prev, { 
+const addToCart = (product) => {
+  setCartItems(prev => [...prev, { 
+    ...product, 
+    cartId: Date.now(),
+    quantity: 1  // Add default quantity
+  }]);
+  setIsCartOpen(true);
+};
+
+const addToCartWithQuantity = (product) => {
+  setCartItems((prev) => {
+    // Check if product already exists in the cart (optional logic)
+    const existingProductIndex = prev.findIndex((item) => item.id === product.id);
+    
+    if (existingProductIndex !== -1) {
+      // Update quantity if the product exists
+      const updatedCart = [...prev];
+      updatedCart[existingProductIndex].quantity += product.quantity;
+      return updatedCart;
+    }
+    
+    // Add new product with the selected quantity
+    return [...prev, { 
       ...product, 
-      cartId: Date.now(),
-      quantity: 1  // Add default quantity
-    }]);
-    setIsCartOpen(true);
-  };
+      cartId: Date.now(), // Unique identifier for cart items
+    }];
+  });
+
+  setIsCartOpen(true); // Optionally open the cart after adding
+};
 
   const addToCartThroughChat = (product, quantity = 1) => {
     setCartItems(prev => [
@@ -417,11 +450,11 @@ const handleCheckoutComplete = () => {
   }, [products]);
 
   return (
-    <div className="flex h-[calc(100vh-4rem)]">
+    <div className="flex max-h-[calc(100vh-4rem)]">
       {/* Left Column - Chat */}
-      <div className="w-96 bg-white border-r hidden lg:flex flex-col h-full">
-        <div className="flex-1 flex flex-col">
-          {/* Header */}
+      <div className="w-96 bg-white border-r hidden lg:block">
+        <div className="h-full flex flex-col">
+          {/* Chat Header */}
           <div className="p-4 bg-green-50 border-b">
             <div className="flex items-center gap-2">
               <PackageSearch size={24} className="text-green-600" />
@@ -433,23 +466,18 @@ const handleCheckoutComplete = () => {
           </div>
 
           {/* Chat Messages */}
-          <div
-            className="flex-1 overflow-y-auto p-4 space-y-4"
-            style={{ maxHeight: "calc(100vh - 4rem - 8rem)" }} // Adjust for header/footer
-            role="log"
-            aria-live="polite"
-          >
+          <div className="flex-1 overflow-y-auto p-4 space-y-4">
             {chatMessages.map((message, index) => (
               <div
                 key={index}
-                className={`flex ${message.type === "user" ? "justify-end" : "justify-start"}`}
+                className={`flex ${message.type === "user" ? "justify-end" : "justify-start"} animate-fadeIn`}
               >
                 <div
                   className={`inline-block p-3 rounded-lg max-w-[80%] ${
                     message.type === "user"
                       ? "bg-green-600 text-white"
                       : "bg-gray-100"
-                  }`}
+                  } shadow-sm hover:shadow-md transition-shadow duration-300`}
                 >
                   <p>{message.text}</p>
                   {message.options && (
@@ -457,10 +485,8 @@ const handleCheckoutComplete = () => {
                       {message.options.map((option, i) => (
                         <button
                           key={i}
-                          className="block w-full text-left px-3 py-2 rounded bg-white text-green-600 hover:bg-green-50 text-sm transition-colors"
-                          onClick={() => {
-                            setChatInput(option);
-                          }}
+                          className="block w-full text-left px-3 py-2 rounded bg-white text-green-600 hover:bg-green-50 text-sm transition-all duration-300 hover:translate-x-1"
+                          onClick={() => setChatInput(option)}
                         >
                           {option}
                         </button>
@@ -471,7 +497,7 @@ const handleCheckoutComplete = () => {
               </div>
             ))}
             {isLoading && (
-              <div className="flex gap-2 items-center text-gray-500">
+              <div className="flex gap-2 items-center text-gray-500 animate-pulse">
                 <div className="w-2 h-2 rounded-full bg-gray-400 animate-bounce" />
                 <div className="w-2 h-2 rounded-full bg-gray-400 animate-bounce [animation-delay:0.2s]" />
                 <div className="w-2 h-2 rounded-full bg-gray-400 animate-bounce [animation-delay:0.4s]" />
@@ -480,46 +506,49 @@ const handleCheckoutComplete = () => {
           </div>
 
           {/* Chat Input */}
-          <form onSubmit={handleChatSubmit} className="p-4 border-t">
-            <div className="flex gap-2">
+          <div className="p-4 border-t bg-white">
+            <form onSubmit={handleChatSubmit} className="flex gap-2">
               <input
                 type="text"
                 value={chatInput}
                 onChange={(e) => setChatInput(e.target.value)}
                 placeholder="Ask anything about products..."
-                className="flex-1 px-4 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-green-500"
-                aria-label="Chat input"
+                className="flex-1 px-4 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-green-500 transition-all duration-300"
               />
               <button
                 type="submit"
-                className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
+                className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                 disabled={isLoading}
               >
                 Send
+                <span className={`transform transition-transform ${isLoading ? 'rotate-180' : ''}`}>
+                  →
+                </span>
               </button>
-            </div>
-          </form>
-        </div>
-
-        {/* Shopping Cart Button */}
-        <button
-          onClick={() => setIsCartOpen(true)}
-          className="w-full p-4 flex items-center justify-between hover:bg-gray-50 border-t"
-          aria-label="Open shopping cart"
-        >
-          <div className="flex items-center gap-2">
-            <ShoppingCart size={20} />
-            <span className="font-semibold">Shopping Cart</span>
+            </form>
           </div>
-          <span className="bg-green-100 text-green-800 px-2 py-1 rounded">
-            {cartItems.length} items
-          </span>
-        </button>
+
+          {/* Shopping Cart Button */}
+          <div className="border-t">
+            <button
+              onClick={() => setIsCartOpen(true)}
+              className="w-full p-4 flex items-center justify-between hover:bg-gray-50 transition-colors duration-300"
+            >
+              <div className="flex items-center gap-2">
+                <ShoppingCart size={20} className="text-green-600" />
+                <span className="font-semibold">Shopping Cart</span>
+              </div>
+              <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full transition-all duration-300 hover:bg-green-200">
+                {cartItems.length} items
+              </span>
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Main Content Area */}
       <div className="flex-1 overflow-y-auto bg-gray-50">
-        <div className="max-w-7xl mx-auto p-2">
+        <div className="max-w-7xl mx-auto p-6">
           {/* Search and Filters */}
           <div className="sticky top-0 z-10 bg-gray-50 pb-4">
             <div className="flex gap-4 mb-4">
@@ -586,26 +615,8 @@ const handleCheckoutComplete = () => {
         onCheckoutComplete={handleCheckoutComplete}
       />
 
-      {/* Modal for Image */}
-      {selectedImage && (
-        <Dialog open={!!selectedImage} onOpenChange={() => setSelectedImage(null)}>
-        <DialogContent>
-          <DialogTitle>Product Image</DialogTitle>
-          <DialogDescription>This is the image of the product</DialogDescription>
-          <img
-            src={selectedImage}
-            alt="Product"
-            className="w-full h-auto rounded-md shadow-md"
-          />
-          <Button
-            className="mt-4 w-full"
-            onClick={() => setSelectedImage(null)}
-          >
-            Close
-          </Button>
-        </DialogContent>
-      </Dialog>
-      )}
+      {/* Modal for Product */}
+      
 
     </div>
   );
