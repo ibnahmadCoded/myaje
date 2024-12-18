@@ -29,8 +29,8 @@ const Sidebar = ({
   sidebarRef 
 }) => {
   const menuItems = [
-    { icon: <LayoutGrid size={20} />, label: 'Dashboard', href: '/dashboard', badge: '3' },
-    { icon: <Package size={20} />, label: 'Inventory', href: '/inventory', badge: 'Low' },
+    { icon: <LayoutGrid size={20} />, label: 'Dashboard', href: '/dashboard'},
+    { icon: <Package size={20} />, label: 'Inventory', href: '/inventory'},
     { icon: <Store size={20} />, label: 'Storefront', href: '/storefront' },
     { icon: <NotebookIcon size={20} />, label: 'Invoicing', href: '/invoicing' },
     { icon: <PackageOpen size={20} />, label: 'Restock', href: '/restock' },
@@ -56,7 +56,7 @@ const Sidebar = ({
         onMouseLeave={onMouseLeave}
       >
         <div className="flex items-center justify-between p-4 border-b">
-          <h1 className="font-bold text-xl text-green-700">Myaje Suite</h1>
+          <h1 className="font-bold text-xl text-green-700">Myaje</h1>
           {isMobile && (
             <Button
               variant="ghost"
