@@ -49,7 +49,7 @@ export const ProductModal = ({ product, isOpen, onClose, onAddToCart }) => {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-[1200px] w-[1200px] h-[97vh] p-0 overflow-hidden flex flex-col">
+      <DialogContent className="min-w-[1200px] h-[97vh] p-0 overflow-hidden flex flex-col">
         <DialogHeader className="p-1 md:p-6 border-b sticky top-0 bg-white z-10">
           <div className="flex items-center justify-between">
             <div>
