@@ -298,8 +298,6 @@ const addToCartWithQuantity = (product) => {
       
       const result = await response.json(); 
 
-      console.log('Chat inference result:', result);
-
       // Handle different intents based on the result
       switch (result.intent) {
         case 'find_products':
@@ -386,51 +384,53 @@ const addToCartWithQuantity = (product) => {
           }]);
           break;
 
-        case 'remove_from_cart':
-          if (result.remove_all) {
+          case 'remove_from_cart':
             clearCart();
-            setChatMessages(prev => [
-              ...prev,
-              {
-                type: 'bot',
-                text: "I've removed all items from your cart.",
-              },
-            ]);
-          } else if (result.position !== undefined) {
-            setCartItems(prevCartItems => {
-              // Retrieve all current cart items
-              const updatedCart = [...prevCartItems];
-              
-              // Adjust the position to be zero-based
-              const position = result.position - 1;
-        
-              if (position >= 0 && position < updatedCart.length) {
-                // Remove the item at the specified position
-                const removedItem = updatedCart.splice(position, 1)[0]; // Get the removed item
-        
-                // Provide bot feedback
-                setChatMessages(prev => [
-                  ...prev,
-                  {
-                    type: 'bot',
-                    text: `I've removed ${removedItem.name} from your cart.`,
-                  },
-                ]);
-              } else {
-                // Handle invalid position
-                setChatMessages(prev => [
-                  ...prev,
-                  {
-                    type: 'bot',
-                    text: "I couldn't find an item at that position in your cart.",
-                  },
-                ]);
-              }
-        
-              return updatedCart; // Return the updated cart
-            });
-          }
-          break;
+            setChatMessages(prev => [...prev, {type: 'bot', text: "I've removed all items from your cart.",},]);
+            // if (result.remove_all) {
+            //   clearCart();
+            //   setChatMessages(prev => [
+            //     ...prev,
+            //     {
+            //       type: 'bot',
+            //       text: "I've removed all items from your cart.",
+            //     },
+            //   ]);
+            // } else if (result.position !== undefined) {
+            //   setCartItems(prevCartItems => {
+            //     // Retrieve all current cart items
+            //     const updatedCart = [...prevCartItems];
+                
+            //     // Adjust the position to be zero-based
+            //     const position = result.position - 1;
+            
+            //     if (position >= 0 && position < updatedCart.length) {
+            //       // Remove the item at the specified position
+            //       const removedItem = updatedCart.splice(position, 1)[0]; // Get the removed item
+            
+            //       // Provide bot feedback
+            //       setChatMessages(prev => [
+            //         ...prev,
+            //         {
+            //           type: 'bot',
+            //           text: `I've removed ${removedItem.name} from your cart.`,
+            //         },
+            //       ]);
+            //     } else {
+            //       // Handle invalid position
+            //       setChatMessages(prev => [
+            //         ...prev,
+            //         {
+            //           type: 'bot',
+            //           text: "I couldn't find an item at that position in your cart.",
+            //         },
+            //       ]);
+            //     }
+            
+            //     return updatedCart; // Return the updated cart
+            //   });
+            // }
+            break;
 
         case 'save_for_later':
           if (result.index !== undefined) {
