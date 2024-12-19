@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from models import create_tables
-from routes import auth, inventory, storefront, orders, marketplace, invoice, chat_inference, notifications
+from routes import auth, inventory, storefront, orders, marketplace, invoice, chat_inference, notifications, dashboard
 from utils.chatInferenceQueryParser import QueryIntentParser
 
 # Initialize FastAPI
@@ -40,6 +40,7 @@ app.include_router(invoice.router, prefix="/invoicing", tags=["invoicing"])
 app.include_router(marketplace.router, prefix="/marketplace", tags=["marketplace"])
 app.include_router(chat_inference.router, prefix="/chat", tags=["chat"])
 app.include_router(notifications.router, prefix="/notifications", tags=["notifications"])
+app.include_router(dashboard.router, prefix="/dashboard", tags=["dashboard"])
 
 if __name__ == "__main__":
     import uvicorn
