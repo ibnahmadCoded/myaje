@@ -10,7 +10,7 @@ from email.mime.text import MIMEText
 import smtplib
 import os
 from pydantic import BaseModel, EmailStr
-from models import InvoiceRequest, StoreSettings, User, BankDetails
+from models import InvoiceRequest, StoreSettings, User, BankDetails, Order
 from routes.notifications import create_notification, NotificationType
 from sql_database import get_db
 from routes.auth import get_current_user
@@ -113,11 +113,19 @@ async def get_invoice_requests(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    query = db.query(InvoiceRequest)
+    # Start with base query joining with Order to get seller_id
+    query = db.query(InvoiceRequest).join(
+        Order, 
+        InvoiceRequest.order_id == Order.id
+    ).filter(
+        Order.seller_id == current_user.id
+    )
     
+    # Add status filter if provided
     if status:
         query = query.filter(InvoiceRequest.status == status)
     
+    # Order by creation date
     requests = query.order_by(desc(InvoiceRequest.created_at)).all()
     
     return [{
@@ -130,7 +138,8 @@ async def get_invoice_requests(
         "status": req.status,
         "created_at": req.created_at,
         "invoice_number": req.invoice_number,
-        "items": req.items
+        "items": req.items,
+        "order_id": req.order_id
     } for req in requests]
 
 @router.get("/request/{request_id}")

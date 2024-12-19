@@ -29,19 +29,60 @@ import { useToast } from "@/hooks/use-toast";
 
 const DashboardPage = () => {
   const [currentDateTime, setCurrentDateTime] = useState('');
+  const [metrics, setMetrics] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [feedbackForm, setFeedbackForm] = useState({ name: '', email: '', message: '' });
   const { toast } = useToast();
 
   useEffect(() => {
     updateDateTime();
+    fetchMetrics();
+    
     const timer = setInterval(updateDateTime, 1000);
-    return () => clearInterval(timer);
+    // Refresh metrics every 5 minutes
+    const metricsTimer = setInterval(fetchMetrics, 300000);
+    
+    return () => {
+      clearInterval(timer);
+      clearInterval(metricsTimer);
+    };
   }, []);
 
   const updateDateTime = () => {
     const now = new Date();
     setCurrentDateTime(now.toLocaleString());
+  };
+
+  const fetchMetrics = async () => {
+    try {
+      const token = localStorage.getItem('token'); // Or however you store your auth token
+      const response = await fetch('http://localhost:8000/dashboard/metrics', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (response.status === 401) {
+        // Handle unauthorized access - maybe redirect to login
+        router.push('/login');
+        return;
+      }
+      
+      if (!response.ok) throw new Error('Failed to fetch metrics');
+      
+      const data = await response.json();
+      setMetrics(data);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to load dashboard metrics",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const businessNews = [
@@ -63,44 +104,64 @@ const DashboardPage = () => {
     {
       title: "Inventory Overview",
       icon: Boxes,
+      metricsKey: "inventory",
       metrics: [
-        { label: "Total Items", value: "1,234", trend: "+12%" },
-        { label: "Low Stock", value: "12", trend: "-3%", status: "warning" },
-        { label: "Out of Stock", value: "5", trend: "-2%", status: "danger" },
-        { label: "Categories", value: "28", trend: "0%" }
+        { label: "Total Items", key: "total_items" },
+        { label: "Low Stock", key: "low_stock" },
+        { label: "Out of Stock", key: "out_of_stock" },
+        { label: "Categories", key: "categories" }
       ]
     },
     {
       title: "Orders Status",
       icon: ShoppingCart,
+      metricsKey: "orders",
       metrics: [
-        { label: "New Orders", value: "45", trend: "+8%" },
-        { label: "Processing", value: "23", trend: "+5%" },
-        { label: "Shipped", value: "18", trend: "+12%" },
-        { label: "Returns", value: "4", trend: "-1%", status: "warning" }
+        { label: "New Orders", key: "new_orders" },
+        { label: "Processing", key: "processing" },
+        { label: "Shipped", key: "shipped" },
+        { label: "Returns", key: "returns" }
       ]
     },
     {
       title: "Restock Requests",
       icon: PackageOpen,
+      metricsKey: "restock",
       metrics: [
-        { label: "New Requests", value: "8", trend: "+3%" },
-        { label: "In Progress", value: "12", trend: "+2%" },
-        { label: "Fulfilled", value: "25", trend: "+15%" },
-        { label: "Urgent", value: "3", trend: "-1%", status: "warning" }
+        { label: "New Requests", key: "new_requests" },
+        { label: "In Progress", key: "in_progress" },
+        { label: "Fulfilled", key: "fulfilled" },
+        { label: "Urgent", key: "urgent" }
       ]
     },
     {
       title: "Invoicing",
       icon: FileText,
+      metricsKey: "invoicing",
       metrics: [
-        { label: "Pending", value: "28", trend: "+5%" },
-        { label: "Sent", value: "156", trend: "+12%" },
-        { label: "Paid", value: "142", trend: "+18%" },
-        { label: "Overdue", value: "14", trend: "-2%", status: "danger" }
+        { label: "Pending", key: "pending" },
+        { label: "Sent", key: "sent" },
+        { label: "Paid", key: "paid" },
+        { label: "Overdue", key: "overdue" }
       ]
     }
   ];
+
+  const getTrendColor = (metric) => {
+    if (!metric) return 'text-gray-600';
+    if (metric.status === 'danger') return 'text-red-600';
+    if (metric.status === 'warning') return 'text-yellow-600';
+    return metric.trend?.startsWith('+') ? 'text-green-600' : 
+           metric.trend === '0%' ? 'text-gray-600' : 'text-red-600';
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900" />
+      </div>
+    );
+  }
 
   const navigationShortcuts = [
     { icon: <LayoutGrid size={20} />, label: 'Dashboard', href: '/dashboard'},
@@ -118,12 +179,6 @@ const DashboardPage = () => {
     });
     setShowFeedbackModal(false);
     setFeedbackForm({ name: '', email: '', message: '' });
-  };
-
-  const getTrendColor = (trend, status) => {
-    if (status === 'danger') return 'text-red-600';
-    if (status === 'warning') return 'text-yellow-600';
-    return trend.startsWith('+') ? 'text-green-600' : trend === '0%' ? 'text-gray-600' : 'text-red-600';
   };
 
   return (
@@ -152,21 +207,31 @@ const DashboardPage = () => {
         </Card>
 
         {/* GMV Card */}
-        <Card className="bg-gradient-to-r from-green-50 to-emerald-50">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Total GMV</p>
-                <p className="text-3xl font-bold text-green-700">₦4,678,639.87</p>
+        {metrics?.gmv && (
+          <Card className="bg-gradient-to-r from-green-50 to-emerald-50">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Total GMV</p>
+                  <p className="text-3xl font-bold text-green-700">
+                    ₦{metrics.gmv.current_month_gmv.toLocaleString(undefined, {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2
+                    })}
+                  </p>
+                </div>
+                <DollarSign className="h-12 w-12 text-green-500" />
               </div>
-              <DollarSign className="h-12 w-12 text-green-500" />
-            </div>
-            <div className="mt-4 flex items-center text-sm">
-              <TrendingUp className="h-4 w-4 text-green-500 mr-1" />
-              <span className="text-green-600">+12.5% from last month</span>
-            </div>
-          </CardContent>
-        </Card>
+              <div className="mt-4 flex items-center text-sm">
+                <TrendingUp className="h-4 w-4 text-green-500 mr-1" />
+                <span className="text-green-600">
+                  {metrics.gmv.growth_percentage > 0 ? '+' : ''}
+                  {metrics.gmv.growth_percentage.toFixed(1)}% from last month
+                </span>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Metrics Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -182,17 +247,22 @@ const DashboardPage = () => {
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-2 gap-4">
-                  {group.metrics.map((metric, idx) => (
-                    <div key={idx} className="space-y-1">
-                      <p className="text-sm text-gray-600">{metric.label}</p>
-                      <div className="flex items-center space-x-2">
-                        <span className="text-xl font-semibold">{metric.value}</span>
-                        <span className={`text-sm ${getTrendColor(metric.trend, metric.status)}`}>
-                          {metric.trend}
-                        </span>
+                  {group.metrics.map((metric, idx) => {
+                    const metricData = metrics?.[group.metricsKey]?.[metric.key];
+                    return (
+                      <div key={idx} className="space-y-1">
+                        <p className="text-sm text-gray-600">{metric.label}</p>
+                        <div className="flex items-center space-x-2">
+                          <span className="text-xl font-semibold">
+                            {metricData?.value || '0'}
+                          </span>
+                          <span className={`text-sm ${getTrendColor(metricData)}`}>
+                            {metricData?.trend || '0%'}
+                          </span>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </CardContent>
             </Card>
