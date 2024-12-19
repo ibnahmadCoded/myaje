@@ -5,6 +5,8 @@ from sqlalchemy import desc
 from typing import List, Optional, Dict, Literal
 from datetime import datetime
 from models import MarketplaceOrder, Order, OrderItem, User, Product, OrderStatus, StorefrontProduct, InvoiceRequest, InvoiceStatus, Payment
+from routes.notifications import create_notification, NotificationType
+from routes.invoice import notify_seller_of_new_invoice
 from sql_database import get_db
 from routes.auth import get_current_user
 from pydantic import BaseModel, EmailStr
@@ -27,6 +29,16 @@ class MarketplaceOrderCreate(BaseModel):
 
 class OrderUpdate(BaseModel):
     status: OrderStatus
+
+async def notify_seller_of_new_order(db: Session, order):
+    await create_notification(
+        db=db,
+        user_id=order.seller_id,
+        type=NotificationType.NEW_ORDER,
+        text=f"New order received #{order.id} from {order.customer_name}",
+        reference_id=order.id,
+        reference_type="order"
+    )
 
 @router.post("/submit")
 async def submit_marketplace_order(
@@ -83,7 +95,7 @@ async def submit_marketplace_order(
             shipping_address=order.shipping_address,
             total_amount=total_amount,
             payment_info=order.payment_info,
-            order_type=order.order_type  # "payment" or "invoice"
+            order_type=order.order_type  # "payment" or "invoice" or "cash (later implementation)"
         )
         db.add(marketplace_order)
         db.flush()
@@ -132,7 +144,9 @@ async def submit_marketplace_order(
                     status="pending",
                     payment_details=order.payment_info
                 )
-                db.add(payment)
+                db.add(payment) 
+
+                # we should notify seller of payment here (after payment integration)
             else:  # invoice
                 # Create invoice request for this seller's portion
                 invoice_request = InvoiceRequest(
@@ -152,8 +166,15 @@ async def submit_marketplace_order(
                     created_at=datetime.utcnow()
                 )
                 db.add(invoice_request)
+                db.flush()
+
+                # Create notification
+                await notify_seller_of_new_invoice(db=db, invoice_request=invoice_request)
             
             seller_orders.append(seller_order)
+
+            # Create notification for this seller
+            await notify_seller_of_new_order(db, seller_order)
         
         db.commit()
         

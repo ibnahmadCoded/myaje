@@ -1,5 +1,5 @@
 from datetime import datetime
-from sqlalchemy import Column, Integer, String, Float, Text, DateTime, ForeignKey, UniqueConstraint, Enum, JSON
+from sqlalchemy import Column, Integer, String, Float, Text, DateTime, ForeignKey, UniqueConstraint, Enum, JSON, Boolean
 from starlette.concurrency import run_in_threadpool
 from sqlalchemy.orm import relationship
 from sql_database import Base, engine
@@ -23,6 +23,7 @@ class User(Base):
     store_settings = relationship('StoreSettings', back_populates='owner', uselist=False)
     orders = relationship("Order", back_populates="seller")
     bank_details = relationship("BankDetails", back_populates="user_data")
+    notifications = relationship("Notification", back_populates="user")
 
     def generate_store_slug(self, db):
         base_slug = slugify(self.business_name)
@@ -353,6 +354,31 @@ class InvoiceRequest(Base):
             })
         
         return result
+
+# models.py (add this to your existing models)
+class NotificationType(str, enum.Enum):
+    NEW_ORDER = "new_order"
+    NEW_INVOICE = "new_invoice"
+    LOW_STOCK = "low_stock"
+    PAYMENT_RECEIVED = "payment_received"
+    ORDER_STATUS_CHANGE = "order_status_change"
+    INVOICE_STATUS_CHANGE = "invoice_status_change"
+    RESTOCK_STATUS_CHANGE = "restock_status_change"
+
+class Notification(Base):
+    __tablename__ = "notifications"
+    
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
+    type = Column(String, nullable=False)  # Uses NotificationType
+    text = Column(String, nullable=False)
+    is_read = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    reference_id = Column(Integer)  # ID of related order/invoice/etc
+    reference_type = Column(String)  # "order", "invoice", etc
+    
+    # Relationships
+    user = relationship("User", back_populates="notifications")
 
 # Create tables function
 async def create_tables():
