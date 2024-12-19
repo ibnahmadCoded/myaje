@@ -11,6 +11,7 @@ import smtplib
 import os
 from pydantic import BaseModel, EmailStr
 from models import InvoiceRequest, StoreSettings, User, BankDetails
+from routes.notifications import create_notification, NotificationType
 from sql_database import get_db
 from routes.auth import get_current_user
 import logging
@@ -24,6 +25,16 @@ router = APIRouter()
 base_dir = os.path.dirname(os.path.abspath(__file__))  
 template_dir = os.path.join(base_dir, "../templates")
 env = Environment(loader=FileSystemLoader(template_dir))
+
+async def notify_seller_of_new_invoice(db: Session, invoice_request):
+    await create_notification(
+        db=db,
+        user_id=invoice_request.order.seller_id,
+        type=NotificationType.NEW_INVOICE,
+        text=f"New invoice request #{invoice_request.id} from {invoice_request.customer_name}",
+        reference_id=invoice_request.id,
+        reference_type="invoice"
+    )
 
 class InvoiceItemCreate(BaseModel):
     product_id: int
@@ -59,7 +70,7 @@ class BankDetailsRequestCreate(BaseModel):
     sortCode: str
     accountType: str
 
-@router.post("/request")
+@router.post("/request") # currently not using the route but can be useful in the future if we want buyers to request new invoices fromt thier accounts (when buyers start having accounts)
 async def create_invoice_request(
     request: InvoiceRequestCreate,
     db: Session = Depends(get_db)
@@ -78,6 +89,11 @@ async def create_invoice_request(
         )
         
         db.add(invoice_request)
+        db.flush()
+
+        # Create notification
+        await notify_seller_of_new_invoice(db=db, invoice_request=invoice_request)
+
         db.commit()
         db.refresh(invoice_request)
         

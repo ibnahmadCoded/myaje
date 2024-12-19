@@ -67,7 +67,7 @@ export const CheckoutDialog = ({
         customer_phone: formData.customer_phone,
         shipping_address: formData.shipping_address,
         items: cartItems.map(item => ({
-          product_id: item.id,
+          product_id: item.product_id,
           quantity: item.quantity,
           price: item.price,
           name: item.name

@@ -16,6 +16,8 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { formatDistanceToNow } from 'date-fns';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 const Sidebar = ({ 
   isOpen, 
@@ -23,7 +25,10 @@ const Sidebar = ({
   isMobile, 
   searchQuery, 
   onSearchChange,
-  notifications,
+  notifications = [],
+  loading = false,
+  onNotificationClick,
+  onMarkAllRead,
   onMouseEnter,
   onMouseLeave,
   sidebarRef 
@@ -36,6 +41,8 @@ const Sidebar = ({
     { icon: <PackageOpen size={20} />, label: 'Restock', href: '/restock' },
     { icon: <LineChart size={20} />, label: 'Accounting', href: '/accounting', badge: 'Coming Soon' },
   ];
+
+  const unreadCount = notifications.filter(n => !n.is_read).length;
 
   return (
     <>
@@ -56,7 +63,12 @@ const Sidebar = ({
         onMouseLeave={onMouseLeave}
       >
         <div className="flex items-center justify-between p-4 border-b">
-          <h1 className="font-bold text-xl text-green-700">Myaje</h1>
+        <h1 
+          className="font-bold text-xl text-green-700 cursor-pointer"
+          onClick={() => (window.location.href = '/dashboard')}
+        >
+          Myaje
+        </h1>
           {isMobile && (
             <Button
               variant="ghost"
@@ -81,6 +93,7 @@ const Sidebar = ({
           </div>
         </div>
 
+        {/* Navigation Menu */}
         <nav className="mt-2">
           {menuItems.map((item, index) => (
             <a
@@ -107,19 +120,59 @@ const Sidebar = ({
           <div className="px-4 py-3">
             <div className="flex items-center justify-between text-gray-700 mb-2">
               <span className="text-sm font-medium">Notifications</span>
-              <Badge variant="outline">{notifications.filter(n => n.isNew).length}</Badge>
-            </div>
-            <div className="space-y-2 max-h-64 overflow-y-auto">
-              {notifications.map(notification => (
-                <div 
-                  key={notification.id}
-                  className="flex items-center gap-2 text-sm p-2 rounded-lg hover:bg-gray-50"
-                >
-                  <Bell size={14} className={notification.isNew ? 'text-green-500' : 'text-gray-400'} />
-                  <span className="text-gray-600">{notification.text}</span>
+              {unreadCount > 0 && (
+                <div className="flex gap-2 items-center">
+                  <Badge variant="outline">{unreadCount}</Badge>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-xs text-green-600 hover:text-green-700"
+                    onClick={onMarkAllRead}
+                  >
+                    Mark all read
+                  </Button>
                 </div>
-              ))}
+              )}
             </div>
+            
+            <ScrollArea className="max-h-64">
+              {loading ? (
+                <div className="text-center py-4 text-gray-500">Loading notifications...</div>
+              ) : notifications.length === 0 ? (
+                <div className="text-center py-4 text-gray-500">No notifications</div>
+              ) : (
+                <div className="space-y-2">
+                  {notifications.map(notification => (
+                    <div 
+                      key={notification.id}
+                      onClick={() => {
+                        if (notification.type === 'new_order') {
+                          window.location.href = '/storefront';
+                        } else if (notification.type === 'new_invoice') {
+                          window.location.href = '/invoicing';
+                        }
+                        onNotificationClick(notification.id); // Always call this
+                      }}
+                      className={`flex items-start gap-2 p-2 rounded-lg cursor-pointer
+                        ${!notification.is_read ? 'bg-green-50 hover:bg-green-100' : 'hover:bg-gray-50'}`}
+                    >
+                      <Bell 
+                        size={14} 
+                        className={!notification.is_read ? 'text-green-500 mt-1' : 'text-gray-400 mt-1'} 
+                      />
+                      <div className="flex-1">
+                        <p className={`text-sm ${!notification.is_read ? 'font-medium' : ''} text-gray-600`}>
+                          {notification.text}
+                        </p>
+                        <span className="text-xs text-gray-400">
+                          {formatDistanceToNow(new Date(notification.created_at), { addSuffix: true })}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </ScrollArea>
           </div>
         </div>
 

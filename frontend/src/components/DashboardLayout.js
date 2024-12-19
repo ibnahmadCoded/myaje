@@ -5,6 +5,7 @@ import { Menu } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import Sidebar from '@/components/Sidebar';
+import { useNotifications } from '@/hooks/use-notifications'
 
 
 export default function DashboardLayout ({ children }) {
@@ -12,70 +13,17 @@ export default function DashboardLayout ({ children }) {
   const [searchQuery, setSearchQuery] = useState('');
   const sidebarRef = useRef(null);
   const [isMobile, setIsMobile] = useState(false);
-  const [notifications, setNotifications] = useState([
-    { 
-      id: 1, 
-      text: 'New order received #1045', 
-      isNew: true,
-      timestamp: Date.now() - 5000 // slightly older
-    },
-    { 
-      id: 2, 
-      text: 'Inventory low alert: Coffee Beans', 
-      isNew: true,
-      timestamp: Date.now() - 3000 
-    },
-    { 
-      id: 3, 
-      text: 'Payment processed for invoice #254', 
-      isNew: true,
-      timestamp: Date.now() - 7000
-    },
-    { 
-      id: 4, 
-      text: 'Customer support ticket #89 updated', 
-      isNew: true,
-      timestamp: Date.now() - 2000
-    },
-    { 
-      id: 5, 
-      text: 'New product review received', 
-      isNew: true,
-      timestamp: Date.now() - 4000
-    },
-    { 
-      id: 6, 
-      text: 'Monthly sales report ready', 
-      isNew: true,
-      timestamp: Date.now() - 8000
-    },
-    { 
-      id: 7, 
-      text: 'Shipping delay detected for order #1042', 
-      isNew: false,
-      timestamp: Date.now() - 24000
-    },
-    { 
-      id: 8, 
-      text: 'Refund processed for customer', 
-      isNew: false,
-      timestamp: Date.now() - 36000
-    },
-    { 
-      id: 9, 
-      text: 'New supplier contract signed', 
-      isNew: false,
-      timestamp: Date.now() - 48000
-    },
-    { 
-      id: 10, 
-      text: 'Quarterly inventory audit completed', 
-      isNew: false,
-      timestamp: Date.now() - 72000
-    }
-  ]);
   const router = useRouter();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const { 
+    notifications, 
+    loading, 
+    markAsRead, 
+    markAllAsRead 
+  } = useNotifications();
+
+  // Calculate unread count
+  const unreadCount = notifications.filter(n => !n.is_read).length;
 
   useEffect(() => {
     const checkMobileView = () => {
@@ -152,8 +100,12 @@ export default function DashboardLayout ({ children }) {
         searchQuery={searchQuery}
         onSearchChange={(e) => setSearchQuery(e.target.value)}
         notifications={notifications}
-        onMouseEnter={handleMouseEnter}
-        onMouseLeave={handleMouseLeave}
+        loading={loading}
+        onNotificationClick={markAsRead}
+        onMarkAllRead={markAllAsRead}
+        unreadCount={unreadCount}
+        onMouseEnter={() => !isMobile && setIsSidebarOpen(true)}
+        onMouseLeave={() => !isMobile && setIsSidebarOpen(false)}
         sidebarRef={sidebarRef}
       />
 
