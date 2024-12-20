@@ -30,7 +30,7 @@ os.makedirs(UPLOAD_DIRECTORY, exist_ok=True)
 if not os.path.exists(UPLOAD_DIRECTORY):
     os.makedirs(UPLOAD_DIRECTORY)
 
-SQLALCHEMY_DATABASE_URL = os.getenv('DB_TYPE')+os.getenv('DB_NAME')
+SQLALCHEMY_DATABASE_URL = os.getenv('DB_TYPE', "sqlite:///./") + os.getenv('DB_NAME', "myaje_app.db")
 # Read secret key from file
 SECRET_KEY_PATH = os.getenv('SECRET_KEY_PATH', './secrets/appsecret.txt')
 
@@ -45,4 +45,6 @@ ALGORITHM = "HS256"
 SMTP_USERNAME = os.getenv("SMTP_USERNAME")
 SMTP_PASSWORD = os.getenv("SMTP_PASSWORD")
 SMTP_SERVER = os.getenv("SMTP_SERVER") 
-SMTP_PORT = int(os.getenv("SMTP_PORT"))
+SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
+SUPER_ADMIN_EMAIL = os.getenv("SUPER_ADMIN_EMAIL", "admin@yourdomain.com")
+SUPER_ADMIN_PASSWORD = os.getenv("SUPER_ADMIN_PASSWORD", "adminpassword123")
