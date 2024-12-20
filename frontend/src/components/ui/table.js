@@ -35,4 +35,23 @@ export const Table = ({ className = "", children, ...props }) => {
       </Component>
     );
   };
+
+  export const TableHead = ({ className = "", children, ...props }) => {
+    return (
+      <th
+        className={`border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 ${className}`}
+        {...props}
+      >
+        {children}
+      </th>
+    );
+  };
+
+  export const TableBody = ({ className = "", children, ...props }) => {
+    return (
+      <tbody className={className} {...props}>
+        {children}
+      </tbody>
+    );
+  };
   

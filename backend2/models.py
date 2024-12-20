@@ -15,6 +15,8 @@ class User(Base):
     password = Column(String(60), nullable=False)
     business_name = Column(String(100), nullable=False)
     store_slug = Column(String(150), unique=True, nullable=False)
+    is_admin = Column(Boolean, default=False)
+    admin_role = Column(String(50), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     
     # Relationships
@@ -391,6 +393,7 @@ class Feedback(Base):
     phone = Column(String(20))
     message = Column(Text, nullable=False)
     status = Column(String(20), default="pending")  # pending, in_progress, resolved
+    admin_notes = Column(Text)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     # Relationship with User model

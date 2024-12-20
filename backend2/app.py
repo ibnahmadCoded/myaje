@@ -4,6 +4,7 @@ from fastapi.staticfiles import StaticFiles
 from models import create_tables
 from routes import auth, inventory, storefront, orders, marketplace, invoice, chat_inference, notifications, dashboard, feedback
 from utils.chatInferenceQueryParser import QueryIntentParser
+from sql_database import SessionLocal
 
 # Initialize FastAPI
 app = FastAPI()
@@ -25,11 +26,16 @@ app.mount("/uploaded_images", StaticFiles(directory="uploaded_images"), name="up
 
 @app.on_event("startup")
 async def startup_event():
-    # Logic for startup, such as creating tables or connecting to databases
-    await create_tables() 
+    await create_tables()
 
-# couple quer_parser with chat_inference
-chat_inference.query_parser = query_parser
+    db = SessionLocal()
+    try:
+        await auth.create_super_admin(db)
+    finally:
+        db.close()
+    
+    # Initialize query parser
+    chat_inference.query_parser = query_parser
 
 # Include route modules
 app.include_router(auth.router, prefix="/auth", tags=["auth"])

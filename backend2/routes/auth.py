@@ -1,10 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import JSONResponse
 from fastapi.security import OAuth2PasswordBearer
+from numpy import rint
 from sqlalchemy.orm import Session
 from jose import jwt, JWTError
 from datetime import datetime, timedelta
-from config import SECRET_KEY, ALGORITHM
+from config import SECRET_KEY, ALGORITHM, SUPER_ADMIN_EMAIL, SUPER_ADMIN_PASSWORD
 
 from sql_database import get_db
 from models import User, TokenBlacklist
@@ -52,6 +53,46 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = De
     except JWTError:
         raise credentials_exception
 
+async def get_admin_user(
+    current_user: User = Depends(get_current_user)
+) -> User:
+    
+    print(current_user.is_admin)
+    print(current_user.business_name)
+    print(current_user.email)
+    
+    if not current_user.is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to access admin resources"
+        )
+    return current_user
+
+async def create_super_admin(db: Session):
+    """Create super admin user if it doesn't exist"""
+    super_admin_email = SUPER_ADMIN_EMAIL
+    super_admin_password = SUPER_ADMIN_PASSWORD
+    
+    existing_admin = db.query(User).filter(
+        User.email == super_admin_email,
+        User.is_admin == True,
+        User.admin_role == "super_admin"
+    ).first()
+    
+    if not existing_admin:
+        super_admin = User(
+            email=super_admin_email,
+            password=pwd_context.hash(super_admin_password),
+            is_admin=True,
+            admin_role="super_admin",
+            business_name="System Admin",
+            store_slug="system-admin"
+        )
+        
+        db.add(super_admin)
+        db.commit()
+        print(f"Super admin created with email: {super_admin_email}")
+
 @router.post("/signup")
 async def signup(request: Request, db: Session = Depends(get_db)):
     data = await request.json()
@@ -86,6 +127,24 @@ async def login(request: Request, db: Session = Depends(get_db)):
     user = db.query(User).filter_by(email=data['email']).first()
 
     if user and verify_password(data['password'], user.password):
+        token = create_access_token({'user_id': user.id})
+        return {
+            'token': token,
+            'user': {
+                'id': user.id,
+                'email': user.email,
+                'business_name': user.business_name
+            }
+        }
+
+    raise HTTPException(status_code=401, detail="Invalid credentials")
+
+@router.post("/admin/login")
+async def admin_login(request: Request, db: Session = Depends(get_db)):
+    data = await request.json()
+    user = db.query(User).filter_by(email=data['email']).first()
+
+    if user and user.is_admin and verify_password(data['password'], user.password):
         token = create_access_token({'user_id': user.id})
         return {
             'token': token,

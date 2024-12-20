@@ -13,5 +13,4 @@ async def get_dashboard_metrics(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    print("here")
     return await get_all_metrics(db, current_user.id)
