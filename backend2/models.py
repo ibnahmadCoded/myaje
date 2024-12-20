@@ -24,6 +24,7 @@ class User(Base):
     orders = relationship("Order", back_populates="seller")
     bank_details = relationship("BankDetails", back_populates="user_data")
     notifications = relationship("Notification", back_populates="user")
+    feedbacks = relationship("Feedback", back_populates="user")
 
     def generate_store_slug(self, db):
         base_slug = slugify(self.business_name)
@@ -379,6 +380,21 @@ class Notification(Base):
     
     # Relationships
     user = relationship("User", back_populates="notifications")
+
+class Feedback(Base):
+    __tablename__ = "feedback"
+    
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey('users.id'))
+    name = Column(String(100), nullable=False)
+    email = Column(String(120), nullable=False)
+    phone = Column(String(20))
+    message = Column(Text, nullable=False)
+    status = Column(String(20), default="pending")  # pending, in_progress, resolved
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    # Relationship with User model
+    user = relationship("User", back_populates="feedbacks")
 
 # Create tables function
 async def create_tables():

@@ -32,7 +32,12 @@ const DashboardPage = () => {
   const [metrics, setMetrics] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
-  const [feedbackForm, setFeedbackForm] = useState({ name: '', email: '', message: '' });
+  const [feedbackForm, setFeedbackForm] = useState({ 
+    name: '', 
+    email: '', 
+    phone: '', 
+    message: '' 
+  });
   const { toast } = useToast();
 
   useEffect(() => {
@@ -172,13 +177,35 @@ const DashboardPage = () => {
     { icon: <LineChart size={20} />, label: 'Accounting', href: '/accounting'}
   ];
 
-  const handleFeedbackSubmit = () => {
-    toast({
-      title: "Feedback Submitted",
-      description: "Thank you for your feedback! We'll get back to you soon.",
-    });
-    setShowFeedbackModal(false);
-    setFeedbackForm({ name: '', email: '', message: '' });
+  const handleFeedbackSubmit = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('http://localhost:8000/feedback/submit', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(feedbackForm),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to submit feedback');
+      }
+
+      toast({
+        title: "Success",
+        description: "Thank you for your feedback! We'll get back to you soon.",
+      });
+      setShowFeedbackModal(false);
+      setFeedbackForm({ name: '', email: '', phone: '', message: '' });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to submit feedback. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -324,6 +351,7 @@ const DashboardPage = () => {
                   id="name"
                   value={feedbackForm.name}
                   onChange={(e) => setFeedbackForm({...feedbackForm, name: e.target.value})}
+                  placeholder="Your name"
                 />
               </div>
               <div>
@@ -333,6 +361,17 @@ const DashboardPage = () => {
                   type="email"
                   value={feedbackForm.email}
                   onChange={(e) => setFeedbackForm({...feedbackForm, email: e.target.value})}
+                  placeholder="your.email@example.com"
+                />
+              </div>
+              <div>
+                <Label htmlFor="phone">Phone Number</Label>
+                <Input
+                  id="phone"
+                  type="tel"
+                  value={feedbackForm.phone}
+                  onChange={(e) => setFeedbackForm({...feedbackForm, phone: e.target.value})}
+                  placeholder="Your phone number"
                 />
               </div>
               <div>
@@ -342,6 +381,7 @@ const DashboardPage = () => {
                   value={feedbackForm.message}
                   onChange={(e) => setFeedbackForm({...feedbackForm, message: e.target.value})}
                   rows={4}
+                  placeholder="How can we help you?"
                 />
               </div>
             </div>
