@@ -1,7 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import JSONResponse
 from fastapi.security import OAuth2PasswordBearer
-from numpy import rint
 from sqlalchemy.orm import Session
 from jose import jwt, JWTError
 from datetime import datetime, timedelta
@@ -56,10 +55,6 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = De
 async def get_admin_user(
     current_user: User = Depends(get_current_user)
 ) -> User:
-    
-    print(current_user.is_admin)
-    print(current_user.business_name)
-    print(current_user.email)
     
     if not current_user.is_admin:
         raise HTTPException(

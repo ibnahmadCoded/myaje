@@ -7,6 +7,7 @@ import {
   X,
   Search,
   Bell,
+  User,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -29,7 +30,8 @@ const Sidebar = ({
   sidebarRef 
 }) => {
   const menuItems = [
-    { icon: <LayoutGrid size={20} />, label: 'Feedback', href: 'admin/dashboard'},
+    { icon: <LayoutGrid size={20} />, label: 'Feedback', href: '/admin/feedback'},
+    { icon: <User size={20} />, label: 'Manage Admin Users', href: '/admin/users'},
   ];
 
   const unreadCount = notifications.filter(n => !n.is_read).length;
@@ -55,7 +57,7 @@ const Sidebar = ({
         <div className="flex items-center justify-between p-4 border-b">
         <h1 
           className="font-bold text-xl text-green-700 cursor-pointer"
-          onClick={() => (window.location.href = '/dashboard')}
+          onClick={() => (window.location.href = '/feedbak')}
         >
           Myaje
         </h1>
