@@ -1,7 +1,7 @@
 
 from fastapi import APIRouter, Depends
 from routes.auth import get_current_user
-from utils.metrics_calculator import get_all_metrics
+from utils.user_metrics_calculator import get_all_metrics
 from sqlalchemy.orm import Session
 from sql_database import get_db
 from models import User
