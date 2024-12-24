@@ -29,6 +29,7 @@ class User(Base):
     bank_details = relationship("BankDetails", back_populates="user_data")
     notifications = relationship("Notification", back_populates="user")
     feedbacks = relationship("Feedback", back_populates="user")
+    restock_requests = relationship('RestockRequest', back_populates='user')
 
     def generate_store_slug(self, db):
         base_slug = slugify(self.business_name)
@@ -74,6 +75,7 @@ class Product(Base):
     # Relationships
     owner = relationship('User', back_populates='products')
     images = relationship('ProductImage', back_populates='product', cascade="all, delete-orphan")
+    restock_requests = relationship('RestockRequest', back_populates='product')
     
     __table_args__ = (UniqueConstraint('user_id', 'sku'),)
 
@@ -400,6 +402,38 @@ class Feedback(Base):
 
     # Relationship with User model
     user = relationship("User", back_populates="feedbacks")
+
+class RestockRequestStatus(str, enum.Enum):
+    PENDING = "pending"
+    APPROVED = "approved"
+    DELIVERED = "delivered"
+    CANCELLED = "cancelled"
+
+class RestockRequestUrgency(str, enum.Enum):
+    NORMAL = "normal"
+    HIGH = "high"
+
+class RestockRequest(Base):
+    __tablename__ = "restock_requests"
+    
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
+    product_id = Column(Integer, ForeignKey('products.id'), nullable=True)  # Null for new products
+    product_name = Column(String(100), nullable=False)
+    quantity = Column(Integer, nullable=False)
+    description = Column(Text, nullable=True)
+    address = Column(Text, nullable=False)
+    additional_notes = Column(Text, nullable=True)
+    urgency = Column(Enum(RestockRequestUrgency), default=RestockRequestUrgency.NORMAL)
+    status = Column(Enum(RestockRequestStatus), default=RestockRequestStatus.PENDING)
+    type = Column(String(20), nullable=False)  # 'existing' or 'new'
+    request_date = Column(DateTime, default=datetime.utcnow)
+    expected_delivery = Column(DateTime)
+    delivered_date = Column(DateTime, nullable=True)
+    
+    # Relationships
+    user = relationship('User', back_populates='restock_requests')
+    product = relationship('Product', back_populates='restock_requests')
 
 # Create tables function
 async def create_tables():

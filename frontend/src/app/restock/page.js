@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { format } from 'date-fns';
 import DashboardLayout from '@/components/DashboardLayout';
 import { Package, Plus, Truck, Search, RefreshCw, Clock, CheckCircle2, PackageCheck } from 'lucide-react';
 import { Card } from "@/components/ui/card";
@@ -12,11 +13,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Table } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 
 const RestockRequestPage = () => {
+  const [loading, setLoading] = useState(true);
   const [existingProducts, setExistingProducts] = useState([]);
   const [requests, setRequests] = useState([]);
   const [showNewRequestDialog, setShowNewRequestDialog] = useState(false);
@@ -42,58 +44,57 @@ const RestockRequestPage = () => {
   }, []);
 
   const fetchRequests = async () => {
-    // Simulated data - replace with actual API call
-    setRequests([
-      {
-        id: 1,
-        productName: "Premium Coffee Beans",
-        quantity: 50,
-        status: "pending",
-        requestDate: "2024-12-11",
-        expectedDelivery: "2024-12-12",
-        type: "existing",
-        urgency: "high"
+    const response = await fetch('http://localhost:8000/restock/requests', {
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem('token')}`,
       },
-      {
-        id: 2,
-        productName: "Organic Tea Bags",
-        quantity: 100,
-        status: "approved",
-        requestDate: "2024-12-10",
-        expectedDelivery: "2024-12-11",
-        type: "new",
-        urgency: "normal"
-      }
-    ]);
+    });
+    const data = await response.json();
+    setRequests(data);
   };
 
   const fetchProducts = async () => {
-    // Simulated data - replace with actual API call
-    setExistingProducts([
-      { id: 1, name: "Premium Coffee Beans", currentStock: 20 },
-      { id: 2, name: "Organic Tea Bags", currentStock: 15 },
-      { id: 3, name: "Herbal Green Tea", currentStock: 30 }
-    ]);
+    try {
+      const response = await fetch('http://localhost:8000/inventory/get_inventory', {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
+        },
+      });
+      const data = await response.json();
+      setExistingProducts(data);
+    } catch (error) {
+      console.error('Error fetching products:', error);
+      setError('Failed to fetch products');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSubmit = async () => {
     try {
-      // Add validation
-      if (!formData.quantity || (requestType === 'existing' && !formData.productId) || 
-          (requestType === 'new' && !formData.productName) || !formData.address) {
-        throw new Error('Please fill in all required fields');
+      console.log(formData)
+      const response = await fetch('http://localhost:8000/restock/requests', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token')}` },
+        body: JSON.stringify({
+          product_id: formData.productId,
+          product_name: formData.productName,
+          quantity: parseInt(formData.quantity),
+          description: formData.description,
+          address: formData.address,
+          additional_notes: formData.additionalNotes,
+          urgency: formData.urgency,
+          type: requestType
+        })
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to submit request');
       }
-
-      // Simulated API call - replace with actual implementation
-      // const response = await fetch('/api/restock-requests', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify(formData)
-      // });
-
+      
       toast({
         title: "Success",
-        description: "Restock request submitted successfully. Expected delivery by tomorrow.",
+        description: "Restock request submitted successfully",
       });
       setShowNewRequestDialog(false);
       fetchRequests();
@@ -101,7 +102,7 @@ const RestockRequestPage = () => {
     } catch (error) {
       toast({
         title: "Error",
-        description: error.message || "Failed to submit request",
+        description: error.message,
         variant: "destructive"
       });
     }
@@ -135,7 +136,7 @@ const RestockRequestPage = () => {
   };
 
   const filteredRequests = requests.filter(request => {
-    const matchesSearch = request.productName.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = request.product_name.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'all' || request.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
@@ -244,7 +245,7 @@ const RestockRequestPage = () => {
             <tbody>
               {filteredRequests.map((request) => (
                 <tr key={request.id} className="border-t hover:bg-gray-50">
-                  <td className="p-4">{request.productName}</td>
+                  <td className="p-4">{request.product_name}</td>
                   <td className="p-4">{request.quantity}</td>
                   <td className="p-4">
                     <Badge variant="outline">
@@ -252,8 +253,8 @@ const RestockRequestPage = () => {
                     </Badge>
                   </td>
                   <td className="p-4">{getStatusBadge(request.status)}</td>
-                  <td className="p-4">{request.requestDate}</td>
-                  <td className="p-4">{request.expectedDelivery}</td>
+                  <td className="p-4">{new Date(request.request_date).toLocaleString()}</td>
+                  <td className="p-4">{new Date(request.expected_delivery).toLocaleString()}</td>
                   <td className="p-4">
                     <Badge variant={request.urgency === 'high' ? 'destructive' : 'default'}>
                       {request.urgency.charAt(0).toUpperCase() + request.urgency.slice(1)}
@@ -269,6 +270,7 @@ const RestockRequestPage = () => {
           <DialogContent className="max-w-2xl">
             <DialogHeader>
               <DialogTitle>New Restock Request</DialogTitle>
+              <DialogDescription></DialogDescription>
             </DialogHeader>
 
             <Tabs value={requestType} onValueChange={setRequestType}>
@@ -291,7 +293,7 @@ const RestockRequestPage = () => {
                       <SelectContent>
                         {existingProducts.map((product) => (
                           <SelectItem key={product.id} value={product.id.toString()}>
-                            {product.name} (Current Stock: {product.currentStock})
+                            {product.name} (Current Stock: {product.quantity})
                           </SelectItem>
                         ))}
                       </SelectContent>
