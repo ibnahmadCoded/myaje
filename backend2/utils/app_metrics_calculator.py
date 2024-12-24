@@ -1,11 +1,12 @@
-from sqlalchemy import func, desc, and_
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
 from typing import Dict
 from decimal import Decimal
 from models import (
     User, Product, Order, OrderStatus, Payment, PaymentStatus,
-    InvoiceRequest, InvoiceStatus, StorefrontProduct
+    InvoiceRequest, InvoiceStatus, StorefrontProduct, RestockRequest, 
+    RestockRequestStatus, RestockRequestUrgency
 )
 
 class AdminMetricsCalculator:
@@ -327,28 +328,47 @@ class AdminMetricsCalculator:
     
     def get_restock_metrics(self) -> Dict:
         """Calculate restock and inventory management metrics"""
+        
+        # Get total products
         total_products = self.db.query(Product).count()
         
+        # Get pending restock requests
+        pending_requests = self.db.query(RestockRequest).filter(
+            RestockRequest.status == RestockRequestStatus.PENDING
+        ).count()
+        
+        # Get high priority requests
+        high_priority_requests = self.db.query(RestockRequest).filter(
+            RestockRequest.urgency == RestockRequestUrgency.HIGH,
+            RestockRequest.status == RestockRequestStatus.PENDING
+        ).count()
+        
+        # Get products with low stock
         low_stock_items = self.db.query(Product).filter(
             Product.quantity <= Product.low_stock_threshold,
             Product.quantity > 0
         ).count()
         
+        # Get out of stock products
         out_of_stock_items = self.db.query(Product).filter(
             Product.quantity == 0
         ).count()
         
-        critical_stock_items = self.db.query(Product).filter(
-            Product.quantity <= Product.low_stock_threshold * 0.5,
-            Product.quantity > 0
-        ).count()
-        
-        healthy_stock_items = total_products - low_stock_items - out_of_stock_items
+        # Calculate trends comparing to 30 days ago
+        compare_date = datetime.utcnow() - timedelta(days=30)
         
         return {
             "total_products": {
                 "value": total_products,
-                "trend": self._calculate_trend(total_products, datetime.utcnow() - timedelta(days=30), Product)
+                "trend": self._calculate_trend(total_products, compare_date, Product)
+            },
+            "pending_requests": {
+                "value": pending_requests,
+                "status": "warning" if pending_requests > 0 else "normal"
+            },
+            "high_priority_requests": {
+                "value": high_priority_requests,
+                "status": "danger" if high_priority_requests > 0 else "normal"
             },
             "low_stock_items": {
                 "value": low_stock_items,
@@ -357,14 +377,6 @@ class AdminMetricsCalculator:
             "out_of_stock_items": {
                 "value": out_of_stock_items,
                 "status": "danger" if out_of_stock_items > total_products * 0.1 else "normal"
-            },
-            "critical_stock_items": {
-                "value": critical_stock_items,
-                "status": "danger" if critical_stock_items > total_products * 0.1 else "normal"
-            },
-            "healthy_stock_items": {
-                "value": healthy_stock_items,
-                "status": "normal" if healthy_stock_items > total_products * 0.7 else "warning"
             }
         }
 
