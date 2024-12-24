@@ -3,10 +3,12 @@ from sqlalchemy.orm import Session
 from datetime import datetime
 from typing import List
 from sql_database import get_db
+from routes.auth import get_current_user
 from pydantic import BaseModel, EmailStr
 from routes.auth import get_admin_user, pwd_context
 from models import User
 from enum import Enum
+from utils.app_metrics_calculator import get_all_metrics
 
 router = APIRouter()
 
@@ -100,3 +102,10 @@ async def delete_admin_user(
     db.delete(admin_user)
     db.commit()
     return {"message": "Admin user deleted successfully"}
+
+@router.get("/metrics")
+async def get_app_metrics(
+    db: Session = Depends(get_db),
+    admin: User = Depends(get_admin_user)
+):
+    return await get_all_metrics(db)

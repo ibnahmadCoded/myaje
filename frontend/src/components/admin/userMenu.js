@@ -17,6 +17,7 @@ export const UserMenu = () => {
   const handleLogout = async (e) => {
     e.preventDefault();
     try {
+      console.log(localStorage.getItem('token'))
       const response = await fetch('http://localhost:8000/auth/logout', {
         method: 'POST',
         credentials: 'include',

@@ -122,6 +122,10 @@ async def login(request: Request, db: Session = Depends(get_db)):
     user = db.query(User).filter_by(email=data['email']).first()
 
     if user and verify_password(data['password'], user.password):
+        # Update last_login field
+        user.last_login = datetime.utcnow()
+        db.commit()
+        
         token = create_access_token({'user_id': user.id})
         return {
             'token': token,
@@ -140,6 +144,10 @@ async def admin_login(request: Request, db: Session = Depends(get_db)):
     user = db.query(User).filter_by(email=data['email']).first()
 
     if user and user.is_admin and verify_password(data['password'], user.password):
+        # Update last_login field
+        user.last_login = datetime.utcnow()
+        db.commit()
+
         token = create_access_token({'user_id': user.id})
         return {
             'token': token,

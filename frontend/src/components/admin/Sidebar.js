@@ -8,6 +8,7 @@ import {
   Search,
   Bell,
   User,
+  LineChart
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -32,6 +33,7 @@ const Sidebar = ({
   const menuItems = [
     { icon: <LayoutGrid size={20} />, label: 'Feedback', href: '/admin/feedback'},
     { icon: <User size={20} />, label: 'Manage Admin Users', href: '/admin/users'},
+    { icon: <LineChart size={20} />, label: 'Metrics', href: '/admin/metrics'},
   ];
 
   const unreadCount = notifications.filter(n => !n.is_read).length;

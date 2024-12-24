@@ -17,6 +17,8 @@ class User(Base):
     store_slug = Column(String(150), unique=True, nullable=False)
     is_admin = Column(Boolean, default=False)
     admin_role = Column(String(50), nullable=True)
+    last_login = Column(DateTime, default=datetime.utcnow)  # Added last_login field
+    is_verified = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     
     # Relationships
