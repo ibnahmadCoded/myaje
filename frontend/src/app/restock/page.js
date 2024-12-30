@@ -108,6 +108,69 @@ const RestockRequestPage = () => {
     }
   };
 
+  const handleCancelRequest = async (requestId) => {
+    try {
+      const response = await fetch(`http://localhost:8000/restock/requests/${requestId}/cancel`, {
+        method: 'PUT',
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.detail || 'Failed to cancel request');
+      }
+      
+      toast({
+        title: "Success",
+        description: "Request cancelled successfully",
+      });
+      fetchRequests();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleUpdateRequest = async (requestId, newQuantity) => {
+    try {
+      const response = await fetch(`http://localhost:8000/restock/requests/${requestId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({ quantity: parseInt(newQuantity) })
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.detail || 'Failed to update request');
+      }
+      
+      toast({
+        title: "Success",
+        description: "Request updated successfully",
+      });
+      fetchRequests();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  };
+
+  const isWithinEditWindow = (requestDate) => {
+    const timeDifference = new Date() - new Date(requestDate);
+    return timeDifference <= 3 * 60 * 60 * 1000; // 3 hours in milliseconds
+  };
+
   const resetForm = () => {
     setFormData({
       productId: '',
@@ -123,8 +186,8 @@ const RestockRequestPage = () => {
 
   const getStatusBadge = (status) => {
     const variants = {
-      'pending': 'warning',
-      'approved': 'success',
+      'pending': 'waiting',
+      'approved': 'default',
       'delivered': 'default',
       'cancelled': 'destructive'
     };
@@ -243,25 +306,49 @@ const RestockRequestPage = () => {
               </tr>
             </thead>
             <tbody>
-              {filteredRequests.map((request) => (
-                <tr key={request.id} className="border-t hover:bg-gray-50">
-                  <td className="p-4">{request.product_name}</td>
-                  <td className="p-4">{request.quantity}</td>
-                  <td className="p-4">
-                    <Badge variant="outline">
-                      {request.type === 'existing' ? 'Existing Product' : 'New Product'}
-                    </Badge>
-                  </td>
-                  <td className="p-4">{getStatusBadge(request.status)}</td>
-                  <td className="p-4">{new Date(request.request_date).toLocaleString()}</td>
-                  <td className="p-4">{new Date(request.expected_delivery).toLocaleString()}</td>
-                  <td className="p-4">
-                    <Badge variant={request.urgency === 'high' ? 'destructive' : 'default'}>
-                      {request.urgency.charAt(0).toUpperCase() + request.urgency.slice(1)}
-                    </Badge>
-                  </td>
-                </tr>
-              ))}
+            {filteredRequests.map((request) => (
+              <tr key={request.id} className="border-t hover:bg-gray-50">
+                <td className="p-4">{request.product_name}</td>
+                <td className="p-4">
+                  {request.status === 'pending' && isWithinEditWindow(request.request_date) ? (
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="number"
+                        defaultValue={request.quantity}
+                        className="w-20"
+                        onBlur={(e) => handleUpdateRequest(request.id, e.target.value)}
+                      />
+                    </div>
+                  ) : (
+                    request.quantity
+                  )}
+                </td>
+                <td className="p-4">
+                  <Badge variant="outline">
+                    {request.type === 'existing' ? 'Existing Product' : 'New Product'}
+                  </Badge>
+                </td>
+                <td className="p-4">{getStatusBadge(request.status)}</td>
+                <td className="p-4">{new Date(request.request_date).toLocaleString()}</td>
+                <td className="p-4">{new Date(request.expected_delivery).toLocaleString()}</td>
+                <td className="p-4">
+                  <Badge variant={request.urgency === 'high' ? 'destructive' : 'default'}>
+                    {request.urgency.charAt(0).toUpperCase() + request.urgency.slice(1)}
+                  </Badge>
+                </td>
+                <td className="p-4">
+                  {request.status === 'pending' && isWithinEditWindow(request.request_date) && (
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => handleCancelRequest(request.id)}
+                    >
+                      Cancel
+                    </Button>
+                  )}
+                </td>
+              </tr>
+            ))}
             </tbody>
           </Table>
         </Card>
