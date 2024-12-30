@@ -29,6 +29,9 @@ class RestockRequestResponse(BaseModel):
     expected_delivery: datetime
     urgency: RestockRequestUrgency
 
+class RestockRequestUpdate(BaseModel):
+    quantity: int
+
 @router.post("/requests", response_model=RestockRequestResponse)
 async def create_restock_request(
     request_data: RestockRequestCreate,
@@ -88,4 +91,61 @@ async def get_restock_request(
     ).first()
     if not request:
         raise HTTPException(status_code=404, detail="Restock request not found")
+    return request
+
+@router.put("/requests/{request_id}", response_model=RestockRequestResponse)
+async def update_restock_request(
+    request_id: int,
+    request_data: RestockRequestUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    request = db.query(RestockRequest).filter_by(
+        id=request_id,
+        user_id=current_user.id
+    ).first()
+    
+    if not request:
+        raise HTTPException(status_code=404, detail="Restock request not found")
+    
+    # Check if request is within 3-hour window
+    time_difference = datetime.utcnow() - request.request_date
+    if time_difference > timedelta(hours=3):
+        raise HTTPException(status_code=403, detail="Cannot modify request after 3 hours")
+    
+    # Check if request is in a modifiable state
+    if request.status != RestockRequestStatus.PENDING:
+        raise HTTPException(status_code=403, detail="Can only modify pending requests")
+    
+    request.quantity = request_data.quantity
+    db.commit()
+    db.refresh(request)
+    return request
+
+@router.put("/requests/{request_id}/cancel", response_model=RestockRequestResponse)
+async def cancel_restock_request(
+    request_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    request = db.query(RestockRequest).filter_by(
+        id=request_id,
+        user_id=current_user.id
+    ).first()
+    
+    if not request:
+        raise HTTPException(status_code=404, detail="Restock request not found")
+    
+    # Check if request is within 3-hour window
+    time_difference = datetime.utcnow() - request.request_date
+    if time_difference > timedelta(hours=3):
+        raise HTTPException(status_code=403, detail="Cannot cancel request after 3 hours")
+    
+    # Check if request is in a cancellable state
+    if request.status != RestockRequestStatus.PENDING:
+        raise HTTPException(status_code=403, detail="Can only cancel pending requests")
+    
+    request.status = RestockRequestStatus.CANCELLED
+    db.commit()
+    db.refresh(request)
     return request

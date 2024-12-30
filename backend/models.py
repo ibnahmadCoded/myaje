@@ -429,6 +429,7 @@ class RestockRequest(Base):
     type = Column(String(20), nullable=False)  # 'existing' or 'new'
     request_date = Column(DateTime, default=datetime.utcnow)
     expected_delivery = Column(DateTime)
+    admin_notes = Column(Text, nullable=True)
     delivered_date = Column(DateTime, nullable=True)
     
     # Relationships

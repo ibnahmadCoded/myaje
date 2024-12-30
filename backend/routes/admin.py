@@ -3,7 +3,6 @@ from sqlalchemy.orm import Session
 from datetime import datetime
 from typing import List
 from sql_database import get_db
-from routes.auth import get_current_user
 from pydantic import BaseModel, EmailStr
 from routes.auth import get_admin_user, pwd_context
 from models import User
