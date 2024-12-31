@@ -84,7 +84,7 @@ async def create_super_admin(db: Session):
             is_admin=True,
             admin_role="super_admin",
             business_name="System Admin",
-            store_slug="system-admin1", 
+            store_slug="system-admin", 
             last_login = datetime.now(pytz.utc),
             is_verified = True
         )
