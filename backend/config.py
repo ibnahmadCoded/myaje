@@ -30,7 +30,13 @@ os.makedirs(UPLOAD_DIRECTORY, exist_ok=True)
 if not os.path.exists(UPLOAD_DIRECTORY):
     os.makedirs(UPLOAD_DIRECTORY)
 
-SQLALCHEMY_DATABASE_URL = os.getenv('DB_TYPE', "sqlite:///./") + os.getenv('DB_NAME', "myaje_app.db")
+# set up db url
+#SQLALCHEMY_DATABASE_URL = os.getenv('DB_TYPE', "sqlite:///./") + os.getenv('DB_NAME', "myaje_app.db")
+SQLALCHEMY_DATABASE_URL = os.getenv('DB_TYPE', "postgresql://") + \
+    f"{os.getenv('DB_USER', 'postgres')}:{os.getenv('DB_PASSWORD', 'alegeaa')}@" + \
+    f"{os.getenv('DB_HOST', 'localhost')}:{os.getenv('DB_PORT', '5432')}/" + \
+    os.getenv('DB_NAME', 'myaje')
+
 # Read secret key from file
 SECRET_KEY_PATH = os.getenv('SECRET_KEY_PATH', './secrets/appsecret.txt')
 
