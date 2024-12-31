@@ -15,6 +15,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { apiBaseUrl, backendUrl } from '@/config';
 
 const StorefrontManagement = () => {
   const [inventoryProducts, setInventoryProducts] = useState([]);
@@ -41,7 +42,7 @@ const StorefrontManagement = () => {
   // Fetch functions
   const fetchInventoryProducts = async () => {
     try {
-      const response = await fetch('http://localhost:8000/inventory/get_inventory', {
+      const response = await fetch(`${apiBaseUrl}/inventory/get_inventory`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
@@ -55,7 +56,7 @@ const StorefrontManagement = () => {
 
   const fetchStoreProducts = async () => {
     try {
-      const response = await fetch('http://localhost:8000/storefront/get_products', {
+      const response = await fetch(`${apiBaseUrl}/storefront/get_products`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
@@ -74,7 +75,7 @@ const StorefrontManagement = () => {
 
   const fetchOrders = async () => {
     try {
-      const response = await fetch('http://localhost:8000/orders/seller/list', { 
+      const response = await fetch(`${apiBaseUrl}/orders/seller/list`, { 
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
@@ -103,7 +104,7 @@ const StorefrontManagement = () => {
 
   const fetchStoreDetails = async () => {
     try {
-      const response = await fetch('http://localhost:8000/storefront/get_store_details', {
+      const response = await fetch(`${apiBaseUrl}/storefront/get_store_details`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
@@ -117,7 +118,7 @@ const StorefrontManagement = () => {
 
   const handleUpdateStoreDetails = async () => {
     try {
-      await fetch('http://localhost:8000/storefront/update_store_details', {
+      await fetch(`${apiBaseUrl}/storefront/update_store_details`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -160,7 +161,7 @@ const StorefrontManagement = () => {
     if (!editingProduct) return;
 
     try {
-      await fetch(`http://localhost:8000/storefront/update_products/${editingProduct.id}`, {
+      await fetch(`${apiBaseUrl}/storefront/update_products/${editingProduct.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -180,7 +181,7 @@ const StorefrontManagement = () => {
 
   const handleFulfillOrder = async (orderId) => {
     try {
-      await fetch(`http://localhost:8000/orders/seller/${orderId}/fulfill`, {
+      await fetch(`${apiBaseUrl}/orders/seller/${orderId}/fulfill`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -194,7 +195,7 @@ const StorefrontManagement = () => {
 
   const handleDeleteOrder = async (orderId) => {
     try {
-      await fetch(`http://localhost:8000/orders/seller/${orderId}`, {
+      await fetch(`${apiBaseUrl}/orders/seller/${orderId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -321,7 +322,7 @@ const StorefrontManagement = () => {
           const price = productPrices[productId];
           if (!price) continue;
   
-          await fetch('http://localhost:8000/storefront/add_products', {
+          await fetch(`${apiBaseUrl}/storefront/add_products`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -400,7 +401,7 @@ const StorefrontManagement = () => {
 
   const handleDeleteFromStore = async (productId) => {
     try {
-      await fetch(`http://localhost:8000/storefront/delete_products/${productId}`, {
+      await fetch(`${apiBaseUrl}/storefront/delete_products/${productId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -417,7 +418,7 @@ const StorefrontManagement = () => {
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
     const images = product.images || [];
     const displayImages = images.length > 0 
-      ? images.map(img => `http://localhost:8000/${img.replace('./', '')}`)
+      ? images.map(img => `${backendUrl}/${img.replace('./', '')}`)
       : [];
   
     const handleNextImage = (e) => {

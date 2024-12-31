@@ -16,6 +16,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Table } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
+import { apiBaseUrl } from '@/config';
 
 const RestockRequestPage = () => {
   const [loading, setLoading] = useState(true);
@@ -44,7 +45,7 @@ const RestockRequestPage = () => {
   }, []);
 
   const fetchRequests = async () => {
-    const response = await fetch('http://localhost:8000/restock/requests', {
+    const response = await fetch(`${apiBaseUrl}/restock/requests`, {
       headers: {
         Authorization: `Bearer ${localStorage.getItem('token')}`,
       },
@@ -55,7 +56,7 @@ const RestockRequestPage = () => {
 
   const fetchProducts = async () => {
     try {
-      const response = await fetch('http://localhost:8000/inventory/get_inventory', {
+      const response = await fetch(`${apiBaseUrl}/inventory/get_inventory`, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem('token')}`,
         },
@@ -73,7 +74,7 @@ const RestockRequestPage = () => {
   const handleSubmit = async () => {
     try {
       console.log(formData)
-      const response = await fetch('http://localhost:8000/restock/requests', {
+      const response = await fetch(`${apiBaseUrl}/restock/requests`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token')}` },
         body: JSON.stringify({
@@ -110,7 +111,7 @@ const RestockRequestPage = () => {
 
   const handleCancelRequest = async (requestId) => {
     try {
-      const response = await fetch(`http://localhost:8000/restock/requests/${requestId}/cancel`, {
+      const response = await fetch(`${apiBaseUrl}/restock/requests/${requestId}/cancel`, {
         method: 'PUT',
         headers: {
           Authorization: `Bearer ${localStorage.getItem('token')}`
@@ -138,7 +139,7 @@ const RestockRequestPage = () => {
 
   const handleUpdateRequest = async (requestId, newQuantity) => {
     try {
-      const response = await fetch(`http://localhost:8000/restock/requests/${requestId}`, {
+      const response = await fetch(`${apiBaseUrl}/restock/requests/${requestId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

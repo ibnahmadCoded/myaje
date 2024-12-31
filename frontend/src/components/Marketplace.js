@@ -5,6 +5,7 @@ import { CheckoutDialog } from '@/components/CheckoutDialog'
 import { CartDialog } from '@/components/CartDialog'
 import { Button } from '@/components/ui/button';
 import { ProductModal } from '@/components/ProductModal'
+import { apiBaseUrl, backendUrl } from '@/config';
 
 const CATEGORIES = ['All', 'Electronics', 'Fashion', 'Home', 'Beauty', 'Sports'];
 
@@ -51,7 +52,7 @@ const ProductCard = ({ product, onAddToCart, onImageClick }) => {
               onClick={handleImageClick}
             >
               <img
-                src={`http://localhost:8000/${product.images[activeIndex].replace('./', '')}`}
+                src={`${backendUrl}/${product.images[activeIndex].replace('./', '')}`}
                 alt={product.name}
                 className={`w-full h-full object-cover rounded-2xl transition-transform duration-500 ${
                   isHovered ? 'scale-110' : 'scale-100'
@@ -140,7 +141,7 @@ const SearchBar = ({ onSearch }) => {
   );
 };
 
-const MarketplaceView = ({ products: initialProducts = [], isStorePage = false }) => { // should be initial_products = []
+const MarketplaceView = ({ products: initialProducts = [], isStorePage = false }) => { 
   const [cartItems, setCartItems] = useState([]);
   const [chatInput, setChatInput] = useState('');
   const [isCartOpen, setIsCartOpen] = useState(false);
@@ -170,7 +171,7 @@ const [filteredProducts, setFilteredProducts] = useState(products);
   // Fetch products from API
   const fetchProducts = async () => {
     try {
-      const response = await fetch('http://localhost:8000/marketplace/get_products'); // Adjust API endpoint as needed
+      const response = await fetch(`${apiBaseUrl}/marketplace/get_products`); // Adjust API endpoint as needed
       if (!response.ok) {
         throw new Error('Failed to fetch products');
       }
@@ -284,7 +285,7 @@ const addToCartWithQuantity = (product) => {
     setIsLoading(true);
   
     try {
-      const response = await fetch('http://localhost:8000/chat/chat_inference', {
+      const response = await fetch(`${apiBaseUrl}/chat/chat_inference`, {
         method: 'POST', 
         headers: {
           'Content-Type': 'application/json', // Inform the server of the data format

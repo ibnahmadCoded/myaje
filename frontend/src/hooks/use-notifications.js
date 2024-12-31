@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { apiBaseUrl } from '@/config';
 
 export const useNotifications = () => {
     const [notifications, setNotifications] = useState([]);
@@ -7,7 +8,7 @@ export const useNotifications = () => {
   
     const fetchNotifications = async () => {
       try {
-        const response = await fetch('http://localhost:8000/notifications/get_notifications', {
+        const response = await fetch(`${apiBaseUrl}/notifications/get_notifications`, {
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('token')}`
           }
@@ -26,7 +27,7 @@ export const useNotifications = () => {
   
     const markAsRead = async (notificationId) => {
       try {
-        await fetch(`http://localhost:8000/notifications/${notificationId}/mark-read`, {
+        await fetch(`${apiBaseUrl}/notifications/${notificationId}/mark-read`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -45,7 +46,7 @@ export const useNotifications = () => {
   
     const markAllAsRead = async () => {
       try {
-        await fetch('http://localhost:8000/notifications/mark-all-read', {
+        await fetch(`${apiBaseUrl}/notifications/mark-all-read`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('token')}`

@@ -24,7 +24,8 @@ logger = structlog.get_logger(__name__)
 #UPLOAD_FOLDER = "./uploaded_docs/"
 #os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-UPLOAD_DIRECTORY = os.getenv('UPLOAD_DIRECTORY_PATH', "./uploaded_images/") 
+UPLOAD_PATH = os.getenv('UPLOAD_PATH', "/uploaded_images") 
+UPLOAD_DIRECTORY = os.getenv('UPLOAD_DIRECTORY', "uploaded_images") 
 os.makedirs(UPLOAD_DIRECTORY, exist_ok=True)
 
 if not os.path.exists(UPLOAD_DIRECTORY):
@@ -54,3 +55,5 @@ SMTP_SERVER = os.getenv("SMTP_SERVER")
 SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
 SUPER_ADMIN_EMAIL = os.getenv("SUPER_ADMIN_EMAIL", "admin@yourdomain.com")
 SUPER_ADMIN_PASSWORD = os.getenv("SUPER_ADMIN_PASSWORD", "adminpassword123")
+FRONTEND_URL = allow_origins=[os.getenv("FRONTEND_URL", "http://localhost:3000")]
+BASE_API_PREFIX = os.getenv("NEXT_PUBLIC_API_BASE_URL", "/api")

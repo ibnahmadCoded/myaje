@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast"
+import { apiBaseUrl } from '@/config';
 
 const InvoicingPage = () => {
   const [invoices, setInvoices] = useState([]);
@@ -47,7 +48,7 @@ const InvoicingPage = () => {
 
   const fetchInvoices = async () => {
     try {
-      const response = await fetch('http://localhost:8000/invoicing/requests', {
+      const response = await fetch(`${apiBaseUrl}/invoicing/requests`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
         },
@@ -67,7 +68,7 @@ const InvoicingPage = () => {
 
   const fetchBankDetails = async () => {
     try {
-      const response = await fetch('http://localhost:8000/invoicing/get_bank_details', {
+      const response = await fetch(`${apiBaseUrl}/invoicing/get_bank_details`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
         },
@@ -94,7 +95,7 @@ const InvoicingPage = () => {
   const handleGenerateConfirm = async () => {
     setIsGenerating(true);
     try {
-      const response = await fetch(`http://localhost:8000/invoicing/generate/${generateInvoiceId}`, {
+      const response = await fetch(`${apiBaseUrl}/invoicing/generate/${generateInvoiceId}`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
@@ -130,7 +131,7 @@ const InvoicingPage = () => {
   const handleResendEmail = async (invoiceId) => {
     setIsSendingEmail(true);
     try {
-      const response = await fetch(`http://localhost:8000/invoicing/${invoiceId}/send-email`, {
+      const response = await fetch(`${apiBaseUrl}/invoicing/${invoiceId}/send-email`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
@@ -275,7 +276,7 @@ const InvoicingPage = () => {
 
   const handleAccountUpdate = async (formData) => {
     try {
-      const response = await fetch('http://localhost:8000/invoicing/save_bank_details', {
+      const response = await fetch(`${apiBaseUrl}/invoicing/save_bank_details`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,

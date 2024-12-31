@@ -23,6 +23,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { PlusCircle, Trash2 } from 'lucide-react';
+import { apiBaseUrl } from '@/config';
 
 export default function AdminUsers() {
   const [adminUsers, setAdminUsers] = useState([]);
@@ -43,7 +44,7 @@ export default function AdminUsers() {
   const fetchAdminUsers = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:8000/admin/get_admin_users', {
+      const response = await fetch(`${apiBaseUrl}/admin/get_admin_users`, {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
@@ -78,7 +79,7 @@ export default function AdminUsers() {
   const handleCreateUser = async () => {
     try {
       const token = localStorage.getItem('adminToken');
-      const response = await fetch('http://localhost:8000/admin/create_admin_user', {
+      const response = await fetch(`${apiBaseUrl}/admin/create_admin_user`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -119,7 +120,7 @@ export default function AdminUsers() {
 
     try {
       const token = localStorage.getItem('adminToken');
-      const response = await fetch(`http://localhost:8000/admin/users/${userId}`, {
+      const response = await fetch(`${apiBaseUrl}/admin/users/${userId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,

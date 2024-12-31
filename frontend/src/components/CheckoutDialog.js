@@ -8,7 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { apiBaseUrl } from '@/config';
 
 export const CheckoutDialog = ({ 
   isOpen, 
@@ -16,6 +17,7 @@ export const CheckoutDialog = ({
   cartItems, 
   onCheckoutComplete 
 }) => {
+
   const [isProcessing, setIsProcessing] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [error, setError] = useState("");
@@ -76,7 +78,7 @@ export const CheckoutDialog = ({
         status: "pending"
       };
 
-      const response = await fetch('http://localhost:8000/orders/submit', {
+      const response = await fetch(`${apiBaseUrl}/orders/submit`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(invoiceData),
@@ -133,7 +135,7 @@ export const CheckoutDialog = ({
         }
       };
 
-      const response = await fetch('http://localhost:8000/orders/submit', {
+      const response = await fetch(`${apiBaseUrl}/orders/submit`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(orderData),

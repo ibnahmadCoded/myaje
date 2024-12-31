@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from typing import Optional, List
@@ -75,9 +75,10 @@ async def get_all_feedback(
 @router.put("/admin/feedback/{feedback_id}") # only available in admin page
 async def update_feedback_status(
     feedback_id: int,
+    request: Request,
     update: FeedbackUpdate,
     db: Session = Depends(get_db),
-    admin: User = Depends(get_admin_user)
+    admin_user: User = Depends(get_admin_user)
 ):
     feedback = db.query(Feedback).filter(Feedback.id == feedback_id).first()
     if not feedback:

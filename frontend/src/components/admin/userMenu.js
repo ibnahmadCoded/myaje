@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { LogOut, User, Settings, ChevronUp } from 'lucide-react';
+import { apiBaseUrl } from '@/config';
 
 export const UserMenu = () => {
   const [isDropupOpen, setIsDropupOpen] = useState(false);
@@ -17,8 +18,7 @@ export const UserMenu = () => {
   const handleLogout = async (e) => {
     e.preventDefault();
     try {
-      console.log(localStorage.getItem('token'))
-      const response = await fetch('http://localhost:8000/auth/logout', {
+      const response = await fetch(`${apiBaseUrl}/auth/logout`, {
         method: 'POST',
         credentials: 'include',
         headers: {
@@ -86,7 +86,7 @@ export const UserMenu = () => {
                     <div className="text-xs text-stone-500">{userDetails.email}</div>
                   </>
                 ) : (
-                  <div className="text-sm font-medium text-stone-800">Loading...</div> // Loading state
+                  <div className="text-sm font-medium text-stone-800">Loading...</div> 
                 )}
             </div>
           </div>
