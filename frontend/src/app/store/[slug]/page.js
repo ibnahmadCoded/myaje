@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { use } from 'react';
 import { Share2, ArrowLeft } from 'lucide-react';
 import MarketplaceView from '@/components/Marketplace';
+import { apiBaseUrl } from '@/config';
 
 const StorePage = (props) => {
   const params = use(props.params);
@@ -15,7 +16,7 @@ const StorePage = (props) => {
   useEffect(() => {
     const fetchStoreData = async () => {
       try {
-        const response = await fetch(`http://localhost:8000/marketplace/store/${slug}`);
+        const response = await fetch(`${apiBaseUrl}/marketplace/store/${slug}`);
         if (!response.ok) throw new Error('Failed to fetch store data');
         const data = await response.json();
         setStoreData(data);

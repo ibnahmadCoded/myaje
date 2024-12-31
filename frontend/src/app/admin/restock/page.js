@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { apiBaseUrl } from '@/config';
 
 export default function AdminRestockManagement() {
   const [restockRequests, setRestockRequests] = useState([]);
@@ -34,7 +35,7 @@ export default function AdminRestockManagement() {
     setIsLoading(true);
     try {
       const token = localStorage.getItem('token');
-      const url = `http://localhost:8000/admin/restock${statusFilter !== 'all' ? `?status=${statusFilter}` : ''}`;
+      const url = `${apiBaseUrl}/admin/restock${statusFilter !== 'all' ? `?status=${statusFilter}` : ''}`;
       const response = await fetch(url, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -64,7 +65,7 @@ export default function AdminRestockManagement() {
     if (!selectedRequest) return;
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:8000/admin/restock/${selectedRequest.id}`, {
+      const response = await fetch(`${apiBaseUrl}/admin/restock/${selectedRequest.id}`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,

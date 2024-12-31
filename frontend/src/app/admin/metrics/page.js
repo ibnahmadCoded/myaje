@@ -16,6 +16,7 @@ import {
     CheckCircle,
     RefreshCw,
   } from 'lucide-react';
+import { apiBaseUrl } from '@/config';
 
 export default function AdminMetrics() {
   const [metrics, setMetrics] = useState(null);
@@ -33,7 +34,7 @@ export default function AdminMetrics() {
   const fetchMetrics = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:8000/admin/metrics', {
+      const response = await fetch(`${apiBaseUrl}/admin/metrics`, {
         headers: {
           'Authorization': `Bearer ${token}`,
         }

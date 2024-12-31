@@ -6,9 +6,11 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import Sidebar from '@/components/admin/Sidebar';
 import { useNotifications } from '@/hooks/use-notifications'
+import { apiBaseUrl } from '@/config';
 
 
 export default function DashboardLayout ({ children }) {
+
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const sidebarRef = useRef(null);
@@ -65,7 +67,7 @@ export default function DashboardLayout ({ children }) {
 
   const validateToken = async (token) => {
     try {
-      const response = await fetch('http://localhost:8000/auth/validate-token', {
+      const response = await fetch(`${apiBaseUrl}/auth/validate-token`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`

@@ -28,7 +28,7 @@ services:
       - .env
   
   postgres:
-    image: postgres:17  # Use the correct version of PostgreSQL
+    image: postgres:17  
     container_name: postgres
     environment:
       POSTGRES_USER: postgres
@@ -37,8 +37,19 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data  # Mount the volume here to persist data
+      - postgres_data:/var/lib/postgresql/data  
+  
+  nginx:
+    image: nginx:latest
+    container_name: myaje-nginx
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx:/etc/nginx/conf.d
+    depends_on:
+      - backend
+      - frontend
   
 volumes:
-  postgres_data:  # This section defines the volume named postgres_data
-    driver: local   # This ensures the volume uses the local driver (the default)
+  postgres_data:  
+    driver: local   

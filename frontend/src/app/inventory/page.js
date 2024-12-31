@@ -14,6 +14,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { apiBaseUrl, backendUrl } from '@/config';
 
 const InventoryManagement = () => {
   const [products, setProducts] = useState([]);
@@ -27,7 +28,7 @@ const InventoryManagement = () => {
 
   const fetchProducts = async () => {
     try {
-      const response = await fetch('http://localhost:8000/inventory/get_inventory', {
+      const response = await fetch(`${apiBaseUrl}/inventory/get_inventory`, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem('token')}`,
         },
@@ -50,7 +51,7 @@ const InventoryManagement = () => {
     if (window.confirm('Are you sure you want to delete this product?')) {
       try {
         const response = await fetch(
-          `http://localhost:8000/inventory/delete_from_inventory/${productId}`,
+          `${apiBaseUrl}/inventory/delete_from_inventory/${productId}`,
           {
             method: 'DELETE',
             headers: {
@@ -161,10 +162,10 @@ const InventoryManagement = () => {
                             {product.images.map((image, index) => (
                               <img
                                 key={index}
-                                src={`http://localhost:8000/${image.replace('./', '')}`}
+                                src={`${backendUrl}/${image.replace('./', '')}`}
                                 alt={`${product.name} - Image ${index + 1}`}
                                 className="h-16 w-16 object-cover rounded-md cursor-pointer"
-                                onClick={() => setSelectedImage(`http://localhost:8000/${image.replace('./', '')}`)}
+                                onClick={() => setSelectedImage(`${backendUrl}/${image.replace('./', '')}`)}
                               />
                             ))}
                           </div>
@@ -324,7 +325,7 @@ const ProductForm = ({ onSuccess, onClose }) => {
     }
 
     try {
-      const response = await fetch('http://localhost:8000/inventory/add_to_inventory', {
+      const response = await fetch(`${apiBaseUrl}/inventory/add_to_inventory`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${localStorage.getItem('token')}`,
@@ -462,7 +463,7 @@ const EditProductForm = ({ product, onSuccess, onClose }) => {
   });
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [filePreviews, setFilePreviews] = useState(
-    product.images.map(img => `http://localhost:8000/${img.replace('./', '')}`)
+    product.images.map(img => `${backendUrl}/${img.replace('./', '')}`)
   );
   const [existingImages, setExistingImages] = useState(product.images);
 
@@ -532,7 +533,7 @@ const EditProductForm = ({ product, onSuccess, onClose }) => {
     });
 
     try {
-      const response = await fetch(`http://localhost:8000/inventory/update_product/${product.id}`, {
+      const response = await fetch(`${apiBaseUrl}/inventory/update_product/${product.id}`, {
         method: 'PUT',
         headers: {
           Authorization: `Bearer ${localStorage.getItem('token')}`,

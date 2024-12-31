@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { LogOut, User, Settings, ChevronUp } from 'lucide-react';
+import { apiBaseUrl } from '@/config';
 
 export const UserMenu = () => {
   const [isDropupOpen, setIsDropupOpen] = useState(false);
@@ -17,7 +18,7 @@ export const UserMenu = () => {
   const handleLogout = async (e) => {
     e.preventDefault();
     try {
-      const response = await fetch('http://localhost:8000/auth/logout', {
+      const response = await fetch(`${apiBaseUrl}/auth/logout`, {
         method: 'POST',
         credentials: 'include',
         headers: {

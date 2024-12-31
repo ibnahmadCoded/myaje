@@ -3,8 +3,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { User, Mail, Lock, Check, X, Loader2 } from 'lucide-react';
+import { apiBaseUrl } from '@/config';
 
 export default function Register() {
+
     const router = useRouter();
     const [accountType, setAccountType] = useState('business');
     const [error, setError] = useState('');
@@ -102,7 +104,7 @@ export default function Register() {
       setIsLoading(true);
 
       try {
-        const response = await fetch('http://localhost:8000/auth/signup', {
+        const response = await fetch(`${apiBaseUrl}/auth/signup`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(formData)

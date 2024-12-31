@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, Store, ShoppingCart, Plus, Minus, Share2, Heart, PackageSearch } from 'lucide-react';
 import { Badge } from "@/components/ui/badge";
+import { backendUrl } from '@/config';
 
 // product image SVG
 const ProductImagePlaceholder = ({ onClick }) => (
@@ -87,7 +88,7 @@ export const ProductModal = ({ product, isOpen, onClose, onAddToCart }) => {
               {totalImages > 0 ? (
                   <>
                     <img
-                      src={`http://localhost:8000/${product.images[currentImageIndex].replace('./', '')}`}
+                      src={`${backendUrl}/${product.images[currentImageIndex].replace('./', '')}`}
                       alt={`${product.name} - Image ${currentImageIndex + 1}`}
                       className="object-cover w-full h-full"
                     />
@@ -133,7 +134,7 @@ export const ProductModal = ({ product, isOpen, onClose, onAddToCart }) => {
                       }`}
                     >
                       <img
-                        src={`http://localhost:8000/${image.replace('./', '')}`}
+                        src={`${backendUrl}/${image.replace('./', '')}`}
                         alt={`Thumbnail ${index + 1}`}
                         className="object-cover w-full h-full"
                       />

@@ -25,6 +25,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
+import { apiBaseUrl } from '@/config';
 
 
 const DashboardPage = () => {
@@ -62,7 +63,7 @@ const DashboardPage = () => {
   const fetchMetrics = async () => {
     try {
       const token = localStorage.getItem('token'); // Or however you store your auth token
-      const response = await fetch('http://localhost:8000/dashboard/metrics', {
+      const response = await fetch(`${apiBaseUrl}/dashboard/metrics`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -180,7 +181,7 @@ const DashboardPage = () => {
   const handleFeedbackSubmit = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:8000/feedback/submit', {
+      const response = await fetch(`${apiBaseUrl}/feedback/submit`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

@@ -14,6 +14,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
+import { apiBaseUrl } from '@/config';
 
 export default function AdminFeedback() {
   const [feedback, setFeedback] = useState([]);
@@ -33,7 +34,7 @@ export default function AdminFeedback() {
     setIsLoading(true);
     try {
       const token = localStorage.getItem('token');
-      const url = `http://localhost:8000/feedback/admin/feedback${statusFilter !== 'all' ? `?status=${statusFilter}` : ''}`;
+      const url = `${apiBaseUrl}/feedback/admin/feedback${statusFilter !== 'all' ? `?status=${statusFilter}` : ''}`;
       const response = await fetch(url, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -62,8 +63,8 @@ export default function AdminFeedback() {
   const updateFeedbackStatus = async () => {
     if (!selectedFeedback) return;
     try {
-      const token = localStorage.getItem('adminToken');
-      const response = await fetch(`http://localhost:8000/feedback/admin/feedback/${selectedFeedback.id}`, {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${apiBaseUrl}/feedback/admin/feedback/${selectedFeedback.id}`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
