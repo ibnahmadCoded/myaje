@@ -1,9 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import JSONResponse
 from fastapi.security import OAuth2PasswordBearer
+import pytz
 from sqlalchemy.orm import Session
 from jose import jwt, JWTError
 from datetime import datetime, timedelta
+from pytz import timezone
 from config import SECRET_KEY, ALGORITHM, SUPER_ADMIN_EMAIL, SUPER_ADMIN_PASSWORD
 
 from sql_database import get_db
@@ -71,7 +73,8 @@ async def create_super_admin(db: Session):
     existing_admin = db.query(User).filter(
         User.email == super_admin_email,
         User.is_admin == True,
-        User.admin_role == "super_admin"
+        User.admin_role == "super_admin",
+        User.store_slug == "system-admin"
     ).first()
     
     if not existing_admin:
@@ -81,7 +84,9 @@ async def create_super_admin(db: Session):
             is_admin=True,
             admin_role="super_admin",
             business_name="System Admin",
-            store_slug="system-admin"
+            store_slug="system-admin1", 
+            last_login = datetime.now(pytz.utc),
+            is_verified = True
         )
         
         db.add(super_admin)
