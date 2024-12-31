@@ -1,3 +1,5 @@
+version: '3.8'  # You can specify your desired Docker Compose version
+
 services:
   backend:
     build: ./backend
@@ -10,7 +12,7 @@ services:
       - ./backend:/app
     command: uvicorn app:app --host 0.0.0.0 --port 8000 --reload
     env_file:
-    - .env
+      - .env
 
   frontend:
     build: ./frontend
@@ -23,4 +25,20 @@ services:
       - ./frontend:/app
     command: npm run dev
     env_file:
-    - .env
+      - .env
+  
+  postgres:
+    image: postgres:17  # Use the correct version of PostgreSQL
+    container_name: postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: alegeaa
+      POSTGRES_DB: myaje
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data  # Mount the volume here to persist data
+  
+volumes:
+  postgres_data:  # This section defines the volume named postgres_data
+    driver: local   # This ensures the volume uses the local driver (the default)

@@ -9,10 +9,10 @@ from config import SQLALCHEMY_DATABASE_URL
 
 # For SQLite, use:
 #SQLALCHEMY_DATABASE_URL = "sqlite:///./sql_app.db"
-engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
+#engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
 
 # Create the database engine (for non sqlite db)
-#engine = create_engine(SQLALCHEMY_DATABASE_URL)
+engine = create_engine(SQLALCHEMY_DATABASE_URL)
 
 # Create a configured "SessionLocal" class
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
