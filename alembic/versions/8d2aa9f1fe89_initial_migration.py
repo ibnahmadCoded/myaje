@@ -1,8 +1,8 @@
-"""Restock model creation with relationships
+"""Initial migration
 
-Revision ID: c74de5daa268
-Revises: af70228f8a14
-Create Date: 2024-12-24 02:15:00.956020
+Revision ID: 8d2aa9f1fe89
+Revises: 
+Create Date: 2025-01-02 17:03:07.649722
 
 """
 from typing import Sequence, Union
@@ -12,8 +12,8 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = 'c74de5daa268'
-down_revision: Union[str, None] = 'af70228f8a14'
+revision: str = '8d2aa9f1fe89'
+down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

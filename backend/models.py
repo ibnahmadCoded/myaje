@@ -12,14 +12,18 @@ class User(Base):
     
     id = Column(Integer, primary_key=True)
     email = Column(String(120), unique=True, nullable=False)
+    phone = Column(String(15), unique=True, nullable=True)  
     password = Column(String(60), nullable=False)
-    business_name = Column(String(100), nullable=False)
-    store_slug = Column(String(150), unique=True, nullable=False)
+    business_name = Column(String(100), nullable=True)  
+    store_slug = Column(String(150), unique=True, nullable=True)  
+    has_business_account = Column(Boolean, default=False)
+    has_personal_account = Column(Boolean, default=True)  
     is_admin = Column(Boolean, default=False)
     admin_role = Column(String(50), nullable=True)
-    last_login = Column(DateTime, default=datetime.utcnow)  # Added last_login field
+    last_login = Column(DateTime, default=datetime.utcnow)
     is_verified = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
+    active_view = Column(String(20), default='personal')  
     
     # Relationships
     products = relationship('Product', back_populates='owner')

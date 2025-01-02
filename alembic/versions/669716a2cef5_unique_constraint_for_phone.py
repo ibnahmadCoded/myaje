@@ -1,8 +1,8 @@
-"""Initial setup
+"""unique constraint for phone
 
-Revision ID: fd85bcd5c82f
-Revises: 
-Create Date: 2024-12-20 03:18:46.874803
+Revision ID: 669716a2cef5
+Revises: 8d2aa9f1fe89
+Create Date: 2025-01-02 17:39:19.555309
 
 """
 from typing import Sequence, Union
@@ -12,8 +12,8 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = 'fd85bcd5c82f'
-down_revision: Union[str, None] = None
+revision: str = '669716a2cef5'
+down_revision: Union[str, None] = '8d2aa9f1fe89'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
