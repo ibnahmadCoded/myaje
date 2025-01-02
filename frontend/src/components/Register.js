@@ -2,20 +2,20 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { User, Mail, Lock, Check, X, Loader2 } from 'lucide-react';
+import { User, Mail, Lock, Check, X, Loader2, Building2, Phone } from 'lucide-react';
 import { apiBaseUrl } from '@/config';
 
 export default function Register() {
-
     const router = useRouter();
-    const [accountType, setAccountType] = useState('business');
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [acceptedTerms, setAcceptedTerms] = useState(false);
+    const [accountType, setAccountType] = useState('personal');
     const [formData, setFormData] = useState({
       email: '',
       password: '',
-      business_name: ''
+      business_name: '',
+      phone: ''
     });
 
     // Password strength criteria
@@ -28,6 +28,9 @@ export default function Register() {
 
     // Email validation pattern
     const emailPattern = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6}$/;
+
+    // Phone number validation pattern
+    const phonePattern = /^\+?[1-9]\d{1,14}$/;
 
     // Memoized password strength calculation
     const calculatePasswordStrength = useCallback((password) => {
@@ -67,7 +70,6 @@ export default function Register() {
       }
     }, []);
 
-    // Memoized PasswordCriteriaItem component
     const PasswordCriteriaItem = useCallback(({ met, text }) => (
       <div className="flex items-center gap-2 text-sm">
         {met ? (
@@ -101,13 +103,26 @@ export default function Register() {
         return;
       }
 
+      if (accountType === 'business' && !formData.business_name.trim()) {
+        setError('Business name is required for business accounts');
+        return;
+      }
+
+      if (!phonePattern.test(formData.phone.replace(/\D/g, ''))) {
+        setError('Please enter a valid phone number');
+        return;
+      }
+
       setIsLoading(true);
 
       try {
         const response = await fetch(`${apiBaseUrl}/auth/signup`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(formData)
+          body: JSON.stringify({
+            ...formData,
+            account_type: accountType
+          })
         });
         
         if (response.ok) {
@@ -144,21 +159,42 @@ export default function Register() {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-stone-600 mb-1">Business Name</label>
-              <div className="relative">
-                <input
-                  type="text"
-                  name="business_name"
-                  required
-                  disabled={isLoading}
-                  className="w-full pl-3 pr-3 py-2 border rounded-lg focus:ring-2 focus:ring-green-200 focus:border-green-300 disabled:opacity-50 focus:outline-none"
-                  value={formData.business_name}
-                  onChange={handleInputChange}
-                  placeholder="Enter business name"
-                />
-              </div>
+            {/* Account Type Selection */}
+            <div className="mb-6">
+                <label className="block text-sm font-medium text-stone-600 mb-2">
+                    Account Type
+                </label>
+                <select
+                    value={accountType}
+                    onChange={(e) => setAccountType(e.target.value)}
+                    className="w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-green-200 focus:border-green-300"
+                >
+                    <option value="business">Business</option>
+                    <option value="personal">Personal</option>
+                </select>
             </div>
+
+            {/* Business Name - Only show for business accounts */}
+            {accountType === 'business' && (
+              <div>
+                <label className="block text-sm font-medium text-stone-600 mb-1">
+                  Business Name
+                </label>
+                <div className="relative">
+                  <Building2 className="absolute left-3 top-1/2 transform -translate-y-1/2 text-stone-400 w-5 h-5" />
+                  <input
+                    type="text"
+                    name="business_name"
+                    required
+                    disabled={isLoading}
+                    className="w-full pl-10 pr-3 py-2 border rounded-lg focus:ring-2 focus:ring-green-200 focus:border-green-300 disabled:opacity-50 focus:outline-none"
+                    value={formData.business_name}
+                    onChange={handleInputChange}
+                    placeholder="Enter business name"
+                  />
+                </div>
+              </div>
+            )}
 
             <div>
               <label className="block text-sm font-medium text-stone-600 mb-1">Email</label>
@@ -175,6 +211,43 @@ export default function Register() {
                   placeholder="Enter your email"
                 />
               </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-stone-600 mb-1">Phone Number</label>
+              <div className="relative">
+                <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-stone-400 w-5 h-5" />
+                <input
+                  type="tel"
+                  name="phone"
+                  required
+                  disabled={isLoading}
+                  className="w-full pl-10 pr-3 py-2 border rounded-lg focus:ring-2 focus:ring-green-200 focus:border-green-300 disabled:opacity-50 focus:outline-none"
+                  value={formData.phone}
+                  onChange={(e) => {
+                    // Basic phone number formatting
+                    let value = e.target.value.replace(/\D/g, '');
+                    if (value.length > 0) {
+                      if (value.length <= 3) {
+                        value = value;
+                      } else if (value.length <= 6) {
+                        value = value.slice(0, 3) + '-' + value.slice(3);
+                      } else {
+                        value = value.slice(0, 3) + '-' + value.slice(3, 6) + '-' + value.slice(6, 10);
+                      }
+                    }
+                    handleInputChange({
+                      target: {
+                        name: 'phone',
+                        value: value
+                      }
+                    });
+                  }}
+                  placeholder="703-725-3503"
+                  maxLength={12}
+                />
+              </div>
+              <span className="text-xs text-stone-500 mt-1">Format: 123-456-7890</span>
             </div>
 
             <div>

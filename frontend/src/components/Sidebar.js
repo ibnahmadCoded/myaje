@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { UserMenu } from '@/components/ui/usermenu';
 import { 
   LayoutGrid, 
@@ -18,6 +18,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { formatDistanceToNow } from 'date-fns';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { AccountToggle } from '@/components/AccountToggle'
 
 const Sidebar = ({ 
   isOpen, 
@@ -33,14 +34,40 @@ const Sidebar = ({
   onMouseLeave,
   sidebarRef 
 }) => {
-  const menuItems = [
+  const [activeView, setActiveView] = useState(() => {
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    return user.active_view || 'personal';
+  });
+  const [hasBusinessAccount, setHasBusinessAccount] = useState(() => {
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    return user.has_business_account || false;
+  });
+
+  const handleViewChange = (newView, newHasBusinessAccount) => {
+    setActiveView(newView);
+    // Update local storage
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    localStorage.setItem('user', JSON.stringify({ ...user, active_view: newView, has_business_account: newHasBusinessAccount }));
+  };
+
+  // Separate menu items for different views
+  const personalMenuItems = [
+    { icon: <LayoutGrid size={20} />, label: 'Dashboard', href: '/dashboard' },
+    { icon: <Package size={20} />, label: 'My Items', href: '/my-items' }, // Added My Items (3 tabs: Purchased Items, Saved Items, Reviewed Items)
+    { icon: <LineChart size={20} />, label: 'Banking', href: '/banking' },
+  ];
+  
+
+  const businessMenuItems = [
     { icon: <LayoutGrid size={20} />, label: 'Dashboard', href: '/dashboard'},
     { icon: <Package size={20} />, label: 'Inventory', href: '/inventory'},
     { icon: <Store size={20} />, label: 'Storefront', href: '/storefront' },
     { icon: <NotebookIcon size={20} />, label: 'Invoicing', href: '/invoicing' },
     { icon: <PackageOpen size={20} />, label: 'Restock', href: '/restock' },
-    { icon: <LineChart size={20} />, label: 'Accounting', href: '/accounting', badge: 'Coming Soon' },
+    { icon: <LineChart size={20} />, label: 'Banking', href: '/banking', badge: 'Coming Soon' },
   ];
+
+  const currentMenuItems = activeView === 'personal' ? personalMenuItems : businessMenuItems;
 
   const unreadCount = notifications.filter(n => !n.is_read).length;
 
@@ -80,6 +107,12 @@ const Sidebar = ({
           )}
         </div>
 
+        <AccountToggle 
+          activeView={activeView}
+          hasBusinessAccount={hasBusinessAccount}
+          onViewChange={handleViewChange}
+        />
+
         {/* Search Bar */}
         <div className="p-4">
           <div className="relative">
@@ -95,7 +128,7 @@ const Sidebar = ({
 
         {/* Navigation Menu */}
         <nav className="mt-2">
-          {menuItems.map((item, index) => (
+          {currentMenuItems.map((item, index) => (
             <a
               key={index}
               href={item.href}

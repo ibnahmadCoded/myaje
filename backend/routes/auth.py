@@ -74,7 +74,6 @@ async def create_super_admin(db: Session):
         User.email == super_admin_email,
         User.is_admin == True,
         User.admin_role == "super_admin",
-        User.store_slug == "system-admin"
     ).first()
     
     if not existing_admin:
@@ -83,8 +82,6 @@ async def create_super_admin(db: Session):
             password=pwd_context.hash(super_admin_password),
             is_admin=True,
             admin_role="super_admin",
-            business_name="System Admin",
-            store_slug="system-admin", 
             last_login = datetime.now(pytz.utc),
             is_verified = True
         )
@@ -99,35 +96,41 @@ async def signup(request: Request, db: Session = Depends(get_db)):
     
     if db.query(User).filter_by(email=data['email']).first():
         raise HTTPException(status_code=400, detail="Email already registered")
-
+    
     hashed_password = get_password_hash(data['password'])
+    
+    # Determine account type
+    account_type = data.get('account_type', 'personal')
+    has_business = account_type == 'business'
+    
     user = User(
         email=data['email'],
         password=hashed_password,
-        business_name=data['business_name']
+        has_business_account=has_business,
+        has_personal_account=True,
+        phone=data['phone'],
+        active_view='business' if has_business else 'personal'
     )
-
-    # Generate the store slug
-    user.generate_store_slug(db=db)
-
-    # Save the user to the database
+    
+    if has_business:
+        user.business_name = data['business_name']
+        user.generate_store_slug(db=db)
+    
     try:
         db.add(user)
         db.commit()
-        db.refresh(user)  # Refresh the user instance with the committed data
+        db.refresh(user)
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=400, detail="Error creating user")
-
+    
     return {"message": "User created successfully"}
 
 @router.post("/login")
 async def login(request: Request, db: Session = Depends(get_db)):
     data = await request.json()
     user = db.query(User).filter_by(email=data['email']).first()
-
     if user and verify_password(data['password'], user.password):
-        # Update last_login field
         user.last_login = datetime.utcnow()
         db.commit()
         
@@ -137,11 +140,46 @@ async def login(request: Request, db: Session = Depends(get_db)):
             'user': {
                 'id': user.id,
                 'email': user.email,
-                'business_name': user.business_name
+                'business_name': user.business_name,
+                'has_business_account': user.has_business_account,
+                'has_personal_account': user.has_personal_account,
+                'active_view': user.active_view
             }
         }
-
     raise HTTPException(status_code=401, detail="Invalid credentials")
+
+@router.post("/toggle-view")
+async def toggle_view(
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    data = await request.json()
+    new_view = data.get('view')
+    
+    if new_view not in ['personal', 'business']:
+        raise HTTPException(status_code=400, detail="Invalid view type")
+        
+    if new_view == 'business' and not current_user.has_business_account:
+        # If user doesn't have business account, they need to create one
+        business_name = data.get('business_name')
+        if not business_name:
+            raise HTTPException(
+                status_code=400, 
+                detail="Business name required to enable business account"
+            )
+        current_user.business_name = business_name
+        current_user.has_business_account = True
+        current_user.generate_store_slug(db=db)
+        
+    current_user.active_view = new_view
+    db.commit()
+    
+    return {
+        "message": "View updated successfully",
+        "active_view": new_view,
+        "has_business_account": current_user.has_business_account
+    }
 
 @router.post("/admin/login")
 async def admin_login(request: Request, db: Session = Depends(get_db)):

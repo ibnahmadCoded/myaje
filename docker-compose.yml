@@ -1,7 +1,7 @@
-version: '3.8'  # You can specify your desired Docker Compose version
-
 services:
   backend:
+    depends_on:
+      - postgres
     build: ./backend
     container_name: myaje-backend
     ports:
@@ -13,6 +13,8 @@ services:
     command: uvicorn app:app --host 0.0.0.0 --port 8000 --reload
     env_file:
       - .env
+    networks:
+      - myaje_network
 
   frontend:
     build: ./frontend
@@ -26,19 +28,44 @@ services:
     command: npm run dev
     env_file:
       - .env
+    networks:
+      - myaje_network
   
   postgres:
     image: postgres:17  
-    container_name: postgres
+    container_name: myaje-postgres
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: alegeaa
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB: myaje
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data  
-  
+    env_file:
+      - .env
+    networks:
+      - myaje_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  alembic:
+    build:
+      context: .
+    volumes:
+      - ./alembic/versions:/app/alembic/versions
+    depends_on:
+      - postgres
+    container_name: myaje-alembic
+    command: ["./wait-for-it.sh", "myaje-postgres:5432", "--", "alembic", "upgrade", "head"]
+    env_file:
+      - .env
+    networks:
+      - myaje_network
+
   nginx:
     image: nginx:latest
     container_name: myaje-nginx
@@ -49,7 +76,13 @@ services:
     depends_on:
       - backend
       - frontend
+    networks:
+      - myaje_network
   
 volumes:
   postgres_data:  
-    driver: local   
+    driver: local
+
+networks:
+  myaje_network:
+    driver: bridge
