@@ -62,6 +62,8 @@ export default function Login() {
         
         // save token in local storage
         localStorage.setItem('token', data.token);
+        localStorage.setItem('businessBankingOnboarded', data.businessBankingOnboarded);
+        localStorage.setItem('personalBankingOnboarded', data.personalBankingOnboarded);
         localStorage.setItem('user', JSON.stringify(data.user));
         
         

@@ -63,6 +63,19 @@ export const AccountToggle = ({ activeView, hasBusinessAccount, onViewChange }) 
 
       if (response.ok) {
         const data = await response.json();
+
+        // Update the localStorage user object
+        const userKey = localStorage.getItem('user');
+        if (userKey) {
+          try {
+            const user = JSON.parse(userKey);
+            user.business_name = businessName; // Update the business_name
+            localStorage.setItem('user', JSON.stringify(user));
+          } catch (error) {
+            console.error('Error updating user in localStorage:', error);
+          }
+        }
+
         onViewChange(data.active_view, data.has_business_account);
         setShowBusinessPrompt(false);
       } else {

@@ -60,7 +60,7 @@ services:
     depends_on:
       - postgres
     container_name: myaje-alembic
-    command: ["./wait-for-it.sh", "myaje-postgres:5432", "--", "alembic", "upgrade", "head"]
+    command: ["./entrypoint.sh"]
     env_file:
       - .env
     networks:
