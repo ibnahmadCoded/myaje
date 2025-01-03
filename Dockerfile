@@ -15,6 +15,7 @@ COPY backend/ /app/backend/
 
 # Copy the wait-for-it script
 COPY wait-for-it.sh /app/wait-for-it.sh
+COPY entrypoint.sh /app/entrypoint.sh
 
 # Make sure the wait-for-it script is executable
-RUN chmod +x /app/wait-for-it.sh
+RUN chmod +x /app/wait-for-it.sh /app/entrypoint.sh

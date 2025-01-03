@@ -140,11 +140,14 @@ async def login(request: Request, db: Session = Depends(get_db)):
             'user': {
                 'id': user.id,
                 'email': user.email,
+                'phone': user.phone,
                 'business_name': user.business_name,
                 'has_business_account': user.has_business_account,
                 'has_personal_account': user.has_personal_account,
                 'active_view': user.active_view
-            }
+            },
+            'businessBankingOnboarded': user.business_banking_onboarded, 
+            'personalBankingOnboarded': user.personal_banking_onboarded
         }
     raise HTTPException(status_code=401, detail="Invalid credentials")
 
@@ -181,6 +184,25 @@ async def toggle_view(
         "has_business_account": current_user.has_business_account
     }
 
+@router.post("/update-banking-onboarding")
+async def update_banking_onboarding(
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    data = await request.json()
+    view_type = data.get('view')
+    
+    if view_type == 'business':
+        current_user.business_banking_onboarded = True
+    elif view_type == 'personal':
+        current_user.personal_banking_onboarded = True
+    else:
+        raise HTTPException(status_code=400, detail="Invalid view type")
+        
+    db.commit()
+    return {"message": "Banking onboarding status updated"}
+
 @router.post("/admin/login")
 async def admin_login(request: Request, db: Session = Depends(get_db)):
     data = await request.json()
@@ -205,35 +227,56 @@ async def admin_login(request: Request, db: Session = Depends(get_db)):
 
 @router.post("/logout")
 async def logout(request: Request, db: Session = Depends(get_db)):
-    token = request.headers.get('Authorization', '')
-    token = token.split()[1] if ' ' in token else token
-
-    if not token:
-        raise HTTPException(status_code=401, detail="Token is required for logout")
+    auth_header = request.headers.get('Authorization', '')
+    
+    # Better token extraction
+    try:
+        token_type, token = auth_header.split()
+        if token_type.lower() != 'bearer':
+            raise ValueError("Invalid token type")
+    except ValueError:
+        raise HTTPException(
+            status_code=401, 
+            detail="Invalid Authorization header format. Expected 'Bearer <token>'"
+        )
 
     try:
-        # First validate the token
+        # Validate the token
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        
+        # Check if token is already blacklisted
+        existing_token = db.query(TokenBlacklist).filter(
+            TokenBlacklist.token == token
+        ).first()
+        
+        if existing_token:
+            return JSONResponse(content={"message": "Already logged out"})
         
         # Blacklist token
         blacklisted_token = TokenBlacklist(token=token)
         db.add(blacklisted_token)
         db.commit()
         
-        # Prepare response and add CORS headers
         response = JSONResponse(content={"message": "Successfully logged out"})
-        response.headers["Access-Control-Allow-Origin"] = "http://localhost:3000"  # Your frontend origin
+        response.headers["Access-Control-Allow-Origin"] = "http://localhost:3000"
         response.headers["Access-Control-Allow-Credentials"] = "true"
-
+        
         return response
     
     except jwt.ExpiredSignatureError:
-        raise HTTPException(status_code=401, detail="Token has expired")
-    #except jwt.InvalidTokenError:
-    #    raise HTTPException(status_code=401, detail="Invalid token")
+        return JSONResponse(
+            status_code=401,
+            content={"message": "Token has expired"}
+        )
+    except jwt.InvalidTokenError as e:
+        return JSONResponse(
+            status_code=401,
+            content={"message": f"Invalid token: {str(e)}"}
+        )
     except Exception as e:
         db.rollback()
-        raise HTTPException(status_code=500, detail=f"Logout failed: {str(e)}")
+        print(f"Logout error: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal server error during logout")
 
 @router.post("/validate-token")
 async def validate_token(request: Request, db: Session = Depends(get_db)):

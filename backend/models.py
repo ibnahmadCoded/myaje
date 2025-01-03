@@ -18,6 +18,8 @@ class User(Base):
     store_slug = Column(String(150), unique=True, nullable=True)  
     has_business_account = Column(Boolean, default=False)
     has_personal_account = Column(Boolean, default=True)  
+    business_banking_onboarded = Column(Boolean, default=False)  
+    personal_banking_onboarded = Column(Boolean, default=False)  
     is_admin = Column(Boolean, default=False)
     admin_role = Column(String(50), nullable=True)
     last_login = Column(DateTime, default=datetime.utcnow)

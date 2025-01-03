@@ -43,18 +43,30 @@ const Sidebar = ({
     return user.has_business_account || false;
   });
 
+  const personalRoutes = ['/dashboard', '/banking', '/my-items'];
+  const businessRoutes = ['/dashboard', '/banking', '/inventory', '/storefront', '/invoicing', '/restock'];
+
   const handleViewChange = (newView, newHasBusinessAccount) => {
     setActiveView(newView);
-    // Update local storage
     const user = JSON.parse(localStorage.getItem('user') || '{}');
     localStorage.setItem('user', JSON.stringify({ ...user, active_view: newView, has_business_account: newHasBusinessAccount }));
+
+    // Get current route
+    const currentRoute = window.location.pathname;
+    
+    // Check if route exists in new view
+    const routesForNewView = newView === 'personal' ? personalRoutes : businessRoutes;
+    const routeExists = routesForNewView.includes(currentRoute);
+
+    // Redirect to same route if it exists, otherwise to dashboard
+    window.location.href = routeExists ? currentRoute : '/dashboard';
   };
 
   // Separate menu items for different views
   const personalMenuItems = [
     { icon: <LayoutGrid size={20} />, label: 'Dashboard', href: '/dashboard' },
     { icon: <Package size={20} />, label: 'My Items', href: '/my-items' }, // Added My Items (3 tabs: Purchased Items, Saved Items, Reviewed Items)
-    { icon: <LineChart size={20} />, label: 'Banking', href: '/banking' },
+    { icon: <LineChart size={20} />, label: 'Banking', href: '/banking', badge: 'BAM' },
   ];
   
 
@@ -64,7 +76,7 @@ const Sidebar = ({
     { icon: <Store size={20} />, label: 'Storefront', href: '/storefront' },
     { icon: <NotebookIcon size={20} />, label: 'Invoicing', href: '/invoicing' },
     { icon: <PackageOpen size={20} />, label: 'Restock', href: '/restock' },
-    { icon: <LineChart size={20} />, label: 'Banking', href: '/banking', badge: 'Coming Soon' },
+    { icon: <LineChart size={20} />, label: 'Banking', href: '/banking', badge: 'BAM' },
   ];
 
   const currentMenuItems = activeView === 'personal' ? personalMenuItems : businessMenuItems;
