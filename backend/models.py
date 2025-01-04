@@ -29,13 +29,17 @@ class User(Base):
     
     # Relationships
     products = relationship('Product', back_populates='owner')
-    transactions = relationship('Transaction', back_populates='owner')
     store_settings = relationship('StoreSettings', back_populates='owner', uselist=False)
     orders = relationship("Order", back_populates="seller")
     bank_details = relationship("BankDetails", back_populates="user_data")
     notifications = relationship("Notification", back_populates="user")
     feedbacks = relationship("Feedback", back_populates="user")
     restock_requests = relationship('RestockRequest', back_populates='user')
+    bank_accounts = relationship("BankAccount", back_populates="user")
+    financial_pools = relationship("FinancialPool", back_populates="user")
+    loans = relationship("Loan", back_populates="user")
+    automations = relationship("BankingAutomation", back_populates="user")
+    external_accounts = relationship("ExternalAccount", back_populates="user")
 
     def generate_store_slug(self, db):
         base_slug = slugify(self.business_name)
@@ -52,6 +56,7 @@ class User(Base):
         self.store_slug = slug
 
 class BankDetails(Base):
+    """Bank Details in Invocing page, not to be confuse with external bank account"""
     __tablename__ = 'bank_details'
     
     id = Column(Integer, primary_key=True, index=True)
@@ -94,19 +99,6 @@ class ProductImage(Base):
     
     # Relationships
     product = relationship('Product', back_populates='images')
-
-class Transaction(Base):
-    __tablename__ = "transactions"
-    
-    id = Column(Integer, primary_key=True)
-    user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
-    type = Column(String(20), nullable=False)
-    amount = Column(Float, nullable=False)
-    description = Column(String(200))
-    date = Column(DateTime, default=datetime.utcnow)
-    
-    # Relationships
-    owner = relationship('User', back_populates='transactions')
 
 class StoreSettings(Base):
     __tablename__ = "store_settings"
@@ -207,15 +199,6 @@ class OrderItem(Base):
     order = relationship("Order", back_populates="items")
     product = relationship("Product")
 
-# payments
-class PaymentStatus(str, Enum):
-    pending = "pending"
-    processing = "processing"
-    completed = "completed"
-    failed = "failed"
-    refunded = "refunded"
-    cancelled = "cancelled"
-
 class InvoiceStatus(str, Enum):
     pending = "pending"
     generated = "generated"
@@ -223,37 +206,6 @@ class InvoiceStatus(str, Enum):
     paid = "paid"
     cancelled = "cancelled"
     overdue = "overdue"
-
-class Payment(Base):
-    __tablename__ = "payments"
-
-    id = Column(Integer, primary_key=True, index=True)
-    order_id = Column(Integer, ForeignKey("orders.id"), nullable=False)
-    amount = Column(Float, nullable=False)
-    payment_method = Column(String, nullable=False)  # e.g., "card", "bank_transfer"
-    status = Column(String, nullable=False, default=PaymentStatus.pending)
-    payment_details = Column(JSON)  # Store payment gateway response, transaction IDs, etc.
-    
-    # Timestamps
-    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
-    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
-    completed_at = Column(DateTime, nullable=True)
-    
-    # Reference fields
-    transaction_id = Column(String, unique=True, nullable=True)  # Payment gateway transaction ID
-    reference_number = Column(String, unique=True, nullable=True)  # Internal reference number
-    
-    # Error handling
-    error_message = Column(String, nullable=True)
-    retry_count = Column(Integer, default=0)
-    
-    # Relationships
-    order = relationship("Order", back_populates="payments")
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        if not self.reference_number:
-            self.reference_number = f"PAY-{datetime.utcnow().strftime('%Y%m%d')}-{id:06d}"
 
 class InvoiceRequest(Base):
     __tablename__ = "invoice_requests"
@@ -291,6 +243,7 @@ class InvoiceRequest(Base):
     creator = relationship("User", foreign_keys=[created_by])
     generator = relationship("User", foreign_keys=[generated_by])
     updater = relationship("User", foreign_keys=[updated_by])
+    payments = relationship("Payment", back_populates="invoice_request")
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -445,3 +398,216 @@ class RestockRequest(Base):
 # Create tables function
 async def create_tables():
     await run_in_threadpool(Base.metadata.create_all, bind=engine)
+
+###############################################################
+#################### BANKING_RELATED MODELS ###################
+class AccountType(enum.Enum):
+    PERSONAL = "personal"
+    BUSINESS = "business"
+
+class TransactionType(enum.Enum):
+    CREDIT = "credit"
+    DEBIT = "debit"
+
+class PaymentType(enum.Enum):
+    ORDER = "order" # marketplace order payment
+    INVOICE = "invoice"
+    INSTALLMENT = "installment"
+    LOAN = "loan"
+    TRANSFER = "transfer"
+    BUY_NOW_PAY_LATER = "buy_now_pay_later"
+
+class PaymentStatus(enum.Enum):
+    PENDING = "pending"
+    PROCESSING = "processing"
+    COMPLETED = "completed"
+    FAILED = "failed"
+    CANCELLED = "cancelled"
+
+class TransactionTag(enum.Enum):
+    SALES = "sales"
+    RESTOCK = "restock"
+    ONLINE = "online"
+    LOAN = "loan"
+    TRANSFER = "transfer"
+    OTHERS = "others"
+
+class AutomationType(enum.Enum):
+    TRANSFER = "transfer"
+    POOL_DISTRIBUTION = "pool_distribution"
+
+class AutomationSchedule(enum.Enum):
+    INSTANT = "instant"
+    DAILY = "daily"
+    WEEKLY = "weekly"
+    BIWEEKLY = "biweekly"
+    MONTHLY = "monthly"
+
+class AccountSource(enum.Enum):
+    INTERNAL = "internal"
+    EXTERNAL = "external"
+
+class ExternalAccount(Base):
+    __tablename__ = "external_accounts"
+    
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
+    account_name = Column(String(100), nullable=False)
+    account_number = Column(String(20), nullable=False)
+    bank_name = Column(String(100), nullable=False)
+    description = Column(String(255))
+    is_verified = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    user = relationship("User", back_populates="external_accounts")
+    outgoing_payments = relationship("Payment", foreign_keys="[Payment.from_external_account_id]")
+    incoming_payments = relationship("Payment", foreign_keys="[Payment.to_external_account_id]")
+
+class BankAccount(Base):
+    __tablename__ = "bank_accounts"
+    
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
+    account_type = Column(Enum(AccountType), nullable=False)
+    account_name = Column(String(100), nullable=False)
+    account_number = Column(String(20), nullable=False)
+    bank_name = Column(String(100), nullable=False)
+    balance = Column(Float, default=0.0)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    user = relationship("User", back_populates="bank_accounts")
+    transactions = relationship("Transaction", back_populates="bank_account")
+    pools = relationship("FinancialPool", back_populates="bank_account")
+    outgoing_payments = relationship("Payment", foreign_keys="[Payment.from_account_id]")
+    incoming_payments = relationship("Payment", foreign_keys="[Payment.to_account_id]")
+
+class Transaction(Base):
+    __tablename__ = "transactions"
+    
+    id = Column(Integer, primary_key=True)
+    bank_account_id = Column(Integer, ForeignKey('bank_accounts.id'), nullable=False)
+    type = Column(Enum(TransactionType), nullable=False)
+    amount = Column(Float, nullable=False)
+    description = Column(String(255))
+    reference = Column(String(50), unique=True, nullable=False)
+    tag = Column(Enum(TransactionTag), nullable=False)
+    payment_id = Column(Integer, ForeignKey('payments.id'), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    bank_account = relationship("BankAccount", back_populates="transactions")
+    payment = relationship("Payment", back_populates="transactions")
+
+class Payment(Base):
+    __tablename__ = "payments"
+    
+    id = Column(Integer, primary_key=True)
+    payment_type = Column(Enum(PaymentType), nullable=False)
+    amount = Column(Float, nullable=False)
+    status = Column(Enum(PaymentStatus), nullable=False)
+    
+    # Source account (either internal or external)
+    from_account_id = Column(Integer, ForeignKey('bank_accounts.id'), nullable=True)
+    from_external_account_id = Column(Integer, ForeignKey('external_accounts.id'), nullable=True)
+    from_account_source = Column(Enum(AccountSource), nullable=False)
+    
+    # Destination account (either internal or external)
+    to_account_id = Column(Integer, ForeignKey('bank_accounts.id'), nullable=True)
+    to_external_account_id = Column(Integer, ForeignKey('external_accounts.id'), nullable=True)
+    to_account_source = Column(Enum(AccountSource), nullable=False)
+    
+    description = Column(String(255))
+    # Reference fields
+    gateway_transaction_id = Column(String, unique=True, nullable=True)  # Payment gateway transaction ID
+    reference_number = Column(String(50), unique=True, nullable=True) # Internal reference number
+    due_date = Column(DateTime, nullable=True)
+    completed_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    # For installment/BNPL payments
+    total_installments = Column(Integer, nullable=True)
+    current_installment = Column(Integer, nullable=True)
+    installment_amount = Column(Float, nullable=True)
+    
+    # For loan payments
+    loan_id = Column(Integer, ForeignKey('loans.id'), nullable=True)
+
+    # For Order payments
+    order_id = Column(Integer, ForeignKey("orders.id"), nullable=True)
+
+    # For Invoice Payments
+    invoice_request_id = Column(Integer, ForeignKey("invoice_requests.id"), nullable=True)
+    
+    # Relationships
+    from_account = relationship("BankAccount", foreign_keys=[from_account_id], overlaps="outgoing_payments")
+    to_account = relationship("BankAccount", foreign_keys=[to_account_id], overlaps="incoming_payments")
+    from_external_account = relationship("ExternalAccount", foreign_keys=[from_external_account_id], overlaps="outgoing_payments")
+    to_external_account = relationship("ExternalAccount", foreign_keys=[to_external_account_id], overlaps="incoming_payments")
+    transactions = relationship("Transaction", back_populates="payment")
+    loan = relationship("Loan", back_populates="payments")
+    order = relationship("Order", back_populates="payments")
+    invoice_request = relationship("InvoiceRequest", back_populates="payments")
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        if not self.reference_number:
+            self.reference_number = f"PAY-{datetime.utcnow().strftime('%Y%m%d')}-{id:06d}"
+
+# FinancialPool, Loan, and BankingAutomation classes remain unchanged
+class FinancialPool(Base):
+    __tablename__ = "financial_pools"
+    
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
+    bank_account_id = Column(Integer, ForeignKey('bank_accounts.id'), nullable=False)
+    name = Column(String(100), nullable=False)
+    percentage = Column(Float, nullable=False)
+    balance = Column(Float, default=0.0)
+    is_credit_pool = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    user = relationship("User", back_populates="financial_pools")
+    bank_account = relationship("BankAccount", back_populates="pools")
+    automations = relationship("BankingAutomation", back_populates="source_pool")
+
+class Loan(Base):
+    __tablename__ = "loans"
+    
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
+    amount = Column(Float, nullable=False)
+    purpose = Column(String(255))
+    status = Column(String(50), nullable=False)  # active, completed, defaulted
+    remaining_amount = Column(Float, nullable=False)
+    equity_share = Column(Float, nullable=True)  # For business loans
+    approved_at = Column(DateTime, nullable=True)
+    completed_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    user = relationship("User", back_populates="loans")
+    payments = relationship("Payment", back_populates="loan")
+
+class BankingAutomation(Base):
+    __tablename__ = "banking_automations"
+    
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
+    name = Column(String(100), nullable=False)
+    type = Column(Enum(AutomationType), nullable=False)
+    schedule = Column(Enum(AutomationSchedule), nullable=False)
+    amount = Column(Float, nullable=True)  # For transfer type
+    source_pool_id = Column(Integer, ForeignKey('financial_pools.id'), nullable=False)
+    destination_account = Column(String(20), nullable=True)  # For transfer type
+    is_active = Column(Boolean, default=True)
+    last_run = Column(DateTime, nullable=True)
+    next_run = Column(DateTime, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    user = relationship("User", back_populates="automations")
+    source_pool = relationship("FinancialPool", back_populates="automations")
