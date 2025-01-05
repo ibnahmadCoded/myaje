@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from datetime import datetime
-from typing import List
+from typing import List, Optional
 from sql_database import get_db
 from pydantic import BaseModel, EmailStr
 from routes.auth import get_admin_user, pwd_context
@@ -26,7 +26,7 @@ class AdminUserResponse(BaseModel):
     id: int
     email: str
     admin_role: str
-    business_name: str
+    business_name: Optional[str] = None
     created_at: datetime
 
 @router.post("/create_admin_user", response_model=AdminUserResponse)

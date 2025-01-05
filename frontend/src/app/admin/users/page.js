@@ -78,7 +78,7 @@ export default function AdminUsers() {
 
   const handleCreateUser = async () => {
     try {
-      const token = localStorage.getItem('adminToken');
+      const token = localStorage.getItem('token');
       const response = await fetch(`${apiBaseUrl}/admin/create_admin_user`, {
         method: 'POST',
         headers: {
@@ -119,7 +119,7 @@ export default function AdminUsers() {
     if (!confirm('Are you sure you want to delete this admin user?')) return;
 
     try {
-      const token = localStorage.getItem('adminToken');
+      const token = localStorage.getItem('token');
       const response = await fetch(`${apiBaseUrl}/admin/users/${userId}`, {
         method: 'DELETE',
         headers: {

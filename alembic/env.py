@@ -13,6 +13,7 @@ import os
 sys.path.append('/app/backend')
 
 from backend.models import Base
+from backend.models import *
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -76,7 +77,10 @@ def run_migrations_online() -> None:
 
     with connectable.connect() as connection:
         context.configure(
-            connection=connection, target_metadata=target_metadata
+            connection=connection, 
+            target_metadata=target_metadata,
+            include_schemas=True,
+            include_object=lambda obj, name, type_, reflected, compare_to: print(f"Checking {type_} {name}") or True
         )
 
         with context.begin_transaction():

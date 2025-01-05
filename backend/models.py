@@ -1,3 +1,4 @@
+from venv import logger
 from datetime import datetime
 from sqlalchemy import Column, Integer, String, Float, Text, DateTime, ForeignKey, UniqueConstraint, Enum, JSON, Boolean
 from starlette.concurrency import run_in_threadpool
@@ -397,7 +398,9 @@ class RestockRequest(Base):
 
 # Create tables function
 async def create_tables():
-    await run_in_threadpool(Base.metadata.create_all, bind=engine)
+    #await run_in_threadpool(Base.metadata.create_all, bind=engine)
+    logger.info("Skipping table creation - handled by Alembic migrations")
+    pass
 
 ###############################################################
 #################### BANKING_RELATED MODELS ###################
@@ -472,8 +475,9 @@ class BankAccount(Base):
     account_type = Column(Enum(AccountType), nullable=False)
     account_name = Column(String(100), nullable=False)
     account_number = Column(String(20), nullable=False)
+    bvn = Column(String(11), nullable=True, default=None)
     bank_name = Column(String(100), nullable=False)
-    balance = Column(Float, default=0.0)
+    balance = Column(Float, default=0.00)
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     
