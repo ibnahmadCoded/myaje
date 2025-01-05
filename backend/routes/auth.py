@@ -184,25 +184,6 @@ async def toggle_view(
         "has_business_account": current_user.has_business_account
     }
 
-@router.post("/update-banking-onboarding")
-async def update_banking_onboarding(
-    request: Request,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-    data = await request.json()
-    view_type = data.get('view')
-    
-    if view_type == 'business':
-        current_user.business_banking_onboarded = True
-    elif view_type == 'personal':
-        current_user.personal_banking_onboarded = True
-    else:
-        raise HTTPException(status_code=400, detail="Invalid view type")
-        
-    db.commit()
-    return {"message": "Banking onboarding status updated"}
-
 @router.post("/admin/login")
 async def admin_login(request: Request, db: Session = Depends(get_db)):
     data = await request.json()

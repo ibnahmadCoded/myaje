@@ -1,7 +1,8 @@
 services:
   backend:
     depends_on:
-      - postgres
+      alembic:
+        condition: service_healthy
     build: ./backend
     container_name: myaje-backend
     ports:
@@ -38,6 +39,10 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data  
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
     env_file:
       - .env
     networks:
@@ -69,6 +74,8 @@ services:
       context: .
     volumes:
       - ./alembic/versions:/app/alembic/versions
+      - ./backend:/app/backend #sync backend files
+      - ./alembic.ini:/app/alembic.ini
     depends_on:
       - postgres
     container_name: myaje-alembic
@@ -77,6 +84,11 @@ services:
       - .env
     networks:
       - myaje_network
+    healthcheck:
+      test: ["CMD-SHELL", "/usr/local/bin/check_migrations.sh"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
 
   nginx:
     image: nginx:latest

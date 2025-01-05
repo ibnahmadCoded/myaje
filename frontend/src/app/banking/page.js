@@ -15,115 +15,205 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import DashboardLayout from '@/components/DashboardLayout';
 import { apiBaseUrl } from '@/config';
 
 const BankingPage = () => {
-  const [showOnboarding, setShowOnboarding] = useState(true);
+  const [showOnboarding, setShowOnboarding] = useState(() => {
+    const userDataStr = localStorage.getItem('user');
+    if (userDataStr) {
+      const user = JSON.parse(userDataStr);
+      if (user.active_view === 'business') {
+        return localStorage.getItem('businessBankingOnboarded') !== 'true';
+      } else {
+        return localStorage.getItem('personalBankingOnboarded') !== 'true';
+      }
+    }
+    return true; // Default to true if user data is missing
+  });
   const [onboardingStep, setOnboardingStep] = useState(0);
   const [userData, setUserData] = useState(null);
   const [businessAccountDetails, setBusinessAccountDetails] = useState({
     accountName: '',
     accountNumber: '',
     accountType: 'Business',
-    balance: 1000000,
-    templateType: ''
+    balance: 0,
+    isActive: ''
   });
   const [personalAccountDetails, setPersonalAccountDetails] = useState({
     accountName: '',
     accountNumber: '',
     accountType: 'Individual',
-    balance: 100000,
-    templateType: ''
+    balance: 0,
+    isActive: ''
   });
+  const { toast } = useToast();
 
-  const [accounts, setAccounts] = useState([]);
-  const [loans, setLoans] = useState([]);
-  const [automations, setAutomations] = useState([]);
+  const fetchAccountDetails = async () => {
+    try {
+      const response = await fetch(`${apiBaseUrl}/banking/accounts/${userData?.active_view === 'business' ? 'business' : 'personal'}`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
 
+      if (response.ok) {
+        const accountData = await response.json();
+        const mappedData = {
+          accountName: accountData.account_name,
+          accountNumber: accountData.account_number,
+          accountType: accountData.account_type === 'personal' ? 'Individual' : 'Business',
+          balance: accountData.balance,
+          isActive: accountData.is_active,
+        };
+
+        if (userData?.active_view === 'business') {
+          setBusinessAccountDetails(mappedData);
+        } else {
+          setPersonalAccountDetails(mappedData);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching account details:', error);
+    }
+  };
+  
   useEffect(() => {
     const userDataStr = localStorage.getItem('user');
     if (userDataStr) {
-      const userData = JSON.parse(userDataStr);
-      setUserData(userData);
-      
-      const isBusinessView = userData.active_view === 'business';
-      
-      // Generate account numbers if not set
-      if (!businessAccountDetails.accountNumber) {
-        const businessAccNumber = Math.floor(1000000000 + Math.random() * 9000000000).toString();
-        setBusinessAccountDetails(prev => ({
-          ...prev,
-          accountNumber: businessAccNumber,
-          accountName: userData.business_name || ''
-        }));
+      const parsedUser = JSON.parse(userDataStr);
+      setUserData(parsedUser);
+  
+      const onboardingKey = parsedUser.active_view === 'business'
+        ? 'businessBankingOnboarded'
+        : 'personalBankingOnboarded';
+  
+      const onboardingCompleted = localStorage.getItem(onboardingKey) === 'true';
+      if (onboardingCompleted) {
+        setShowOnboarding(false);
       }
-      
-      if (!personalAccountDetails.accountNumber) {
-        const phoneNumber = userData.phone.replace(/\D/g, '');
-        setPersonalAccountDetails(prev => ({
-          ...prev,
-          accountNumber: phoneNumber.slice(-10),
-          accountName: userData.full_name || ''
-        }));
-      }
-
-      // Check view-specific onboarding status
-      const onboardingKey = isBusinessView ? 'businessBankingOnboarded' : 'personalBankingOnboarded';
-      const isOnboarded = localStorage.getItem(onboardingKey) === 'true';
-      setShowOnboarding(!isOnboarded);
     }
-  }, [userData?.active_view]);
-
-  const handleAccountNameChange = (e) => {
-      setPersonalAccountDetails(prev => ({
-        ...prev,
-        accountName: e.target.value
-      }));
-  };
-
-  const handleOnboardingComplete = async () => {
-    if (onboardingStep < 2) {
-      setOnboardingStep(prev => prev + 1);
-      return;
+  }, []); // Initial load
+  
+  useEffect(() => {
+    if (userData) {
+      fetchAccountDetails();
     }
-  
-    try {
-      const response = await fetch(`${apiBaseUrl}/auth/update-banking-onboarding`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({
-          view: userData.active_view
-        })
-      });
-  
-      if (!response.ok) throw new Error('Failed to update onboarding status');
-  
-      const onboardingKey = userData.active_view === 'business' ? 
-        'businessBankingOnboarded' : 'personalBankingOnboarded';
-      localStorage.setItem(onboardingKey, 'true');
-      setShowOnboarding(false);
-    } catch (error) {
-      console.error('Error updating onboarding status:', error);
-      // Optionally show error to user
-    }
-  };
+  }, [userData]);
 
   // Get current account details based on active view
   const getCurrentAccountDetails = () => {
     return userData?.active_view === 'business' ? 
       businessAccountDetails : personalAccountDetails;
   };
-
+  
   const OnboardingContent = () => {
+    const [accountName, setAccountName] = useState(getCurrentAccountDetails()?.accountName || "");
+    const [bvn, setBvn] = useState("");
+    const [bvnError, setBvnError] = useState("");
     const accountDetails = getCurrentAccountDetails();
-
     const isBusinessView = userData?.active_view === 'business';
+
+    const handleAccountNameChange = (e) => {
+      setAccountName(e.target.value); 
+    };
+
+    const handleBvnChange = (e) => {
+      const value = e.target.value;
+      if (/^\d{0,11}$/.test(value)) {
+        setBvn(value);
+        setBvnError("");
+      } else {
+        setBvnError("BVN must be exactly 11 digits.");
+      }
+    };
+  
+    const validateInputs = () => {
+      if (!isBusinessView && bvn.length !== 11) {
+        setBvnError("BVN must be exactly 11 digits.");
+        return false;
+      }
+      return true;
+    };
+
+    const handleOnboardingComplete = async () => {
+      if (onboardingStep === 0) {
+        if (!validateInputs()) return;
+
+        // Call the backend immediately after the first step
+        try {
+          const accountResponse = await fetch(`${apiBaseUrl}/banking/accounts`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${localStorage.getItem('token')}`
+            },
+            body: JSON.stringify({
+              account_name: userData.active_view === 'business' ? userData?.business_name : accountName,
+              account_type: userData.active_view === 'business' ? 'business' : 'personal',
+              bank_name: 'BAM Bank',
+              bvn: userData.active_view === 'business' ? undefined : bvn,
+            })
+          });
     
+          if (!accountResponse.ok) throw new Error('Failed to create bank account');
+    
+          // Refresh account details immediately
+          await fetchAccountDetails();
+    
+        } catch (error) {
+          console.error('Error during onboarding step 1:', error);
+          toast({
+            title: "Error",
+            description: error.message,
+            variant: "destructive"
+          });
+          return;
+        }
+      }
+    
+      if (onboardingStep < 2) {
+        setOnboardingStep((prev) => prev + 1);
+        return;
+      }
+    
+      // Step 3 completion logic remains the same
+      try {
+        const onboardingResponse = await fetch(`${apiBaseUrl}/banking/update-banking-onboarding`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          },
+          body: JSON.stringify({
+            view: userData.active_view
+          })
+        });
+    
+        if (!onboardingResponse.ok) throw new Error('Failed to update onboarding status');
+    
+        const onboardingKey = userData.active_view === 'business' ? 
+          'businessBankingOnboarded' : 'personalBankingOnboarded';
+        localStorage.setItem(onboardingKey, 'true');
+        setShowOnboarding(false);
+    
+        toast({
+          title: "Success",
+          description: "BAM setup successfully completed",
+        });
+    
+      } catch (error) {
+        console.error('Error completing onboarding:', error);
+        toast({
+          title: "Error",
+          description: error.message,
+          variant: "destructive"
+        });
+      }
+    };
+  
     const steps = [
       {
         title: "Welcome to BAM - The Myaje Banking Experience",
@@ -133,24 +223,34 @@ const BankingPage = () => {
             <div className="p-4 bg-gray-50 rounded-lg">
               <p className="font-medium">Your Account Details</p>
               <div className="mt-2 space-y-2">
-                <p>Account Number: {accountDetails.accountNumber}</p>
+                <p>Account Number: {isBusinessView ? "To be generated" : userData?.phone.replace(/[^0-9]/g, '')}</p>
                 <p>Account Type: {accountDetails.accountType}</p>
               </div>
             </div>
             {!isBusinessView && (
               <div className="space-y-2">
                 <Label>Account Name</Label>
-                <Input 
-                  type="text" 
-                  value={accountDetails.accountName}
+                <Input
+                  type="text"
+                  value={accountName}
                   onChange={handleAccountNameChange}
                   placeholder="Enter your full name"
-                  required 
+                  required
                 />
+                <Label>BVN</Label>
+                <Input
+                  type="text"
+                  value={bvn}
+                  onChange={handleBvnChange}
+                  placeholder="Enter your 11-digit BVN"
+                  maxLength={11}
+                  required
+                />
+                {bvnError && <p className="text-red-500 text-sm">{bvnError}</p>}
               </div>
             )}
           </div>
-        )
+        ),
       },
       {
         title: "Banking Features",
@@ -214,17 +314,17 @@ const BankingPage = () => {
               <div className="mt-2 space-y-2">
                 <p>Bank Name: BAM Bank</p>
                 <p>Account Number: {accountDetails.accountNumber}</p>
-                <p>Account Name: {accountDetails.accountName || userData?.business_name}</p>
+                <p>Account Name: {accountName || userData?.business_name}</p>
               </div>
             </div>
             <p className="text-sm text-gray-500">
               Transfer any amount to your account to start enjoying BAM Banking services
             </p>
           </div>
-        )
-      }
+        ),
+      },
     ];
-
+  
     return (
       <Dialog open={showOnboarding} onOpenChange={setShowOnboarding}>
         <DialogContent className="sm:max-w-[500px]">
@@ -232,11 +332,9 @@ const BankingPage = () => {
             <DialogTitle>{steps[onboardingStep].title}</DialogTitle>
             <DialogDescription>{steps[onboardingStep].description}</DialogDescription>
           </DialogHeader>
-          
-          <div className="py-4">
-            {steps[onboardingStep].content}
-          </div>
-          
+  
+          <div className="py-4">{steps[onboardingStep].content}</div>
+  
           <DialogFooter>
             <Button onClick={handleOnboardingComplete}>
               {onboardingStep === 2 ? "Complete Setup" : "Next"}

@@ -162,20 +162,20 @@ class AdminMetricsCalculator:
         start_of_month = datetime(now.year, now.month, 1)
         
         monthly_revenue = self.db.query(func.sum(Payment.amount)).filter(
-            Payment.status == 'completed',
+            Payment.status == PaymentStatus.COMPLETED,
             Payment.created_at >= start_of_month
         ).scalar() or Decimal('0')
         
         pending_payouts = self.db.query(func.sum(Payment.amount)).filter(
-            Payment.status == 'pending'
+            Payment.status == PaymentStatus.PENDING
         ).scalar() or Decimal('0')
         
         successful_transactions = self.db.query(Payment).filter(
-            Payment.status == 'completed'
+            Payment.status == PaymentStatus.COMPLETED
         ).count()
         
         failed_transactions = self.db.query(Payment).filter(
-            Payment.status == 'failed'
+            Payment.status == PaymentStatus.FAILED
         ).count()
         
         return {
@@ -284,20 +284,20 @@ class AdminMetricsCalculator:
         
         total_payments = self.db.query(Payment).count()
         successful_payments = self.db.query(Payment).filter(
-            Payment.status == PaymentStatus.completed
+            Payment.status == PaymentStatus.COMPLETED
         ).count()
         
         failed_payments = self.db.query(Payment).filter(
-            Payment.status == PaymentStatus.failed
+            Payment.status == PaymentStatus.FAILED
         ).count()
         
         monthly_payment_volume = self.db.query(func.sum(Payment.amount)).filter(
             Payment.created_at >= start_of_month,
-            Payment.status == PaymentStatus.completed
+            Payment.status == PaymentStatus.COMPLETED
         ).scalar() or Decimal('0')
         
         pending_payments = self.db.query(Payment).filter(
-            Payment.status == PaymentStatus.pending
+            Payment.status == PaymentStatus.PENDING
         ).count()
         
         payment_success_rate = (successful_payments / total_payments * 100) if total_payments > 0 else 0

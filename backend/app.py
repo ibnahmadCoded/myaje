@@ -1,3 +1,4 @@
+from venv import logger
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -5,7 +6,7 @@ from models import create_tables
 from routes import (auth, inventory, storefront, orders, 
                     marketplace, invoice, chat_inference, 
                     notifications, dashboard, feedback, 
-                    admin, restock, admin_restock)
+                    admin, restock, admin_restock, banking)
 from utils.chatInferenceQueryParser import QueryIntentParser
 from sql_database import SessionLocal
 from config import FRONTEND_URL, UPLOAD_DIRECTORY, UPLOAD_PATH, BASE_API_PREFIX
@@ -31,6 +32,7 @@ app.mount(UPLOAD_PATH, StaticFiles(directory=UPLOAD_DIRECTORY), name=UPLOAD_DIRE
 @app.on_event("startup")
 async def startup_event():
     await create_tables()
+    logger.info("DATABASE TABLES CREATED")
 
     db = SessionLocal()
     try:
@@ -55,6 +57,7 @@ app.include_router(feedback.router, prefix=BASE_API_PREFIX + "/feedback", tags=[
 app.include_router(admin.router, prefix=BASE_API_PREFIX + "/admin", tags=["admin_management"])
 app.include_router(restock.router, prefix=BASE_API_PREFIX + "/restock", tags=["restock"])
 app.include_router(router=admin_restock.router, prefix=BASE_API_PREFIX + "/admin/restock", tags=["admin_restock"])
+app.include_router(router=banking.router, prefix=BASE_API_PREFIX + "/banking", tags=["banking"])
 
 if __name__ == "__main__":
     import uvicorn
