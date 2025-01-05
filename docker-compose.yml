@@ -3,6 +3,8 @@ services:
     depends_on:
       alembic:
         condition: service_healthy
+      redis:
+        condition: service_healthy
     build: ./backend
     container_name: myaje-backend
     ports:
@@ -102,13 +104,31 @@ services:
       - frontend
     networks:
       - myaje_network
+
+  redis:
+    image: redis:7-alpine
+    container_name: myaje-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - myaje_network
+    command: redis-server --save 20 1 --loglevel warning
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
   
 volumes:
   postgres_data:  
     driver: local
   pgadmin_data:
     driver: local
-
+  redis_data:    
+    driver: local
+    
 networks:
   myaje_network:
     driver: bridge

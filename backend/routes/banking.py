@@ -7,7 +7,10 @@ from datetime import datetime
 from sql_database import get_db
 from routes.auth import get_current_user
 from models import User, BankAccount, AccountType
+from utils.redis_cache import cache_response
+from config import CACHE_EXPIRATION_TIME
 import random
+import json
 
 router = APIRouter()
 
@@ -72,7 +75,9 @@ async def create_bank_account(
             detail=f"User already has a {account_data.account_type.value} account"
         )
     
-    if account_data.account_type == AccountType.PERSONAL and account_data.bvn:
+    print(account_data.bvn)
+    
+    if account_data.bvn:
         if not account_data.bvn.isdigit() or len(account_data.bvn) != 11:
             raise HTTPException(
                 status_code=400,
@@ -122,21 +127,26 @@ async def create_bank_account(
     return new_account
 
 @router.get("/accounts", response_model=List[BankAccountResponse])
+@cache_response(expire=CACHE_EXPIRATION_TIME)
 async def get_user_accounts(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    return db.query(BankAccount).filter(
+    accounts = db.query(BankAccount).filter(
         BankAccount.user_id == current_user.id,
         BankAccount.is_active == True
     ).all()
 
+    return accounts
+
 @router.get("/accounts/{account_type}", response_model=Optional[BankAccountResponse])
+@cache_response(expire=CACHE_EXPIRATION_TIME)
 async def get_account_by_type(
     account_type: AccountType,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
+
     account = db.query(BankAccount).filter(
         BankAccount.user_id == current_user.id,
         BankAccount.account_type == account_type,

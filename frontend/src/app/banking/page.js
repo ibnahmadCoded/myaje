@@ -21,18 +21,19 @@ import DashboardLayout from '@/components/DashboardLayout';
 import { apiBaseUrl } from '@/config';
 
 const BankingPage = () => {
-  const [showOnboarding, setShowOnboarding] = useState(() => {
+  const [showOnboarding, setShowOnboarding] = useState(false);
+
+  useEffect(() => {
     const userDataStr = localStorage.getItem('user');
     if (userDataStr) {
       const user = JSON.parse(userDataStr);
-      if (user.active_view === 'business') {
-        return localStorage.getItem('businessBankingOnboarded') !== 'true';
-      } else {
-        return localStorage.getItem('personalBankingOnboarded') !== 'true';
-      }
+      const onboardingKey = user.active_view === 'business'
+        ? 'businessBankingOnboarded'
+        : 'personalBankingOnboarded';
+      const isOnboarded = localStorage.getItem(onboardingKey) === 'true';
+      setShowOnboarding(!isOnboarded);
     }
-    return true; // Default to true if user data is missing
-  });
+  }, []);
   const [onboardingStep, setOnboardingStep] = useState(0);
   const [userData, setUserData] = useState(null);
   const [businessAccountDetails, setBusinessAccountDetails] = useState({
@@ -154,7 +155,7 @@ const BankingPage = () => {
               account_name: userData.active_view === 'business' ? userData?.business_name : accountName,
               account_type: userData.active_view === 'business' ? 'business' : 'personal',
               bank_name: 'BAM Bank',
-              bvn: userData.active_view === 'business' ? undefined : bvn,
+              bvn: bvn,
             })
           });
     
@@ -237,6 +238,21 @@ const BankingPage = () => {
                   placeholder="Enter your full name"
                   required
                 />
+                <Label>BVN</Label>
+                <Input
+                  type="text"
+                  value={bvn}
+                  onChange={handleBvnChange}
+                  placeholder="Enter your 11-digit BVN"
+                  maxLength={11}
+                  required
+                />
+                {bvnError && <p className="text-red-500 text-sm">{bvnError}</p>}
+              </div>
+            )}
+
+            {isBusinessView && (
+              <div className="space-y-2">
                 <Label>BVN</Label>
                 <Input
                   type="text"
