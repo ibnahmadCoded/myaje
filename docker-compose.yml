@@ -34,10 +34,6 @@ services:
   postgres:
     image: postgres:17  
     container_name: myaje-postgres
-    environment:
-      POSTGRES_USER: ${DB_USER}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
-      POSTGRES_DB: myaje
     ports:
       - "5432:5432"
     volumes:
@@ -51,6 +47,22 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+  
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: myaje-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: "admin@admin.com"
+      PGADMIN_DEFAULT_PASSWORD: "admin"
+      PGADMIN_CONFIG_SERVER_MODE: "False"
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    depends_on:
+      - postgres
+    networks:
+      - myaje_network
 
   alembic:
     build:
@@ -81,6 +93,8 @@ services:
   
 volumes:
   postgres_data:  
+    driver: local
+  pgadmin_data:
     driver: local
 
 networks:
