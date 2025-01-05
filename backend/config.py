@@ -57,3 +57,6 @@ SUPER_ADMIN_EMAIL = os.getenv("SUPER_ADMIN_EMAIL", "admin@yourdomain.com")
 SUPER_ADMIN_PASSWORD = os.getenv("SUPER_ADMIN_PASSWORD", "adminpassword123")
 FRONTEND_URL = allow_origins=[os.getenv("FRONTEND_URL", "http://localhost:3000")]
 BASE_API_PREFIX = os.getenv("NEXT_PUBLIC_API_BASE_URL", "/api")
+REDIS_HOST = os.getenv('REDIS_HOST', 'redis')
+REDIS_PORT = int(os.getenv('REDIS_PORT', 6379))
+CACHE_EXPIRATION_TIME = int(os.getenv('CACHE_EXPIRATION_TIME', 300)) #5 minutes
