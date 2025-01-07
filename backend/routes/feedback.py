@@ -7,6 +7,8 @@ from datetime import datetime
 from models import Feedback, User
 from routes.auth import get_current_user, get_admin_user
 from sql_database import get_db
+from utils.cache_constants import CACHE_KEYS
+from utils.cache_decorators import cache_response, CacheNamespace, invalidate_cache
 
 router = APIRouter()
 
@@ -36,6 +38,10 @@ class FeedbackResponse(BaseModel):
     admin_notes: Optional[str]
 
 @router.post("/submit")
+@invalidate_cache(
+    namespaces=[CacheNamespace.FEEDBACK],
+    user_id_arg='current_user'
+)
 async def submit_feedback(
     feedback: FeedbackCreate,
     current_user: User = Depends(get_current_user),
@@ -61,6 +67,7 @@ async def submit_feedback(
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/admin/feedback", response_model=List[FeedbackResponse]) # only available in admin page
+@cache_response(expire=900)
 async def get_all_feedback(
     status: Optional[FeedbackStatus] = None,
     db: Session = Depends(get_db),
@@ -73,6 +80,10 @@ async def get_all_feedback(
     return query.order_by(Feedback.created_at.desc()).all()
 
 @router.put("/admin/feedback/{feedback_id}") # only available in admin page
+@invalidate_cache(
+    namespaces=[CacheNamespace.FEEDBACK],
+    custom_keys=[lambda result: CACHE_KEYS["feedback_detail"](result.id)]
+)
 async def update_feedback_status(
     feedback_id: int,
     request: Request,

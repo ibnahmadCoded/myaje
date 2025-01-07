@@ -16,8 +16,10 @@ import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { apiBaseUrl, backendUrl } from '@/config';
+import { useToast } from "@/hooks/use-toast";
 
 const StorefrontManagement = () => {
+  const { toast } = useToast();
   const [inventoryProducts, setInventoryProducts] = useState([]);
   const [storeProducts, setStoreProducts] = useState([]);
   const [orders, setOrders] = useState([]);
@@ -128,8 +130,16 @@ const StorefrontManagement = () => {
       });
       setIsEditingStoreDetails(false);
       fetchStoreDetails();
+      toast({
+        title: "Success",
+        description: "Store details updated successfully.",
+      });
     } catch (error) {
       setError('Failed to update store details');
+      toast({
+        title: "Error",
+        description: error.message,
+      });
     }
   };
 

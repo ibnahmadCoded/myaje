@@ -8,6 +8,8 @@ from models import Notification, NotificationType, User
 from sql_database import get_db
 from routes.auth import get_current_user
 from pydantic import BaseModel
+from utils.cache_constants import CACHE_KEYS
+from utils.cache_decorators import cache_response, CacheNamespace, invalidate_cache
 
 router = APIRouter()
 
@@ -49,6 +51,7 @@ async def create_notification(
     return notification
 
 @router.get("/get_notifications", response_model=List[NotificationRead])
+@cache_response(expire=300)
 async def get_notifications(
     unread_only: bool = False,
     db: Session = Depends(get_db),
@@ -64,6 +67,11 @@ async def get_notifications(
     return notifications
 
 @router.post("/{notification_id}/mark-read")
+@invalidate_cache(
+    namespaces=[CacheNamespace.NOTIFICATION],
+    user_id_arg='current_user',
+    custom_keys=[lambda result: CACHE_KEYS["user_notifications"](result["user_id"])]
+)
 async def mark_notification_read(
     notification_id: int,
     db: Session = Depends(get_db),
@@ -80,9 +88,14 @@ async def mark_notification_read(
     
     notification.is_read = True
     db.commit()
-    return {"message": "Notification marked as read"}
+    return {"message": "Notification marked as read", "user_id": current_user.id}
 
 @router.post("/mark-all-read")
+@invalidate_cache(
+    namespaces=[CacheNamespace.NOTIFICATION],
+    user_id_arg='current_user',
+    custom_keys=[lambda result: CACHE_KEYS["user_notifications"](result["user_id"])]
+)
 async def mark_all_notifications_read(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
@@ -94,4 +107,4 @@ async def mark_all_notifications_read(
     ).update({Notification.is_read: True})
     
     db.commit()
-    return {"message": "All notifications marked as read"}
+    return {"message": "All notifications marked as read", "user_id": current_user.id}

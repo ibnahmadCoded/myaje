@@ -7,10 +7,10 @@ from datetime import datetime
 from sql_database import get_db
 from routes.auth import get_current_user
 from models import User, BankAccount, AccountType
-from utils.redis_cache import cache_response
+from utils.cache_decorators import cache_response, invalidate_cache
 from config import CACHE_EXPIRATION_TIME
 import random
-import json
+from utils.cache_constants import CacheNamespace, CACHE_KEYS
 
 router = APIRouter()
 
@@ -57,7 +57,16 @@ def generate_account_number(account_type: AccountType, user: User) -> str:
         # For business accounts, generate random 10-digit number
         return str(random.randint(1000000000, 9999999999))
 
-@router.post("/accounts", response_model=BankAccountResponse)
+@router.post("/accounts")
+@invalidate_cache(
+    namespaces=[CacheNamespace.ACCOUNT],
+    user_id_arg='current_user',
+    custom_keys=[
+        lambda result: CACHE_KEYS["user_accounts"](result.user_id),
+        lambda result: CACHE_KEYS["account_detail"](result.user_id, result.id),
+        lambda result: CACHE_KEYS["account_by_type"](result.user_id, result.account_type)
+    ]
+)
 async def create_bank_account(
     account_data: BankAccountCreate,
     db: Session = Depends(get_db),
@@ -75,8 +84,6 @@ async def create_bank_account(
             detail=f"User already has a {account_data.account_type.value} account"
         )
     
-    print(account_data.bvn)
-    
     if account_data.bvn:
         if not account_data.bvn.isdigit() or len(account_data.bvn) != 11:
             raise HTTPException(
@@ -86,7 +93,6 @@ async def create_bank_account(
 
     # Generate account number based on type
     if account_data.account_type == AccountType.BUSINESS:
-        # For business accounts, keep trying until we get a unique number
         while True:
             account_number = generate_account_number(account_data.account_type, current_user)
             exists = db.query(BankAccount).filter(
@@ -95,9 +101,7 @@ async def create_bank_account(
             if not exists:
                 break
     else:
-        # For personal accounts, use phone number
         account_number = generate_account_number(account_data.account_type, current_user)
-        # Check if this phone number is already used as an account number
         exists = db.query(BankAccount).filter(
             BankAccount.account_number == account_number
         ).first()
@@ -107,8 +111,7 @@ async def create_bank_account(
                 detail="An account with this phone number already exists"
             )
 
-    # Set initial balance based on account type
-    initial_balance = 1000000.00 if account_data.account_type == AccountType.BUSINESS else 100000.00 # should be 0.00
+    initial_balance = 1000000.00 if account_data.account_type == AccountType.BUSINESS else 100000.00
 
     new_account = BankAccount(
         user_id=current_user.id,
@@ -162,6 +165,13 @@ async def get_account_by_type(
     return account
 
 @router.post("/update-banking-onboarding")
+@invalidate_cache(
+    namespaces=[CacheNamespace.USER],
+    user_id_arg='current_user',
+    custom_keys=[
+        lambda result: CACHE_KEYS["user_profile"](result["user_id"]) if "user_id" in result else None
+    ]
+)
 async def update_banking_onboarding(
     data: OnboardingUpdate,
     db: Session = Depends(get_db),
@@ -179,9 +189,18 @@ async def update_banking_onboarding(
         current_user.personal_banking_onboarded = True
     
     db.commit()
-    return {"status": "success", "message": f"{data.view} banking onboarding completed"}
+    return {"status": "success", "message": f"{data.view} banking onboarding completed", "user_id": current_user.id}
 
 @router.put("/accounts/{account_id}")
+@invalidate_cache(
+    namespaces=[CacheNamespace.ACCOUNT],
+    user_id_arg='current_user',
+    custom_keys=[
+        lambda result: CACHE_KEYS["account_detail"](result.user_id, result.id),
+        lambda result: CACHE_KEYS["account_by_type"](result.user_id, result.account_type),
+        lambda result: CACHE_KEYS["user_accounts"](result.user_id)
+    ]
+)
 async def update_account(
     account_id: int,
     account_data: BankAccountCreate,

@@ -18,6 +18,9 @@ import logging
 from typing import Dict
 from enum import Enum
 from config import SMTP_USERNAME, SMTP_PASSWORD, SMTP_SERVER, SMTP_PORT
+from utils.cache_constants import CACHE_KEYS
+from utils.cache_decorators import cache_response, CacheNamespace, invalidate_cache
+from utils.helper_functions import serialize_datetime
 
 router = APIRouter()
 
@@ -71,6 +74,14 @@ class BankDetailsRequestCreate(BaseModel):
     accountType: str
 
 @router.post("/request") # currently not using the route but can be useful in the future if we want buyers to request new invoices fromt thier accounts (when buyers start having accounts)
+@invalidate_cache(
+    namespaces=[CacheNamespace.INVOICE, CacheNamespace.NOTIFICATION],
+    user_id_arg=None,
+    custom_keys=[
+        lambda result: f"invoice:request:{result['invoice_request_id']}" if isinstance(result, dict) else None,
+        lambda result: f"invoice:requests:all"
+    ]
+)
 async def create_invoice_request(
     request: InvoiceRequestCreate,
     db: Session = Depends(get_db)
@@ -108,6 +119,7 @@ async def create_invoice_request(
         raise HTTPException(status_code=500, detail="Error processing invoice request")
 
 @router.get("/requests")
+@cache_response(expire=1800)
 async def get_invoice_requests(
     status: Optional[InvoiceStatus] = None,
     current_user: User = Depends(get_current_user),
@@ -136,13 +148,14 @@ async def get_invoice_requests(
         "shipping_address": req.shipping_address,
         "amount": req.amount,
         "status": req.status,
-        "created_at": req.created_at,
+        "created_at": serialize_datetime(req.created_at),
         "invoice_number": req.invoice_number,
         "items": req.items,
         "order_id": req.order_id
     } for req in requests]
 
 @router.get("/request/{request_id}")
+@cache_response(expire=3600)
 async def get_invoice_request(
     request_id: int,
     current_user: User = Depends(get_current_user),
@@ -163,10 +176,10 @@ async def get_invoice_request(
         "shipping_address": invoice_request.shipping_address,
         "amount": invoice_request.amount,
         "status": invoice_request.status,
-        "created_at": invoice_request.created_at,
+        "created_at": serialize_datetime(invoice_request.created_at),
         "invoice_number": invoice_request.invoice_number,
         "items": invoice_request.items,
-        "generated_at": invoice_request.generated_at,
+        "generated_at": serialize_datetime(invoice_request.generated_at),
         "generated_by": invoice_request.generated_by
     }
 
@@ -221,6 +234,14 @@ class InvoiceGenerationParams(BaseModel):
     due_date: Optional[datetime] = None
 
 @router.post("/generate/{request_id}")
+@invalidate_cache(
+    namespaces=[CacheNamespace.INVOICE],
+    user_id_arg='current_user',
+    custom_keys=[
+        lambda result: CACHE_KEYS["invoice_detail"](result["request_id"]),
+        lambda result: CACHE_KEYS["user_invoices"](result["user_id"])
+    ]
+)
 async def generate_invoice(
     request_id: int,
     params: InvoiceGenerationParams,
@@ -272,6 +293,8 @@ async def generate_invoice(
         
         return {
             "message": "Invoice generated successfully",
+            "user_id": current_user.id,
+            "request_id": invoice_request.id,
             "invoice_number": invoice_request.invoice_number,
             "due_date": invoice_request.due_date.isoformat(),
             "status": "email_queued"
@@ -307,6 +330,14 @@ async def resend_email(
         raise HTTPException(status_code=500, detail="Error sending email")
 
 @router.put("/request/{request_id}")
+@invalidate_cache(
+    namespaces=[CacheNamespace.INVOICE],
+    user_id_arg='current_user',
+    custom_keys=[
+        lambda result: CACHE_KEYS["invoice_detail"](result["id"]),
+        lambda result: CACHE_KEYS["user_invoices"](result["user_id"])
+    ]
+)
 async def update_invoice_request(
     request_id: int,
     update_data: InvoiceUpdate,
@@ -332,7 +363,9 @@ async def update_invoice_request(
         
         return {
             "message": "Invoice request updated successfully",
-            "status": invoice_request.status
+            "status": invoice_request.status,
+            "id": invoice_request.id,
+            "user_id": current_user.id
         }
     except Exception as e:
         db.rollback()
@@ -340,6 +373,14 @@ async def update_invoice_request(
         raise HTTPException(status_code=500, detail="Error updating invoice request")
 
 @router.delete("/request/{request_id}")
+@invalidate_cache(
+    namespaces=[CacheNamespace.INVOICE],
+    user_id_arg='current_user',
+    custom_keys=[
+        lambda _: "invoice:requests:all",
+        lambda result: CACHE_KEYS["user_invoices"](result["user_id"])
+    ]
+)
 async def delete_invoice_request(
     request_id: int,
     current_user: User = Depends(get_current_user),
@@ -359,7 +400,7 @@ async def delete_invoice_request(
         db.delete(invoice_request)
         db.commit()
         
-        return {"message": "Invoice request deleted successfully"}
+        return {"message": "Invoice request deleted successfully", "user_id": current_user.id}
     except Exception as e:
         db.rollback()
         logging.error(f"Error deleting invoice request: {str(e)}")

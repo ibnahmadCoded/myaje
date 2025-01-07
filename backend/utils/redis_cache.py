@@ -1,21 +1,14 @@
-from fastapi import Depends
+#utils/redis_cache.py
 import redis
 import json
-from typing import Any, Optional, Dict, List
+from typing import Any, Optional, Dict
 import os
 from functools import wraps
 from sqlalchemy.orm import class_mapper
 from datetime import datetime
 import enum
-from sqlalchemy.orm.relationships import RelationshipProperty
 from models import User, Product, Order, BankAccount
-
-redis_client = redis.Redis(
-    host=os.getenv('REDIS_HOST', 'redis'),
-    port=int(os.getenv('REDIS_PORT', 6379)),
-    db=0,
-    decode_responses=True
-)
+from config import REDIS_CLIENT
 
 class ModelSerializer:
     """Enhanced serializer for SQLAlchemy models with relationship handling"""
@@ -126,7 +119,7 @@ class ModelSerializer:
         
         return data
 
-class EnhancedRedisCache:
+class RedisCache:
     def __init__(self, redis_client):
         self.redis_client = redis_client
         
@@ -153,34 +146,4 @@ class EnhancedRedisCache:
             self.redis_client.delete(*keys)
 
 # Initialize enhanced cache
-enhanced_cache = EnhancedRedisCache(redis_client)
-
-def cache_response(expire: int = 3600, include_user_id: bool = True):
-    """Enhanced caching decorator with user isolation"""
-    def decorator(func):
-        @wraps(func)
-        async def wrapper(*args, **kwargs):
-            # Extract user_id from current_user if present
-            user_id = None
-            if include_user_id:
-                current_user = kwargs.get('current_user')
-                if current_user:
-                    user_id = getattr(current_user, 'id', None)
-            
-            # Generate cache key
-            base_key = f"{func.__name__}:{str(args)}:{str(kwargs)}"
-            cache_key = f"user:{user_id}:{base_key}" if user_id else base_key
-            
-            # Try to get cached response
-            cached_response = await enhanced_cache.get(cache_key)
-            if cached_response is not None:
-                return cached_response
-            
-            # Execute function and cache response
-            response = await func(*args, **kwargs)
-            await enhanced_cache.set(cache_key, response, expire)
-            
-            return response
-            
-        return wrapper
-    return decorator
+redis_cache = RedisCache(REDIS_CLIENT)

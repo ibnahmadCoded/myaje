@@ -6,6 +6,8 @@ from models import Product, User, StorefrontProduct, StoreSettings
 from routes.auth import get_current_user
 from typing import List
 from pydantic import BaseModel
+from utils.cache_constants import CACHE_KEYS
+from utils.cache_decorators import cache_response, CacheNamespace, invalidate_cache
 
 router = APIRouter()
 
@@ -17,6 +19,7 @@ class StorefrontProductUpdate(BaseModel):
     storefront_price: float
 
 @router.get("/get_products")
+@cache_response(expire=3600)  # 1 hour cache
 async def get_storefront_products(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -43,6 +46,14 @@ async def get_storefront_products(
     ]
 
 @router.post("/add_products")
+@invalidate_cache(
+    namespaces=[CacheNamespace.STOREFRONT, CacheNamespace.INVENTORY],
+    user_id_arg='current_user',
+    custom_keys=[
+        lambda result: CACHE_KEYS["store_products"](result["user_id"]) if isinstance(result, dict) else (result.user_id),
+        lambda result: CACHE_KEYS["user_products"](result["user_id"]) if isinstance(result, dict) else (result.user_id)
+    ]
+)
 async def add_to_storefront(
     product: StorefrontProductCreate,
     current_user: User = Depends(get_current_user),
@@ -75,12 +86,19 @@ async def add_to_storefront(
     db.add(storefront_product)
     try:
         db.commit()
-        return {"message": "Product added to storefront"}
+        return {"message": "Product added to storefront", "user_id": current_user.id}
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.put("/update_products/{product_id}")
+@invalidate_cache(
+    namespaces=[CacheNamespace.STOREFRONT],
+    user_id_arg='current_user',
+    custom_keys=[
+        lambda result: CACHE_KEYS["store_products"](result["user_id"]) if isinstance(result, dict) else (result.user_id)
+    ]
+)
 async def update_storefront_product(
     product_id: int,
     product: StorefrontProductUpdate,
@@ -99,12 +117,13 @@ async def update_storefront_product(
     
     try:
         db.commit()
-        return {"message": "Product updated successfully"}
+        return {"message": "Product updated successfully", "user_id": current_user.id}
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/storefront_preview/{user_id}")
+@cache_response(expire=1800)  # 30 minute cache for public preview
 async def get_storefront_preview(
     user_id: int,
     db: Session = Depends(get_db)
@@ -140,6 +159,14 @@ async def get_storefront_preview(
     }
 
 @router.delete("/delete_products/{product_id}")
+@invalidate_cache(
+    namespaces=[CacheNamespace.STOREFRONT, CacheNamespace.INVENTORY],
+    user_id_arg='current_user',
+    custom_keys=[
+        lambda result: CACHE_KEYS["store_products"](result["user_id"]) if isinstance(result, dict) else (result.user_id),
+        lambda result: CACHE_KEYS["user_products"](result["user_id"]) if isinstance(result, dict) else None(result.user_id)
+    ]
+)
 async def remove_from_storefront(
     product_id: int,
     current_user: User = Depends(get_current_user),
@@ -156,12 +183,19 @@ async def remove_from_storefront(
     try:
         db.delete(storefront_product)
         db.commit()
-        return {"message": "Product removed from storefront"}
+        return {"message": "Product removed from storefront", "user_id": current_user.id}
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
     
 @router.put("/update_store_details")
+@invalidate_cache(
+    namespaces=[CacheNamespace.STOREFRONT],
+    user_id_arg='current_user',
+    custom_keys=[
+        lambda result: CACHE_KEYS["store_settings"](result["user_id"]) if isinstance(result, dict) else (result.user_id)
+    ]
+)
 async def update_store_details(
     store_details: dict,  # Flexible schema to handle various fields
     current_user: User = Depends(get_current_user),
@@ -179,12 +213,13 @@ async def update_store_details(
     
     try:
         db.commit()
-        return {"message": "Store details updated successfully"}
+        return {"message": "Store details updated successfully", "user_id": current_user.id}
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/get_store_details")
+@cache_response(expire=3600)  # 1 hour cache
 async def get_store_details(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
