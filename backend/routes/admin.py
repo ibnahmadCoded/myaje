@@ -8,6 +8,9 @@ from routes.auth import get_admin_user, pwd_context
 from models import User
 from enum import Enum
 from utils.app_metrics_calculator import get_all_metrics
+from utils.cache_decorators import cache_response, invalidate_cache
+from utils.cache_constants import CacheNamespace, CACHE_KEYS
+from config import CACHE_EXPIRATION_TIME
 
 router = APIRouter()
 
@@ -30,12 +33,18 @@ class AdminUserResponse(BaseModel):
     created_at: datetime
 
 @router.post("/create_admin_user", response_model=AdminUserResponse)
+@invalidate_cache(
+    namespaces=[CacheNamespace.USER],
+    user_id_arg='current_admin',
+    custom_keys=[
+        lambda _: CACHE_KEYS["admin_users_list"]()
+    ]
+)
 async def create_admin_user(
     user_data: AdminUserCreate,
     db: Session = Depends(get_db),
     current_admin: User = Depends(get_admin_user)
 ):
-    # Only super_admin can create new admin users
     if current_admin.admin_role != "super_admin":
         raise HTTPException(
             status_code=403,
@@ -64,6 +73,7 @@ async def create_admin_user(
     return new_admin
 
 @router.get("/get_admin_users", response_model=List[AdminUserResponse])
+@cache_response(expire=CACHE_EXPIRATION_TIME)
 async def get_admin_users(
     db: Session = Depends(get_db),
     current_admin: User = Depends(get_admin_user)
@@ -77,6 +87,14 @@ async def get_admin_users(
     return db.query(User).filter(User.is_admin == True).all()
 
 @router.delete("/users/{user_id}")
+@invalidate_cache(
+    namespaces=[CacheNamespace.USER],
+    user_id_arg='current_admin',
+    custom_keys=[
+        lambda _: CACHE_KEYS["admin_users_list"](),
+        lambda _, user_id=None: CACHE_KEYS["admin_user_detail"](user_id) if user_id else None
+    ]
+)
 async def delete_admin_user(
     user_id: int,
     db: Session = Depends(get_db),
@@ -103,6 +121,7 @@ async def delete_admin_user(
     return {"message": "Admin user deleted successfully"}
 
 @router.get("/metrics")
+@cache_response(expire=300)  # Short expiration time (5 minutes) for metrics
 async def get_app_metrics(
     db: Session = Depends(get_db),
     admin: User = Depends(get_admin_user)

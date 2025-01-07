@@ -11,6 +11,10 @@ from sql_database import get_db
 from routes.auth import get_current_user
 from pydantic import BaseModel, EmailStr
 import logging
+from utils.cache_constants import CACHE_KEYS
+from utils.cache_decorators import cache_response, CacheNamespace, invalidate_cache
+from utils.helper_functions import serialize_datetime
+from config import CACHE_EXPIRATION_TIME
 
 router = APIRouter()
 
@@ -41,6 +45,21 @@ async def notify_seller_of_new_order(db: Session, order):
     )
 
 @router.post("/submit")
+@invalidate_cache(
+    namespaces=[
+        CacheNamespace.MARKETPLACE,
+        CacheNamespace.ORDER,
+        CacheNamespace.INVENTORY
+    ],
+    custom_keys=[
+        lambda result: CACHE_KEYS["marketplace_orders"](),
+        lambda result: CACHE_KEYS["marketplace_order"](result["marketplace_order_id"]),
+        # Invalidate each seller's order list
+        lambda result: [CACHE_KEYS["user_orders"](order["seller_id"]) 
+                       for order in result["seller_orders"]]
+    ]
+)
+
 async def submit_marketplace_order(
     order: MarketplaceOrderCreate,
     db: Session = Depends(get_db)
@@ -198,6 +217,7 @@ async def submit_marketplace_order(
         raise HTTPException(status_code=500, detail="Error processing order")
 
 @router.get("/marketplace/{marketplace_order_id}")
+@cache_response(expire=CACHE_EXPIRATION_TIME)
 async def get_marketplace_order(
     marketplace_order_id: int,
     db: Session = Depends(get_db)
@@ -216,7 +236,7 @@ async def get_marketplace_order(
         "customer_phone": order.customer_phone,
         "shipping_address": order.shipping_address,
         "total_amount": order.total_amount,
-        "created_at": order.created_at,
+        "created_at": serialize_datetime(order.created_at),
         "seller_orders": [{
             "seller_id": seller_order.seller_id,
             "order_id": seller_order.id,
@@ -232,6 +252,7 @@ async def get_marketplace_order(
     }
 
 @router.get("/seller/list")
+@cache_response(expire=CACHE_EXPIRATION_TIME)
 async def get_seller_orders(
     status: Optional[OrderStatus] = None,
     current_user: User = Depends(get_current_user),
@@ -253,7 +274,7 @@ async def get_seller_orders(
         "shipping_address": order.shipping_address,
         "total_amount": order.total_amount,
         "status": order.status.value,
-        "created_at": order.created_at,
+        "created_at": serialize_datetime(order.created_at),
         "items": [{
             "product_id": item.product_id,
             "product_name": item.product.name,
@@ -263,6 +284,14 @@ async def get_seller_orders(
     } for order in orders]
 
 @router.put("/seller/{order_id}/fulfill")
+@invalidate_cache(
+    namespaces=[CacheNamespace.ORDER, CacheNamespace.MARKETPLACE],
+    custom_keys=[
+        lambda result: CACHE_KEYS["order_detail"](result["order_id"]),
+        lambda result: CACHE_KEYS["user_orders"](result["user_id"]),
+        lambda result: CACHE_KEYS["marketplace_orders"]()
+    ]
+)
 async def fulfill_seller_order(
     order_id: int,
     current_user: User = Depends(get_current_user),
@@ -284,12 +313,26 @@ async def fulfill_seller_order(
     
     try:
         db.commit()
-        return {"message": "Order fulfilled successfully"}
+        return {"message": "Order fulfilled successfully", "order_id": order.id, "user_id": current_user.id}
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.delete("/seller/{order_id}")
+@invalidate_cache(
+    namespaces=[
+        CacheNamespace.ORDER,
+        CacheNamespace.MARKETPLACE,
+        CacheNamespace.INVENTORY,
+        CacheNamespace.INVOICE
+    ],
+    custom_keys=[
+        lambda result: CACHE_KEYS["order_detail"](result["order_id"]),
+        lambda result: CACHE_KEYS["user_orders"](result["user_id"]),
+        lambda result: CACHE_KEYS["marketplace_orders"](),
+        lambda result: CACHE_KEYS["user_invoices"](result["user_id"])
+    ]
+)
 async def delete_seller_order(
     order_id: int,
     current_user: User = Depends(get_current_user),
@@ -328,6 +371,8 @@ async def delete_seller_order(
         
         return {
             "message": "Order and associated unpaid invoices deleted successfully",
+            "order_id": order.id,
+            "user_id": current_user.id,
             "deleted_invoices_count": len(unpaid_invoices)
         }
         

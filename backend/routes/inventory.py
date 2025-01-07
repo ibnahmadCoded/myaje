@@ -1,16 +1,20 @@
+from math import prod
 from fastapi import APIRouter, Depends, HTTPException, File, UploadFile, Form
 from sqlalchemy.orm import Session
 from sql_database import get_db
-from models import Product, User, ProductImage
+from models import Product, User, ProductImage, StorefrontProduct
 from uuid import uuid4
 from typing import List, Optional
 import os
 from routes.auth import get_current_user
 from config import UPLOAD_DIRECTORY
+from utils.cache_constants import CACHE_KEYS
+from utils.cache_decorators import cache_response, CacheNamespace, invalidate_cache
 
 router = APIRouter()
 
 @router.get("/get_inventory")
+@cache_response(expire=3600)  # Cache for 1 hour
 async def get_inventory(
     current_user: User = Depends(get_current_user), 
     db: Session = Depends(get_db)
@@ -31,6 +35,14 @@ async def get_inventory(
     ]
 
 @router.post("/add_to_inventory")
+@invalidate_cache(
+    namespaces=[CacheNamespace.INVENTORY, CacheNamespace.STOREFRONT],
+    user_id_arg='current_user',
+    custom_keys=[
+        lambda result: CACHE_KEYS["user_products"](result["user_id"]) if isinstance(result, dict) else (result.user_id),
+        lambda result: CACHE_KEYS["store_products"](result["user_id"]) if isinstance(result, dict) else (result.user_id)
+    ]
+)
 async def add_product_to_inventory(
     name: str = Form(...),
     sku: str = Form(...),
@@ -94,18 +106,30 @@ async def add_product_to_inventory(
     # Commit the transaction
     try:
         db.commit()
-        return {"message": "Product added successfully"}
+        return {"message": "Product added successfully", "user_id": current_user.id}
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Failed to add product: {str(e)}")
 
 @router.delete("/delete_from_inventory/{product_id}")
+@invalidate_cache(
+    namespaces=[CacheNamespace.INVENTORY, CacheNamespace.STOREFRONT],
+    user_id_arg='current_user',
+    custom_keys=[
+        lambda result: CACHE_KEYS["product_detail"](result["id"]) if isinstance(result, dict) else (result.id),
+        lambda result: CACHE_KEYS["user_products"](result["user_id"]) if isinstance(result, dict) else (result.user_id),
+        lambda result: CACHE_KEYS["store_products"](result["user_id"]) if isinstance(result, dict) else (result.user_id)
+    ]
+)
 async def delete_product_from_inventory(
     product_id: int, 
     current_user: User = Depends(get_current_user), 
     db: Session = Depends(get_db)
 ):
     product = db.query(Product).filter_by(id=product_id, user_id=current_user.id).first()
+
+    storefront_product = db.query(StorefrontProduct).filter_by(product_id=product.id).first()
+
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
     
@@ -119,10 +143,16 @@ async def delete_product_from_inventory(
             print(f"Error deleting file {image.image_url}: {e}")
     
     db.delete(product)
+
+    # Delete product from storefront
+    if storefront_product:
+        db.delete(storefront_product)
+
     db.commit()
-    return {"message": "Product deleted successfully"}
+    return {"message": "Product deleted successfully", "user_id": current_user.id, "id": product.id}
 
 @router.get("/is_low_stock")
+@cache_response(expire=1800)
 async def get_low_stock(
     current_user: User = Depends(get_current_user), 
     db: Session = Depends(get_db)
@@ -141,6 +171,15 @@ async def get_low_stock(
     ]
 
 @router.put("/update_product/{product_id}")
+@invalidate_cache(
+    namespaces=[CacheNamespace.INVENTORY, CacheNamespace.STOREFRONT],
+    user_id_arg='current_user',
+    custom_keys=[
+        lambda result: CACHE_KEYS["product_detail"](result["id"]) if isinstance(result, dict) else (result.id),
+        lambda result: CACHE_KEYS["user_products"](result["id"]) if isinstance(result, dict) else (result.id),
+        lambda result: CACHE_KEYS["store_products"](result["user_id"]) if isinstance(result, dict) else (result.user_id)
+    ]
+)
 async def update_product(
     product_id: int,
     name: Optional[str] = Form(None),
@@ -215,7 +254,7 @@ async def update_product(
     
     try:
         db.commit()
-        return {"message": "Product updated successfully"}
+        return {"message": "Product updated successfully", "user_id": current_user.id, "id": product.id}
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Failed to update product: {str(e)}")

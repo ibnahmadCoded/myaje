@@ -6,6 +6,8 @@ from pydantic import BaseModel
 from models import User, RestockRequest, Product, RestockRequestStatus, RestockRequestUrgency
 from routes.auth import get_current_user
 from sql_database import get_db
+from utils.cache_constants import CACHE_KEYS
+from utils.cache_decorators import cache_response, CacheNamespace, invalidate_cache
 
 router = APIRouter()
 
@@ -33,6 +35,15 @@ class RestockRequestUpdate(BaseModel):
     quantity: int
 
 @router.post("/requests", response_model=RestockRequestResponse)
+@invalidate_cache(
+    namespaces=[CacheNamespace.RESTOCK, CacheNamespace.INVENTORY],
+    user_id_arg='current_user',
+    custom_keys=[
+        lambda result: CACHE_KEYS["restock_requests"](result.user_id),
+        lambda result: CACHE_KEYS["restock_detail"](result.id),
+        lambda result: CACHE_KEYS["user_products"](result.user_id) if result.product_id else None
+    ]
+)
 async def create_restock_request(
     request_data: RestockRequestCreate,
     current_user: User = Depends(get_current_user),
@@ -72,6 +83,7 @@ async def create_restock_request(
     return new_request
 
 @router.get("/requests", response_model=List[RestockRequestResponse])
+@cache_response(expire=1800)  # 30 minute cache
 async def get_restock_requests(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -80,6 +92,7 @@ async def get_restock_requests(
     return requests
 
 @router.get("/requests/{request_id}", response_model=RestockRequestResponse)
+@cache_response(expire=1800)  # 30 minute cache
 async def get_restock_request(
     request_id: int,
     current_user: User = Depends(get_current_user),
@@ -94,6 +107,14 @@ async def get_restock_request(
     return request
 
 @router.put("/requests/{request_id}", response_model=RestockRequestResponse)
+@invalidate_cache(
+    namespaces=[CacheNamespace.RESTOCK],
+    user_id_arg='current_user',
+    custom_keys=[
+        lambda result: CACHE_KEYS["restock_requests"](result.user_id),
+        lambda result: CACHE_KEYS["restock_detail"](result.id)
+    ]
+)
 async def update_restock_request(
     request_id: int,
     request_data: RestockRequestUpdate,
@@ -123,6 +144,14 @@ async def update_restock_request(
     return request
 
 @router.put("/requests/{request_id}/cancel", response_model=RestockRequestResponse)
+@invalidate_cache(
+    namespaces=[CacheNamespace.RESTOCK],
+    user_id_arg='current_user',
+    custom_keys=[
+        lambda result: CACHE_KEYS["restock_requests"](result.user_id),
+        lambda result: CACHE_KEYS["restock_detail"](result.id)
+    ]
+)
 async def cancel_restock_request(
     request_id: int,
     current_user: User = Depends(get_current_user),

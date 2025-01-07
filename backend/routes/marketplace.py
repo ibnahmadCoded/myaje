@@ -2,11 +2,13 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sql_database import get_db
 from models import StorefrontProduct, User
-
+from utils.cache_decorators import cache_response
+from utils.helper_functions import serialize_datetime
 
 router = APIRouter()
 
 @router.get("/get_products")
+@cache_response(expire=3600)
 async def fetch_storefront_products(
     db: Session = Depends(get_db)
 ):
@@ -17,7 +19,7 @@ async def fetch_storefront_products(
             'user_id': sp.user_id,
             'product_id': sp.product_id,
             'price': sp.storefront_price,
-            'created_at': sp.created_at,
+            'created_at': serialize_datetime(sp.created_at),
             'name': sp.product.name,
             'description': sp.product.description,
             'category': sp.product.category,
@@ -28,6 +30,7 @@ async def fetch_storefront_products(
     ]
 
 @router.get("/store/{store_slug}")
+@cache_response(expire=3600)
 async def fetch_store_details(
     store_slug: str,
     db: Session = Depends(get_db)
@@ -59,6 +62,7 @@ async def fetch_store_details(
                 'id': sp.id,
                 'product_id': sp.product_id,
                 'price': sp.storefront_price,
+                'created_at': serialize_datetime(sp.created_at),
                 'name': sp.product.name,
                 'description': sp.product.description,
                 'category': sp.product.category,

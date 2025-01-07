@@ -294,3 +294,4 @@ async def validate_token(request: Request, db: Session = Depends(get_db)):
         #raise HTTPException(status_code=401, detail="Invalid token")
     except Exception:
         raise HTTPException(status_code=400, detail="Token validation failed")
+    
