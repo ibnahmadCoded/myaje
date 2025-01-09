@@ -36,7 +36,12 @@ async def notify_seller_of_new_invoice(db: Session, invoice_request):
         type=NotificationType.NEW_INVOICE,
         text=f"New invoice request #{invoice_request.id} from {invoice_request.customer_name}",
         reference_id=invoice_request.id,
-        reference_type="invoice"
+        reference_type="invoice",
+        notification_metadata={
+            'user_view': 'business',
+            'invoice_amount': float(invoice_request.amount),
+            'customer_name': invoice_request.customer_name
+        }
     )
 
 class InvoiceItemCreate(BaseModel):
