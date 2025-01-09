@@ -1,8 +1,8 @@
 """initial_migration
 
-Revision ID: 42b37fd835b6
+Revision ID: e71e345e7693
 Revises: 
-Create Date: 2025-01-05 16:34:14.912502
+Create Date: 2025-01-07 13:56:53.236518
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '42b37fd835b6'
+revision: str = 'e71e345e7693'
 down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -126,6 +126,20 @@ def upgrade() -> None:
     sa.Column('completed_at', sa.DateTime(), nullable=True),
     sa.Column('created_at', sa.DateTime(), nullable=True),
     sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_table('money_requests',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('requester_id', sa.Integer(), nullable=False),
+    sa.Column('requested_from_id', sa.Integer(), nullable=False),
+    sa.Column('amount', sa.Float(), nullable=False),
+    sa.Column('description', sa.String(length=255), nullable=True),
+    sa.Column('status', sa.Enum('PENDING', 'ACCEPTED', 'REJECTED', 'CANCELLED', 'EXPIRED', name='moneyrequeststatus'), nullable=True),
+    sa.Column('account_type', sa.Enum('PERSONAL', 'BUSINESS', name='accounttype'), nullable=False),
+    sa.Column('expires_at', sa.DateTime(), nullable=False),
+    sa.Column('created_at', sa.DateTime(), nullable=True),
+    sa.ForeignKeyConstraint(['requested_from_id'], ['users.id'], ),
+    sa.ForeignKeyConstraint(['requester_id'], ['users.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_table('notifications',
@@ -320,10 +334,12 @@ def upgrade() -> None:
     sa.Column('loan_id', sa.Integer(), nullable=True),
     sa.Column('order_id', sa.Integer(), nullable=True),
     sa.Column('invoice_request_id', sa.Integer(), nullable=True),
+    sa.Column('money_request_id', sa.Integer(), nullable=True),
     sa.ForeignKeyConstraint(['from_account_id'], ['bank_accounts.id'], ),
     sa.ForeignKeyConstraint(['from_external_account_id'], ['external_accounts.id'], ),
     sa.ForeignKeyConstraint(['invoice_request_id'], ['invoice_requests.id'], ),
     sa.ForeignKeyConstraint(['loan_id'], ['loans.id'], ),
+    sa.ForeignKeyConstraint(['money_request_id'], ['money_requests.id'], ),
     sa.ForeignKeyConstraint(['order_id'], ['orders.id'], ),
     sa.ForeignKeyConstraint(['to_account_id'], ['bank_accounts.id'], ),
     sa.ForeignKeyConstraint(['to_external_account_id'], ['external_accounts.id'], ),
@@ -367,6 +383,7 @@ def downgrade() -> None:
     op.drop_index(op.f('ix_orders_id'), table_name='orders')
     op.drop_table('orders')
     op.drop_table('notifications')
+    op.drop_table('money_requests')
     op.drop_table('loans')
     op.drop_table('feedback')
     op.drop_table('external_accounts')

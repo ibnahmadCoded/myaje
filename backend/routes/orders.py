@@ -41,7 +41,13 @@ async def notify_seller_of_new_order(db: Session, order):
         type=NotificationType.NEW_ORDER,
         text=f"New order received #{order.id} from {order.customer_name}",
         reference_id=order.id,
-        reference_type="order"
+        reference_type="order",
+        notification_metadata={
+            'user_view': 'business',
+            'order_amount': float(order.total_amount),
+            'customer_name': order.customer_name,
+            'order_items_count': len(order.items)
+        },
     )
 
 @router.post("/submit")

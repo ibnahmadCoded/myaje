@@ -5,10 +5,36 @@ export const useNotifications = () => {
     const [notifications, setNotifications] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [userView, setUserView] = useState(null);
+
+    // Fetch user_view from localStorage
+    const fetchUserView = () => {
+        try {
+            const user = JSON.parse(localStorage.getItem('user'));
+            return user?.active_view || null;
+        } catch (err) {
+            console.error('Error parsing user from localStorage:', err);
+            return null;
+        }
+    };
   
     const fetchNotifications = async () => {
+      const currentUserView = fetchUserView();
+        if (!currentUserView) {
+            console.error('No active user_view found. Skipping notification fetch.');
+            setNotifications([]);
+            setLoading(false);
+            return;
+        }
+
+        setUserView(currentUserView);
+
       try {
-        const response = await fetch(`${apiBaseUrl}/notifications/get_notifications`, {
+        const queryParams = new URLSearchParams({
+            user_view: currentUserView,
+        });
+
+        const response = await fetch(`${apiBaseUrl}/notifications/get_notifications?${queryParams}`, {
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('token')}`
           }

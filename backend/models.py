@@ -1,4 +1,5 @@
 from venv import logger
+from sqlalchemy.dialects.postgresql import JSONB
 from datetime import datetime
 from sqlalchemy import Column, Integer, String, Float, Text, DateTime, ForeignKey, UniqueConstraint, Enum, JSON, Boolean
 from starlette.concurrency import run_in_threadpool
@@ -322,7 +323,6 @@ class InvoiceRequest(Base):
         
         return result
 
-# models.py (add this to your existing models)
 class NotificationType(str, enum.Enum):
     NEW_ORDER = "new_order"
     NEW_INVOICE = "new_invoice"
@@ -331,6 +331,8 @@ class NotificationType(str, enum.Enum):
     ORDER_STATUS_CHANGE = "order_status_change"
     INVOICE_STATUS_CHANGE = "invoice_status_change"
     RESTOCK_STATUS_CHANGE = "restock_status_change"
+    MONEY_REQUEST = "money_request"  
+    MONEY_REQUEST_STATUS_CHANGE = "money_request_status_change"
 
 class Notification(Base):
     __tablename__ = "notifications"
@@ -338,6 +340,7 @@ class Notification(Base):
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
     type = Column(String, nullable=False)  # Uses NotificationType
+    notification_metadata = Column(JSONB)  # New field to store additional notification data
     text = Column(String, nullable=False)
     is_read = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
@@ -419,6 +422,8 @@ class PaymentType(enum.Enum):
     LOAN = "loan"
     TRANSFER = "transfer"
     BUY_NOW_PAY_LATER = "buy_now_pay_later"
+    MONEY_REQUEST = "money_request"
+
 
 class PaymentStatus(enum.Enum):
     PENDING = "pending"
@@ -434,6 +439,7 @@ class TransactionTag(enum.Enum):
     LOAN = "loan"
     TRANSFER = "transfer"
     OTHERS = "others"
+    MONEY_REQUEST = "money_request"
 
 class AutomationType(enum.Enum):
     TRANSFER = "transfer"
@@ -449,6 +455,13 @@ class AutomationSchedule(enum.Enum):
 class AccountSource(enum.Enum):
     INTERNAL = "internal"
     EXTERNAL = "external"
+
+class MoneyRequestStatus(enum.Enum):
+    PENDING = "pending"
+    ACCEPTED = "accepted"
+    REJECTED = "rejected"
+    CANCELLED = "cancelled"
+    EXPIRED = "expired"
 
 class ExternalAccount(Base):
     __tablename__ = "external_accounts"
@@ -496,7 +509,7 @@ class Transaction(Base):
     type = Column(Enum(TransactionType), nullable=False)
     amount = Column(Float, nullable=False)
     description = Column(String(255))
-    reference = Column(String(50), unique=True, nullable=False)
+    reference = Column(String(50), nullable=False)
     tag = Column(Enum(TransactionTag), nullable=False)
     payment_id = Column(Integer, ForeignKey('payments.id'), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
@@ -544,6 +557,9 @@ class Payment(Base):
 
     # For Invoice Payments
     invoice_request_id = Column(Integer, ForeignKey("invoice_requests.id"), nullable=True)
+
+    # For money requests
+    money_request_id = Column(Integer, ForeignKey('money_requests.id'), nullable=True)
     
     # Relationships
     from_account = relationship("BankAccount", foreign_keys=[from_account_id], overlaps="outgoing_payments")
@@ -554,13 +570,13 @@ class Payment(Base):
     loan = relationship("Loan", back_populates="payments")
     order = relationship("Order", back_populates="payments")
     invoice_request = relationship("InvoiceRequest", back_populates="payments")
+    money_request = relationship("MoneyRequest", back_populates="payment")
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         if not self.reference_number:
             self.reference_number = f"PAY-{datetime.utcnow().strftime('%Y%m%d')}-{id:06d}"
 
-# FinancialPool, Loan, and BankingAutomation classes remain unchanged
 class FinancialPool(Base):
     __tablename__ = "financial_pools"
     
@@ -571,6 +587,7 @@ class FinancialPool(Base):
     percentage = Column(Float, nullable=False)
     balance = Column(Float, default=0.0)
     is_credit_pool = Column(Boolean, default=False)
+    is_locked = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     
     # Relationships
@@ -615,3 +632,23 @@ class BankingAutomation(Base):
     # Relationships
     user = relationship("User", back_populates="automations")
     source_pool = relationship("FinancialPool", back_populates="automations")
+
+class MoneyRequest(Base):
+    __tablename__ = "money_requests"
+    
+    id = Column(Integer, primary_key=True)
+    requester_id = Column(Integer, ForeignKey('users.id'), nullable=False)
+    requested_from_id = Column(Integer, ForeignKey('users.id'), nullable=False)
+    amount = Column(Float, nullable=False)
+    description = Column(String)
+    account_type = Column(String, nullable=False)  # Account to receive money
+    request_from_account_type = Column(String, nullable=True)  # Account to send money
+    status = Column(String, default='pending')
+    rejection_reason = Column(String, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    expires_at = Column(DateTime)
+
+    # Relationships
+    requester = relationship("User", foreign_keys=[requester_id], backref="sent_money_requests")
+    requested_from = relationship("User", foreign_keys=[requested_from_id], backref="received_money_requests")
+    payment = relationship("Payment", back_populates="money_request", uselist=False)

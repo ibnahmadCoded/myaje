@@ -2,7 +2,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import desc
-from typing import List, Optional
+from typing import List, Optional, Dict
 from datetime import datetime
 from models import Notification, NotificationType, User
 from sql_database import get_db
@@ -21,6 +21,7 @@ class NotificationRead(BaseModel):
     created_at: datetime
     reference_id: Optional[int]
     reference_type: Optional[str]
+    notification_metadata: Optional[Dict] = None
 
 class NotificationCreate(BaseModel):
     user_id: int
@@ -34,6 +35,7 @@ async def create_notification(
     user_id: int,
     type: str,
     text: str,
+    notification_metadata: Optional[Dict] = None,
     reference_id: Optional[int] = None,
     reference_type: Optional[str] = None
 ):
@@ -42,6 +44,7 @@ async def create_notification(
         user_id=user_id,
         type=type,
         text=text,
+        notification_metadata=notification_metadata,
         reference_id=reference_id,
         reference_type=reference_type
     )
@@ -54,6 +57,7 @@ async def create_notification(
 @cache_response(expire=300)
 async def get_notifications(
     unread_only: bool = False,
+    user_view: Optional[str] = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -62,6 +66,15 @@ async def get_notifications(
     
     if unread_only:
         query = query.filter(Notification.is_read == False)
+
+    if user_view:
+        # Filter based on user_view in notification_metadata
+        query = query.filter(
+            Notification.notification_metadata.has_key("user_view"),
+            Notification.notification_metadata["user_view"].astext == user_view
+        )
+
+    
     
     notifications = query.order_by(desc(Notification.created_at)).all()
     return notifications
