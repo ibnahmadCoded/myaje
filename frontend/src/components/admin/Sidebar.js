@@ -3,6 +3,7 @@
 import React from 'react';
 import { UserMenu } from '@/components/admin/usermenu';
 import { 
+  Banknote,
   LayoutGrid, 
   X,
   Search,
@@ -36,6 +37,7 @@ const Sidebar = ({
     { icon: <User size={20} />, label: 'Manage Admin Users', href: '/admin/users'},
     { icon: <LineChart size={20} />, label: 'Metrics', href: '/admin/metrics'},
     { icon: <PackageOpen size={20} />, label: 'Restock', href: '/admin/restock' },
+    { icon: <Banknote size={20} />, label: 'Loans', href: '/admin/loans' },
   ];
 
   const unreadCount = notifications.filter(n => !n.is_read).length;

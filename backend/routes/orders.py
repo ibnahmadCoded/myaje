@@ -8,7 +8,7 @@ from models import MarketplaceOrder, Order, OrderItem, User, Product, OrderStatu
 from routes.notifications import create_notification, NotificationType
 from routes.invoice import notify_seller_of_new_invoice
 from sql_database import get_db
-from routes.auth import get_current_user
+from routes.auth import get_current_user, get_optional_current_user
 from pydantic import BaseModel, EmailStr
 import logging
 from utils.cache_constants import CACHE_KEYS
@@ -65,10 +65,10 @@ async def notify_seller_of_new_order(db: Session, order):
                        for order in result["seller_orders"]]
     ]
 )
-
 async def submit_marketplace_order(
     order: MarketplaceOrderCreate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(dependency=get_optional_current_user)
 ):
     # Group items by seller
     seller_items: Dict[int, List[dict]] = {}
@@ -131,9 +131,11 @@ async def submit_marketplace_order(
             seller_total = sum(item["price"] * item["quantity"] for item in items)
             
             # Create seller order
+            buyer_id = current_user.id if current_user else None
             seller_order = Order(
                 marketplace_order_id=marketplace_order.id,
                 seller_id=seller_id,
+                buyer_id=buyer_id,
                 customer_name=order.customer_name,
                 customer_email=order.customer_email,
                 customer_phone=order.customer_phone,

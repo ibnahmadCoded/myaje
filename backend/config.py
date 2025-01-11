@@ -60,6 +60,9 @@ FRONTEND_URL = allow_origins=[os.getenv("FRONTEND_URL", "http://localhost:3000")
 BASE_API_PREFIX = os.getenv("NEXT_PUBLIC_API_BASE_URL", "/api")
 REDIS_HOST = os.getenv('REDIS_HOST', 'redis')
 REDIS_PORT = int(os.getenv('REDIS_PORT', 6379))
+MYAJE_BANK_ACCOUNT_ID = int(os.getenv('MYAJE_BANK_ACCOUNT_ID', 5))
+PERSONAL_ACCOUNT_INITIAL_BALANCE = float(os.getenv('PERSONAL_ACCOUNT_INITIAL_BALANCE', 100000.00))
+BUSINESS_ACCOUNT_INITIAL_BALANCE = float(os.getenv('BUSINESS_ACCOUNT_INITIAL_BALANCE', 1000000.00))
 CACHE_EXPIRATION_TIME = int(os.getenv('CACHE_EXPIRATION_TIME', 3600)) #1 hour
 REDIS_CLIENT = redis.Redis(
     host=os.getenv('REDIS_HOST', 'redis'),
@@ -67,3 +70,17 @@ REDIS_CLIENT = redis.Redis(
     db=0,
     decode_responses=True
 )
+
+PERSONAL_LOAN_TIERS = [
+    {"purchases": 5, "amount": 5000},
+    {"purchases": 15, "amount": 10000},
+    {"purchases": 50, "amount": 50000},
+    {"purchases": 100, "amount": 100000}
+]
+
+BUSINESS_LOAN_TIERS = [
+    {"restock_orders": 20, "total_gmv": 10_000_000, "amount": 5_000_000},
+    {"restock_orders": 5, "total_gmv": 5_000_000, "amount": 500_000},
+]
+
+BUSINESS_LOAN_EQUITY_PERCENTAGE = 0.02

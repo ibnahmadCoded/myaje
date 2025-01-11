@@ -1,4 +1,5 @@
 from venv import logger
+import asyncio
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -8,6 +9,7 @@ from routes import (auth, inventory, storefront, orders,
                     notifications, dashboard, feedback, 
                     admin, restock, admin_restock, banking)
 from utils.chatInferenceQueryParser import QueryIntentParser
+from banking_automations.automation_processor import process_automations
 from sql_database import SessionLocal
 from config import FRONTEND_URL, UPLOAD_DIRECTORY, UPLOAD_PATH, BASE_API_PREFIX
 
@@ -29,8 +31,12 @@ app.add_middleware(
 # Mount the static files
 app.mount(UPLOAD_PATH, StaticFiles(directory=UPLOAD_DIRECTORY), name=UPLOAD_DIRECTORY)
 
+# Global variable for automation task
+automation_task = None
+
 @app.on_event("startup")
 async def startup_event():
+    global automation_task
     await create_tables()
     logger.info("DATABASE TABLES CREATED")
 
@@ -42,6 +48,33 @@ async def startup_event():
     
     # Initialize query parser
     chat_inference.query_parser = query_parser
+
+    # Start automation processor
+    logger.info("Starting automation processor as a background task.")
+    automation_task = asyncio.create_task(process_automations(), name="AutomationProcessor")
+    logger.info(f"Automation processor started: {automation_task.get_name()} (ID: {id(automation_task)})")
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    global automation_task
+    if automation_task and not automation_task.done():
+        logger.info("Cancelling automation processor...")
+        automation_task.cancel()
+        try:
+            await automation_task
+        except asyncio.CancelledError:
+            logger.info("Automation processor task successfully cancelled.")
+    logger.info("Shutdown complete.")
+
+@app.get("/automation-status")
+async def get_automation_status():
+    global automation_task
+    if automation_task:
+        if automation_task.done():
+            return {"status": "completed", "result": automation_task.result() if not automation_task.cancelled() else "Cancelled"}
+        else:
+            return {"status": "running", "name": automation_task.get_name()}
+    return {"status": "not started"}
 
 # Include route 
 app.include_router(auth.router, prefix=BASE_API_PREFIX + "/auth", tags=["auth"])

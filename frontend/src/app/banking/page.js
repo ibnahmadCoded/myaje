@@ -4,8 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { 
     Building2, CreditCard, Clock, Wallet, Settings,
     ArrowDownCircle, ArrowUpCircle, BanknoteIcon,
-    CalendarIcon, ArrowRightLeft, Pencil, Plus,
-    PiggyBank, Trash2, Save, ChevronDown,
+    Pencil, Plus, Trash2, 
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
@@ -20,6 +19,9 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import DashboardLayout from '@/components/DashboardLayout';
 import { apiBaseUrl } from '@/config';
 import { BankingTransactionsView } from '@/components/BankingTransactionsView'
+import { FinancialsTab } from '@/components/FinancialsTab'
+import { LoansTab } from '@/components/LoansTab'
+import { AutomationTab } from '@/components/AutomationsTab'
 
 const BankingPage = () => {
   const [showOnboarding, setShowOnboarding] = useState(false);
@@ -362,369 +364,7 @@ const BankingPage = () => {
     );
   };
 
-  const FinancialsTab = () => {
-    const [showBalanceModal, setShowBalanceModal] = useState(false);
-    const [showUpdateModal, setShowUpdateModal] = useState(false);
-    const [pools, setPools] = useState([]);
-    const [isEditMode, setIsEditMode] = useState(false);
-    const [selectedTemplate, setSelectedTemplate] = useState('');
-    const [newPoolName, setNewPoolName] = useState('');
-    const [newPoolPercentage, setNewPoolPercentage] = useState('');
-    const [creditPool, setCreditPool] = useState({ name: 'Credit Pool', balance: 100000 }); // should be from backend of course, credit pool holds all incoming payments!
-    const [editingPool, setEditingPool] = useState(null);
-    const [isUpdatingPools, setIsUpdatingPools] = useState(false);
-
-    // Simulated update pool distributions function
-    const updatePoolDistributions = async (updatedPools) => {
-      setIsUpdatingPools(true);
-      
-      // all this should be done in backed, which will just return the pools and their new balances!
-      try {
-        // Simulate API call delay
-        await new Promise(resolve => setTimeout(resolve, 1500));
-
-        // Calculate total available funds
-        const totalFunds = pools.reduce((sum, pool) => sum + pool.balance, 0) + creditPool.balance;
-
-        // Redistribute funds based on new percentages
-        const redistributedPools = updatedPools.map(pool => ({
-          ...pool,
-          balance: Math.floor((totalFunds * pool.percentage) / 100)
-        }));
-
-        // Update pools with new balances
-        setPools(redistributedPools);
-        setCreditPool({ ...creditPool, balance: 0 });
-
-        setIsEditMode(false);
-        setShowUpdateModal(true);
-      } catch (error) {
-        console.error('Error updating pool distributions:', error);
-      } finally {
-        setIsUpdatingPools(false);
-      }
-    };
-
-    const handleSaveChanges = () => {
-      const totalPercentage = getTotalPercentage();
-      if (totalPercentage !== 100) {
-        alert('Total percentage must equal 100%');
-        return;
-      }
-
-      updatePoolDistributions(pools);
-    };
-
-
-    const templates = {
-      personal: {
-        name: 'Personal Template',
-        pools: [
-          { name: 'Savings Pool', percentage: 30, balance: 0 },
-          { name: 'Investments Pool', percentage: 20, balance: 0 },
-          { name: 'Expenses Pool', percentage: 40, balance: 0 },
-          { name: 'Miscellaneous Pool', percentage: 10, balance: 0 }
-        ]
-      },
-      business: {
-        name: 'Business Template',
-        pools: [
-          { name: 'Operations Pool', percentage: 40, balance: 0 },
-          { name: 'Salary Pool', percentage: 30, balance: 0 },
-          { name: 'Investment Pool', percentage: 20, balance: 0 },
-          { name: 'Emergency Pool', percentage: 10, balance: 0 }
-        ]
-      }
-    };
-
-    const handleTemplateSelect = (value) => {
-      setSelectedTemplate(value);
-      setPools(templates[value].pools);
-      setIsEditMode(false);
-    };
-
-    const getTotalPercentage = () => {
-      return pools.reduce((sum, pool) => sum + pool.percentage, 0);
-    };
-
-    const handleAddPool = () => {
-      if (!newPoolName || !newPoolPercentage) return;
-      if (getTotalPercentage() + Number(newPoolPercentage) > 100) {
-        alert('Total percentage cannot exceed 100%');
-        return;
-      }
-
-      const newPool = {
-        name: newPoolName,
-        percentage: Number(newPoolPercentage),
-        balance: 0
-      };
-
-      setPools([...pools, newPool]);
-      setNewPoolName('');
-      setNewPoolPercentage('');
-    };
-
-    const handleUpdatePool = (index, newPercentage) => {
-      const currentTotal = getTotalPercentage() - pools[index].percentage;
-      if (currentTotal + Number(newPercentage) > 100) {
-        alert('Total percentage cannot exceed 100%');
-        return;
-      }
-
-      const updatedPools = [...pools];
-      updatedPools[index].percentage = Number(newPercentage);
-      setPools(updatedPools);
-      setEditingPool(null);
-    };
-
-    const handleDeletePool = (index) => {
-      setPools(pools.filter((_, i) => i !== index));
-    };
-
-    const getTotalBalance = () => {
-      return pools.reduce((sum, pool) => sum + pool.balance, 0) + creditPool.balance;
-    };
-
-    const BalanceModal = () => (
-      <Dialog open={showBalanceModal} onOpenChange={setShowBalanceModal}>
-        <DialogContent className="sm:max-w-[600px]">
-          <DialogHeader>
-            <DialogTitle>Balance Breakdown</DialogTitle>
-            <DialogDescription>
-              Your total balance is distributed across the following pools
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="p-4 bg-blue-50 rounded-lg">
-              <div className="flex justify-between items-center">
-                <div>
-                  <p className="font-medium">Credit Pool</p>
-                  <p className="text-sm text-gray-500">Incoming funds pool</p>
-                </div>
-                <p className="font-bold">₦{creditPool.balance.toLocaleString()}</p>
-              </div>
-            </div>
-            
-            {pools.map((pool, index) => (
-              <div key={index} className="p-4 border rounded-lg">
-                <div className="flex justify-between items-center">
-                  <div>
-                    <p className="font-medium">{pool.name}</p>
-                    <p className="text-sm text-gray-500">{pool.percentage}% of distributions</p>
-                  </div>
-                  <p className="font-bold">₦{pool.balance.toLocaleString()}</p>
-                </div>
-              </div>
-            ))}
-
-            <div className="p-4 bg-gray-50 rounded-lg">
-              <div className="flex justify-between items-center">
-                <p className="font-medium">Total Balance</p>
-                <p className="font-bold">₦{getTotalBalance().toLocaleString()}</p>
-              </div>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-    );
-
-    const UpdateConfirmationModal = () => (
-      <Dialog open={showUpdateModal} onOpenChange={setShowUpdateModal}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Pool Distribution Updated</DialogTitle>
-            <DialogDescription>
-              Funds have been redistributed according to the new percentages
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            {pools.map((pool, index) => (
-              <div key={index} className="flex justify-between items-center">
-                <span>{pool.name} ({pool.percentage}%)</span>
-                <span className="font-bold">₦{pool.balance.toLocaleString()}</span>
-              </div>
-            ))}
-          </div>
-          <DialogFooter>
-            <Button onClick={() => setShowUpdateModal(false)}>Close</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    );  
-
-    return (
-      <div>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex justify-between items-center cursor-pointer" onClick={() => setShowBalanceModal(true)}>
-              <div>
-                <p className="text-sm text-gray-500">Available Balance</p>
-                <p className="text-2xl font-bold">₦{getTotalBalance().toLocaleString()}</p>
-              </div>
-              <div className="flex items-center gap-2">
-                <BanknoteIcon className="text-gray-400" />
-                <ChevronDown className="text-gray-400" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {pools.length === 0 ? (
-          <div className="mt-4 p-6 border-2 border-dashed rounded-lg text-center">
-            <PiggyBank className="w-12 h-12 mx-auto text-gray-400 mb-4" />
-            <h3 className="font-medium mb-2">No Pools Created</h3>
-            <p className="text-gray-500 mb-4">Select a template to start managing your funds</p>
-            <Select onValueChange={handleTemplateSelect}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select a template" />
-              </SelectTrigger>
-              <SelectContent>
-                {userData?.active_view === 'business' ? (
-                  <SelectItem value="business">Basic Business Template</SelectItem>
-                ) : (
-                  <SelectItem value="personal">Basic Personal Template</SelectItem>
-                )}
-              </SelectContent>
-            </Select>
-          </div>
-        ) : (
-          <div className="mt-4 space-y-4">
-            <div className="flex justify-between items-center">
-              <h3 className="font-medium">Pool Distribution</h3>
-              <Button 
-                variant={isEditMode ? "secondary" : "default"}
-                onClick={() => setIsEditMode(!isEditMode)}
-              >
-                {isEditMode ? (
-                  <>
-                    <Save className="w-4 h-4 mr-2" />
-                    Save Changes
-                  </>
-                ) : (
-                  <>
-                    <Pencil className="w-4 h-4 mr-2" />
-                    Edit Pools
-                  </>
-                )}
-              </Button>
-            </div>
-
-            {isEditMode && (
-              <div className="mt-4 flex justify-end">
-                <Button
-                  onClick={handleSaveChanges}
-                  disabled={isUpdatingPools}
-                >
-                  {isUpdatingPools ? (
-                    <>
-                      <span className="animate-spin mr-2">⌛</span>
-                      Updating Pools...
-                    </>
-                  ) : (
-                    <>
-                      <Save className="w-4 h-4 mr-2" />
-                      Save & Redistribute
-                    </>
-                  )}
-                </Button>
-              </div>
-            )}
-
-            <UpdateConfirmationModal />
-
-            {getTotalPercentage() > 100 && (
-              <Alert variant="destructive">
-                <AlertDescription>
-                  Total distribution cannot exceed 100%. Current total: {getTotalPercentage()}%
-                </AlertDescription>
-              </Alert>
-            )}
-
-            {isEditMode && (
-              <div className="grid grid-cols-2 gap-4 p-4 border rounded-lg">
-                <div className="space-y-2">
-                  <Label>Pool Name</Label>
-                  <Input
-                    value={newPoolName}
-                    onChange={(e) => setNewPoolName(e.target.value)}
-                    placeholder="Enter pool name"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Percentage (%)</Label>
-                  <div className="flex gap-2">
-                    <Input
-                      type="number"
-                      value={newPoolPercentage}
-                      onChange={(e) => setNewPoolPercentage(e.target.value)}
-                      placeholder="Enter percentage"
-                      min="0"
-                      max="100"
-                    />
-                    <Button onClick={handleAddPool}>
-                      <Plus className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            <div className="space-y-2">
-              {pools.map((pool, index) => (
-                <div key={index} className="flex items-center justify-between p-4 border rounded-lg">
-                  <div className="flex items-center gap-4">
-                    <PiggyBank className="text-blue-500" />
-                    <div>
-                      <p className="font-medium">{pool.name}</p>
-                      <p className="text-sm text-gray-500">
-                        Balance: ₦{pool.balance.toLocaleString()}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    {editingPool === index ? (
-                      <div className="flex items-center gap-2">
-                        <Input
-                          type="number"
-                          className="w-20"
-                          value={pool.percentage}
-                          onChange={(e) => handleUpdatePool(index, e.target.value)}
-                          min="0"
-                          max="100"
-                        />
-                        <Button size="sm" onClick={() => setEditingPool(null)}>
-                          Save
-                        </Button>
-                      </div>
-                    ) : (
-                      <>
-                        <p className="font-medium">{pool.percentage}%</p>
-                        {isEditMode && (
-                          <div className="flex gap-2">
-                            <Button size="sm" variant="ghost" onClick={() => setEditingPool(index)}>
-                              <Pencil className="w-4 h-4" />
-                            </Button>
-                            <Button size="sm" variant="ghost" onClick={() => handleDeletePool(index)}>
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        )}
-                      </>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        <BalanceModal />
-      </div>
-    );
-  };  
-
-  const LoansTab = ({ accountType }) => {
+  const LoanssTab = ({ accountType }) => {
     // Simulated data for loans
     const initialLoansData = {
       personal: {
@@ -1212,7 +852,7 @@ const BankingPage = () => {
     );
   };
 
-  const AutomationTab = () => {
+  const AutomationsTab = () => {
     // Simulated data for automations
     const initialAutomationsData = [
       {
@@ -1534,7 +1174,7 @@ const BankingPage = () => {
           </TabsContent>
 
           <TabsContent value="automation">
-            <AutomationTab />
+            <AutomationTab accountType={getCurrentAccountDetails().accountType} />
           </TabsContent>
 
           <TabsContent value="settings">
