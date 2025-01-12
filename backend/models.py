@@ -32,7 +32,8 @@ class User(Base):
     # Relationships
     products = relationship('Product', back_populates='owner')
     store_settings = relationship('StoreSettings', back_populates='owner', uselist=False)
-    orders = relationship("Order", back_populates="seller")
+    orders = relationship("Order", back_populates="seller", foreign_keys="[Order.seller_id]")
+    purchases = relationship("Order", back_populates="buyer", foreign_keys="[Order.buyer_id]")
     bank_details = relationship("BankDetails", back_populates="user_data")
     notifications = relationship("Notification", back_populates="user")
     feedbacks = relationship("Feedback", back_populates="user")
@@ -170,6 +171,7 @@ class Order(Base):
     id = Column(Integer, primary_key=True, index=True)
     marketplace_order_id = Column(Integer, ForeignKey("marketplace_orders.id"))
     seller_id = Column(Integer, ForeignKey("users.id"))  # The store owner
+    buyer_id = Column(Integer, ForeignKey("users.id"), nullable=True)  # The buyer if they are logged
     customer_name = Column(String)
     customer_email = Column(String)
     customer_phone = Column(String)
@@ -182,7 +184,8 @@ class Order(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     
     # Relationships
-    seller = relationship("User", back_populates="orders")
+    seller = relationship("User", back_populates="orders", foreign_keys="[Order.seller_id]")
+    buyer = relationship("User", back_populates="purchases", foreign_keys="[Order.buyer_id]")
     marketplace_order = relationship("MarketplaceOrder", back_populates="seller_orders")
     items = relationship("OrderItem", back_populates="order", cascade="all, delete-orphan")
     payments = relationship("Payment", back_populates="order")
@@ -333,6 +336,7 @@ class NotificationType(str, enum.Enum):
     RESTOCK_STATUS_CHANGE = "restock_status_change"
     MONEY_REQUEST = "money_request"  
     MONEY_REQUEST_STATUS_CHANGE = "money_request_status_change"
+    LOAN_STATUS_CHANGE = "loan_status_change"
 
 class Notification(Base):
     __tablename__ = "notifications"
@@ -500,6 +504,8 @@ class BankAccount(Base):
     pools = relationship("FinancialPool", back_populates="bank_account")
     outgoing_payments = relationship("Payment", foreign_keys="[Payment.from_account_id]")
     incoming_payments = relationship("Payment", foreign_keys="[Payment.to_account_id]")
+    loans = relationship("Loan", back_populates="bank_account")
+    automations = relationship("BankingAutomation", back_populates="bank_account")
 
 class Transaction(Base):
     __tablename__ = "transactions"
@@ -577,6 +583,33 @@ class Payment(Base):
         if not self.reference_number:
             self.reference_number = f"PAY-{datetime.utcnow().strftime('%Y%m%d')}-{id:06d}"
 
+class BankingAutomation(Base):
+    __tablename__ = "banking_automations"
+    
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
+    bank_account_id = Column(Integer, ForeignKey('bank_accounts.id'), nullable=False)
+    name = Column(String(100), nullable=False)
+    type = Column(Enum(AutomationType), nullable=False)
+    schedule = Column(Enum(AutomationSchedule), nullable=False)
+    amount = Column(Float, nullable=True)  # For fixed amount transfers
+    percentage = Column(Float, nullable=True)  # For percentage-based transfers
+    source_pool_id = Column(Integer, ForeignKey('financial_pools.id'), nullable=False)
+    destination_pool_id = Column(Integer, ForeignKey('financial_pools.id'), nullable=True)  # For pool transfers
+    destination_account_id = Column(Integer, ForeignKey('external_accounts.id'), nullable=True)  # For external bank transfers
+    destination_bam_account_id = Column(Integer, ForeignKey('external_accounts.id'), nullable=True) # for BAM transfers
+    is_active = Column(Boolean, default=True)
+    last_run = Column(DateTime, nullable=True)
+    next_run = Column(DateTime, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    user = relationship("User", back_populates="automations")
+    bank_account = relationship("BankAccount", back_populates="automations")
+    source_pool = relationship("FinancialPool", foreign_keys=[source_pool_id], back_populates="source_automations")
+    destination_pool = relationship("FinancialPool", foreign_keys=[destination_pool_id], back_populates="destination_automations")
+    destination_account = relationship("ExternalAccount", foreign_keys=[destination_account_id])
+
 class FinancialPool(Base):
     __tablename__ = "financial_pools"
     
@@ -593,45 +626,34 @@ class FinancialPool(Base):
     # Relationships
     user = relationship("User", back_populates="financial_pools")
     bank_account = relationship("BankAccount", back_populates="pools")
-    automations = relationship("BankingAutomation", back_populates="source_pool")
+    source_automations = relationship("BankingAutomation", 
+                                    foreign_keys=[BankingAutomation.source_pool_id],
+                                    back_populates="source_pool")
+    destination_automations = relationship("BankingAutomation",
+                                         foreign_keys=[BankingAutomation.destination_pool_id],
+                                         back_populates="destination_pool")
 
 class Loan(Base):
     __tablename__ = "loans"
     
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
+    bank_account_id = Column(Integer, ForeignKey('bank_accounts.id'), nullable=False)
     amount = Column(Float, nullable=False)
     purpose = Column(String(255))
     status = Column(String(50), nullable=False)  # active, completed, defaulted
     remaining_amount = Column(Float, nullable=False)
     equity_share = Column(Float, nullable=True)  # For business loans
+    rejection_reason = Column(Text, nullable=True)
     approved_at = Column(DateTime, nullable=True)
     completed_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     
     # Relationships
     user = relationship("User", back_populates="loans")
+    bank_account = relationship("BankAccount", back_populates="loans")
     payments = relationship("Payment", back_populates="loan")
 
-class BankingAutomation(Base):
-    __tablename__ = "banking_automations"
-    
-    id = Column(Integer, primary_key=True)
-    user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
-    name = Column(String(100), nullable=False)
-    type = Column(Enum(AutomationType), nullable=False)
-    schedule = Column(Enum(AutomationSchedule), nullable=False)
-    amount = Column(Float, nullable=True)  # For transfer type
-    source_pool_id = Column(Integer, ForeignKey('financial_pools.id'), nullable=False)
-    destination_account = Column(String(20), nullable=True)  # For transfer type
-    is_active = Column(Boolean, default=True)
-    last_run = Column(DateTime, nullable=True)
-    next_run = Column(DateTime, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    
-    # Relationships
-    user = relationship("User", back_populates="automations")
-    source_pool = relationship("FinancialPool", back_populates="automations")
 
 class MoneyRequest(Base):
     __tablename__ = "money_requests"

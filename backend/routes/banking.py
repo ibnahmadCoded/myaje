@@ -3,6 +3,7 @@ from fastapi.encoders import jsonable_encoder
 import re
 from fastapi import APIRouter, Depends, HTTPException, Query, Body
 from sqlalchemy.orm import Session
+from sqlalchemy.sql import func
 from typing import Optional, List
 from pydantic import BaseModel
 from datetime import datetime, timedelta
@@ -10,11 +11,14 @@ from sql_database import get_db
 from routes.auth import get_current_user
 from models import (AccountSource, User, BankAccount, AccountType, Payment, ExternalAccount, 
                     Transaction, TransactionTag, TransactionType, MoneyRequest, 
-                    Notification, MoneyRequestStatus, NotificationType,
-                    FinancialPool, PaymentType, PaymentStatus, AccountSource)
+                    Notification, Loan, NotificationType, BankingAutomation, Order,
+                    FinancialPool, PaymentType, PaymentStatus, AccountSource, 
+                    RestockRequest, RestockRequestStatus, OrderStatus)
 from utils.cache_decorators import cache_response, invalidate_cache
 from utils.cache_manager import cache_manager
-from config import CACHE_EXPIRATION_TIME
+from utils.calculate_next_automation_run import calculate_next_run
+from config import BUSINESS_ACCOUNT_INITIAL_BALANCE, CACHE_EXPIRATION_TIME, MYAJE_BANK_ACCOUNT_ID, PERSONAL_ACCOUNT_INITIAL_BALANCE, PERSONAL_LOAN_TIERS, BUSINESS_LOAN_TIERS, BUSINESS_LOAN_EQUITY_PERCENTAGE
+from enum import Enum
 import random
 import uuid
 from utils.cache_constants import CacheNamespace, CACHE_KEYS
@@ -123,7 +127,7 @@ async def create_bank_account(
                 detail="An account with this phone number already exists"
             )
 
-    initial_balance = 1000000.00 if account_data.account_type == AccountType.BUSINESS else 100000.00
+    initial_balance = BUSINESS_ACCOUNT_INITIAL_BALANCE if account_data.account_type == AccountType.BUSINESS else PERSONAL_ACCOUNT_INITIAL_BALANCE
 
     new_account = BankAccount(
         user_id=current_user.id,
@@ -875,6 +879,15 @@ async def get_transactions(
     } for t in transactions]
 
 ############### FINANCIAL POOL ROUTES ############################################
+class PoolUpdate(BaseModel):
+    name: str
+    percentage: float
+    is_locked: bool
+
+class RedistributePoolsRequest(BaseModel):
+    active_view: str
+    pools: List[PoolUpdate]
+    
 @router.get("/pools/available", response_model=List[dict])
 @cache_response(expire=CACHE_EXPIRATION_TIME)
 async def get_available_pools(
@@ -908,9 +921,466 @@ async def get_available_pools(
         {
             "id": pool.id,
             "name": pool.name,
+            "percentage": pool.percentage,
             "balance": pool.balance,
             "is_locked": pool.is_locked,
             "is_credit_pool": pool.is_credit_pool
         }
         for pool in pools
     ]
+
+@router.post("/pools/redistribute", response_model=dict)
+async def redistribute_pools(
+    request: RedistributePoolsRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    try:
+        # Get bank account based on active_view
+        account_type = AccountType.BUSINESS if request.active_view == 'business' else AccountType.PERSONAL
+        
+        bank_account = db.query(BankAccount).filter(
+            BankAccount.user_id == current_user.id,
+            BankAccount.account_type == account_type,
+            BankAccount.is_active == True
+        ).first()
+        
+        if not bank_account:
+            raise HTTPException(
+                status_code=404, 
+                detail=f"Active {request.active_view} bank account not found"
+            )
+        
+        # Get all pools associated with the bank account
+        pools = db.query(FinancialPool).filter(
+            FinancialPool.bank_account_id == bank_account.id
+        ).all()
+        
+        # Create a map of pool names and ids from the database
+        db_pool_map = {pool.name: pool for pool in pools}
+
+        # Create a map of pool names from the request
+        request_pool_names = {update.name for update in request.pools}
+        
+        # Ensure credit pool exists
+        credit_pool = next((pool for pool in pools if pool.is_credit_pool), None)
+        if not credit_pool:
+            raise HTTPException(status_code=404, detail="Credit pool not found")
+        
+        # Calculate total available funds
+        total_funds = sum(pool.balance for pool in pools)
+        
+        # Move all funds to the credit pool temporarily
+        credit_pool.balance = total_funds
+        for pool in pools:
+            if not pool.is_credit_pool:
+                pool.balance = 0
+        
+        # Handle new pools and update existing ones
+        for update in request.pools:
+            if update.name in db_pool_map:
+                # Update existing pool
+                pool = db_pool_map[update.name]
+                pool.percentage = update.percentage
+                pool.balance = (total_funds * update.percentage) / 100
+                pool.is_locked = update.is_locked
+            else:
+                # Create new pool
+                new_pool = FinancialPool(
+                    name=update.name,
+                    user_id=current_user.id,
+                    percentage=update.percentage,
+                    balance=(total_funds * update.percentage) / 100,
+                    bank_account_id=bank_account.id,
+                    is_credit_pool=False,
+                    is_locked=update.is_locked
+                )
+                db.add(new_pool)
+        
+        # Delete pools that are in the database but not in the request
+        pools_to_delete = db.query(FinancialPool).filter(
+            FinancialPool.bank_account_id == bank_account.id,
+            FinancialPool.name.not_in(request_pool_names),
+            FinancialPool.is_credit_pool == False
+        ).all()
+        
+        for pool in pools_to_delete:
+            db.delete(pool)
+        
+        # Clear credit pool as all funds are redistributed
+        credit_pool.balance = 0
+        
+        # Update bank account balance
+        bank_account.balance = total_funds
+        
+        # Commit transaction
+        db.commit()
+        
+        # Return updated pools
+        updated_pools = db.query(FinancialPool).filter(
+            FinancialPool.bank_account_id == bank_account.id
+        ).all()
+        
+        return {
+            "pools": [
+                {
+                    "id": pool.id,
+                    "name": pool.name,
+                    "percentage": pool.percentage,
+                    "balance": pool.balance,
+                    "percentage": pool.percentage,
+                    "is_credit_pool": pool.is_credit_pool,
+                    "is_locked": pool.is_locked,
+                }
+                for pool in updated_pools
+            ]
+        }
+            
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+
+#################################### LOAN ROUTES ##########################################
+class LoanPurpose(str, Enum):
+    PRODUCT_PURCHASE = "product_purchase"
+    INVENTORY_RESTOCK = "inventory_restock"
+
+@router.get("/loans/availability")
+async def get_loan_availability(
+    active_view: str = Query(..., regex="^(personal|business)$"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    account_type = AccountType.PERSONAL if active_view == "personal" else AccountType.BUSINESS
+    
+    bank_account = db.query(BankAccount).filter(
+        BankAccount.user_id == current_user.id,
+        BankAccount.account_type == account_type
+    ).first()
+    
+    if not bank_account:
+        raise HTTPException(status_code=404, detail="No bank account found for the selected view")
+    
+    if active_view == "personal":
+        # Calculate based on purchase history
+        total_purchases = db.query(Order).filter(
+            Order.buyer_id == current_user.id,
+            Order.status == OrderStatus.fulfilled,
+            Order.seller_id != current_user.id
+        ).count()
+
+        # Sum of all loan amounts
+        total_loans_sum = db.query(func.sum(Loan.amount)).filter(
+            Loan.bank_account_id == bank_account.id,
+            Loan.user_id == current_user.id
+        ).scalar()  # Use scalar() to get the single result directly
+
+        # Sum of all loan repayment amounts
+        total_loan_repayments_sum = db.query(func.sum(Payment.amount)).filter(
+            Payment.payment_type == PaymentType.LOAN,
+            Payment.from_account_id == bank_account.id,
+            Payment.to_account_id == MYAJE_BANK_ACCOUNT_ID
+        ).scalar()
+
+        total_loans_sum = total_loans_sum or 0
+        total_loan_repayments_sum = total_loan_repayments_sum or 0
+        
+        # Define loan tiers
+        loan_tiers = PERSONAL_LOAN_TIERS
+        
+        # Calculate available amount
+        available_amount = 0
+        next_milestone = None
+        
+        for tier in loan_tiers:
+            if total_purchases >= tier["purchases"]:
+                available_limit = tier["amount"] # this is the limit
+
+                # calculate avaliable amount, which is limit - (total_loans - total_loan_repayments)
+                available_amount = available_limit - (total_loans_sum - total_loan_repayments_sum)
+            else:
+                next_milestone = {
+                    "purchases_needed": tier["purchases"] - total_purchases,
+                    "amount_unlock": tier["amount"]
+                }
+                break       
+        return {
+            "total_purchases": total_purchases,
+            "available_amount": available_amount,
+            "next_milestone": next_milestone
+        }
+    
+    else:  # business view
+        # Calculate based on restock orders and GMV
+        restock_orders = db.query(RestockRequest).filter(
+            RestockRequest.user_id == current_user.id,
+            RestockRequest.status == RestockRequestStatus.APPROVED
+        ).count()
+        
+        total_gmv = db.query(func.sum(Order.total_amount)).filter(
+            Order.seller_id == current_user.id,
+            Order.status == OrderStatus.fulfilled,
+            Order.buyer_id != current_user.id
+        ).scalar() or 0
+
+        # Sum of all loan amounts
+        total_loans_sum = db.query(func.sum(Loan.amount)).filter(
+            Loan.bank_account_id == bank_account.id,
+            Loan.user_id == current_user.id
+        ).scalar()  # Use scalar() to get the single result directly
+
+        # Sum of all loan repayment amounts
+        total_loan_repayments_sum = db.query(func.sum(Payment.amount)).filter(
+            Payment.payment_type == PaymentType.LOAN,
+            Payment.from_account_id == bank_account.id,
+            Payment.to_account_id == MYAJE_BANK_ACCOUNT_ID
+        ).scalar()
+
+        total_loans_sum = total_loans_sum or 0
+        total_loan_repayments_sum = total_loan_repayments_sum or 0
+
+        tiers = BUSINESS_LOAN_TIERS
+
+        # Calculate available amount
+        available_amount = 0
+        
+        for tier in tiers:
+            if restock_orders >= tier["restock_orders"] and total_gmv >= tier["total_gmv"]:
+                available_limit = tier["amount"] # this is the limit
+
+                # calculate avaliable amount, which is limit - (total_loans - total_loan_repayments)
+                available_amount = available_limit - (total_loans_sum - total_loan_repayments_sum)
+            
+        return {
+            "restock_orders": restock_orders,
+            "total_gmv": total_gmv,
+            "available_amount": available_amount
+        }
+
+@router.get("/loans/history")
+async def get_loan_history(
+    active_view: str = Query(..., regex="^(personal|business)$"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    account_type = AccountType.PERSONAL if active_view == "personal" else AccountType.BUSINESS
+    
+    bank_account = db.query(BankAccount).filter(
+        BankAccount.user_id == current_user.id,
+        BankAccount.account_type == account_type
+    ).first()
+    
+    if not bank_account:
+        raise HTTPException(status_code=404, detail="No bank account found for the selected view")
+    
+    # we should fetch loans for specific account
+    loans = db.query(Loan).filter(
+        Loan.user_id == current_user.id,
+        Loan.bank_account_id == bank_account.id
+    ).order_by(Loan.created_at.desc()).all()
+    
+    return [
+        {
+            "id": loan.id,
+            "amount": loan.amount,
+            "remaining_amount": loan.remaining_amount,
+            "status": loan.status,
+            "purpose": loan.purpose,
+            "created_at": loan.created_at,
+            "equity_share": loan.equity_share
+        }
+        for loan in loans
+    ]
+
+@router.post("/loans/request")
+async def request_loan(
+    loan_request: dict,
+    active_view: str = Query(..., regex="^(personal|business)$"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    account_type = AccountType.PERSONAL if active_view == "personal" else AccountType.BUSINESS
+    
+    bank_account = db.query(BankAccount).filter(
+        BankAccount.user_id == current_user.id,
+        BankAccount.account_type == account_type
+    ).first()
+    
+    if not bank_account:
+        raise HTTPException(status_code=404, detail="No bank account found for the selected view")
+    
+    # Verify loan eligibility
+    availability = await get_loan_availability(
+        active_view=active_view,
+        db=db,
+        current_user=current_user
+    )
+    
+    if loan_request["amount"] > availability["available_amount"]:
+        raise HTTPException(status_code=400, detail="Requested amount exceeds available limit")
+    
+    new_loan = Loan(
+        user_id=current_user.id,
+        bank_account_id = bank_account.id,
+        amount=loan_request["amount"],
+        remaining_amount=loan_request["amount"],
+        purpose=loan_request["purpose"],
+        status="pending",
+        equity_share=BUSINESS_LOAN_EQUITY_PERCENTAGE if current_user.active_view == "business" else None
+    )
+    
+    db.add(new_loan)
+    db.commit()
+    
+    return {"id": new_loan.id, "status": "pending"}
+
+
+########################################## Automation Routes #####################################################
+
+class AutomationType(str, Enum):
+    TRANSFER = "transfer"
+    POOL_TRANSFER = "pool_transfer"
+
+class AutomationSchedule(str, Enum):
+    DAILY = "daily"
+    WEEKLY = "weekly"
+    BIWEEKLY = "biweekly"
+    MONTHLY = "monthly"
+
+@router.get("/automations")
+async def get_automations(
+    active_view: str = Query(..., regex="^(personal|business)$"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    account_type = AccountType.PERSONAL if active_view == "personal" else AccountType.BUSINESS
+    
+    bank_account = db.query(BankAccount).filter(
+        BankAccount.user_id == current_user.id,
+        BankAccount.account_type == account_type
+    ).first()
+    
+    if not bank_account:
+        raise HTTPException(status_code=404, detail="No bank account found for the selected view")
+    
+    automations = db.query(BankingAutomation).filter(
+        BankingAutomation.user_id == current_user.id,
+        BankingAutomation.bank_account_id == bank_account.id
+    ).all()
+    
+    return [
+        {
+            "id": auto.id,
+            "name": auto.name,
+            "type": auto.type,
+            "schedule": auto.schedule,
+            "amount": auto.amount,
+            "source_pool_id": auto.source_pool_id,
+            "destination_pool_id": auto.destination_pool_id,
+            "percentage": auto.percentage,
+            "is_active": auto.is_active,
+            "next_run": auto.next_run
+        }
+        for auto in automations
+    ]
+
+@router.post("/automations")
+async def create_automation(
+    automation: dict,
+    active_view: str = Query(..., regex="^(personal|business)$"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    account_type = AccountType.PERSONAL if active_view == "personal" else AccountType.BUSINESS
+    
+    bank_account = db.query(BankAccount).filter(
+        BankAccount.user_id == current_user.id,
+        BankAccount.account_type == account_type
+    ).first()
+    
+    if not bank_account:
+        raise HTTPException(status_code=404, detail="No bank account found for the selected view")
+    
+    # Validate source pool
+    source_pool = db.query(FinancialPool).filter(
+        FinancialPool.id == automation["source_pool_id"],
+        FinancialPool.user_id == current_user.id
+    ).first()
+    
+    if not source_pool:
+        raise HTTPException(status_code=400, detail="Invalid source pool")
+
+    # Initialize automation data
+    automation_data = {
+        "user_id": current_user.id,
+        "bank_account_id": bank_account.id,
+        "name": automation["name"],
+        "type": automation["type"],
+        "schedule": automation["schedule"],
+        "amount": automation.get("amount"),
+        "percentage": automation.get("percentage"),
+        "source_pool_id": automation["source_pool_id"],
+        "next_run": calculate_next_run(automation["schedule"]),
+        "is_active": True
+    }
+    
+    if automation["type"] == "pool_transfer":
+        destination_pool = db.query(FinancialPool).filter(
+            FinancialPool.id == automation["destination_pool_id"],
+            FinancialPool.user_id == current_user.id
+        ).first()
+        
+        if not destination_pool:
+            raise HTTPException(status_code=400, detail="Invalid destination pool")
+            
+        automation_data["destination_pool_id"] = automation["destination_pool_id"]
+        
+    else:  # bank_transfer
+        if "destination_bam_details" in automation:
+            # BAM bank transfer
+            destination_account = db.query(BankAccount).join(User).filter(
+                User.phone == automation["destination_bam_details"]["phone"],
+                BankAccount.account_type == automation["destination_bam_details"]["account_type"]
+            ).first()
+            
+            if not destination_account:
+                raise HTTPException(status_code=400, detail="Destination BAM account not found")
+                
+            automation_data["destination_bam_account_id"] = destination_account.id
+            
+        elif "destination_bank_details" in automation:
+            # External bank transfer
+            # First, create or get external account
+            external_account = db.query(ExternalAccount).filter(
+                ExternalAccount.user_id == current_user.id,
+                ExternalAccount.account_number == automation["destination_bank_details"]["account_number"],
+                ExternalAccount.bank_name == automation["destination_bank_details"]["bank_name"]
+            ).first()
+            
+            if not external_account:
+                external_account = ExternalAccount(
+                    user_id=current_user.id,
+                    account_name=automation["destination_bank_details"]["account_name"],
+                    account_number=automation["destination_bank_details"]["account_number"],
+                    bank_name=automation["destination_bank_details"]["bank_name"]
+                )
+                db.add(external_account)
+                db.flush()
+            
+            automation_data["destination_account_id"] = external_account.id
+        
+        else:
+            raise HTTPException(status_code=400, detail="Missing destination account details")
+    
+    # Validate amount OR percentage is provided
+    if bool(automation_data.get("amount")) == bool(automation_data.get("percentage")):
+        raise HTTPException(
+            status_code=400,
+            detail="Exactly one of amount or percentage must be provided"
+        )
+    
+    new_automation = BankingAutomation(**automation_data)
+    db.add(new_automation)
+    db.commit()
+    
+    return {"id": new_automation.id}

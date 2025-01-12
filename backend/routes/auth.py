@@ -5,16 +5,24 @@ import pytz
 from sqlalchemy.orm import Session
 from jose import jwt, JWTError
 from datetime import datetime, timedelta
-from pytz import timezone
+from typing import Optional
 from config import SECRET_KEY, ALGORITHM, SUPER_ADMIN_EMAIL, SUPER_ADMIN_PASSWORD
 
 from sql_database import get_db
 from models import User, TokenBlacklist
 from passlib.context import CryptContext
 
+class OptionalOAuth2PasswordBearer(OAuth2PasswordBearer):
+    async def __call__(self, request: Request) -> Optional[str]:
+        authorization: str = request.headers.get("Authorization")
+        if not authorization:
+            return None
+        return await super().__call__(request)
+
 router = APIRouter()
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+oauth2_scheme_optional = OptionalOAuth2PasswordBearer(tokenUrl="token")
 
 def verify_password(plain_password, hashed_password):
     return pwd_context.verify(plain_password, hashed_password)
@@ -53,6 +61,23 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = De
     
     except JWTError:
         raise credentials_exception
+    
+async def get_optional_current_user(
+    token: Optional[str] = Depends(oauth2_scheme_optional), 
+    db: Session = Depends(get_db)
+) -> Optional[User]:
+    if not token:
+        print("############################################################")
+        return None
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id = payload.get('user_id')
+        if user_id is None:
+            return None
+        user = db.query(User).filter(User.id == user_id).first()
+        return user
+    except JWTError:
+        return None
 
 async def get_admin_user(
     current_user: User = Depends(get_current_user)
@@ -200,7 +225,8 @@ async def admin_login(request: Request, db: Session = Depends(get_db)):
             'user': {
                 'id': user.id,
                 'email': user.email,
-                'business_name': user.business_name
+                'business_name': user.business_name,
+                'active_view': 'admin'
             }
         }
 

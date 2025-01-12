@@ -77,9 +77,21 @@ export const CheckoutDialog = ({
         status: "pending"
       };
 
+      // Retrieve token (if logged in)
+      const token = localStorage.getItem("token"); 
+
+      // Set headers
+      const headers = {
+          "Content-Type": "application/json",
+      };
+
+      if (token) {
+          headers["Authorization"] = `Bearer ${token}`;
+      }
+
       const response = await fetch(`${apiBaseUrl}/orders/submit`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: headers,
         body: JSON.stringify(invoiceData),
       });
 
@@ -134,9 +146,21 @@ export const CheckoutDialog = ({
         }
       };
 
+      // Retrieve token (if logged in)
+      const token = localStorage.getItem("token"); 
+
+      // Set headers
+      const headers = {
+          "Content-Type": "application/json",
+      };
+
+      if (token) {
+          headers["Authorization"] = `Bearer ${token}`;
+      }
+
       const response = await fetch(`${apiBaseUrl}/orders/submit`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: headers,
         body: JSON.stringify(orderData),
       });
 
