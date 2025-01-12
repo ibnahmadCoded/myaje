@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Plus, Clock, Pencil, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose, DialogAction } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -87,12 +87,25 @@ const AutomationForm = ({ isOpen, onClose, onSuccess, pools, accountType }) => {
     destination_bank_name: '',
     destination_account_number: '',
     destination_account_name: '',
-    destination_pool_id: ''
+    destination_pool_id: '',
+    execution_time: "07:00", // 7 am default
+    day_of_week: "5", // Saturday default
+    day_of_month: "30", // Last day default
   });
 
   const handleCreateAutomation = async () => {
     try {
       const activeView = accountType === "Individual" ? "personal" : "business";
+
+      const scheduleDetails = {
+        execution_time: formData.execution_time,
+        day_of_week: formData.schedule === "weekly" || formData.schedule === "biweekly" 
+          ? parseInt(formData.day_of_week) 
+          : null,
+        day_of_month: formData.schedule === "monthly" 
+          ? parseInt(formData.day_of_month) 
+          : null
+      };
       
       const automationData = {
         name: formData.name,
@@ -100,7 +113,8 @@ const AutomationForm = ({ isOpen, onClose, onSuccess, pools, accountType }) => {
         schedule: formData.schedule,
         source_pool_id: formData.source_pool_id,
         amount: formData.transfer_type === 'fixed' ? formData.amount.replace(/,/g, '') : null,
-        percentage: formData.transfer_type === 'percentage' ? formData.percentage : null
+        percentage: formData.transfer_type === 'percentage' ? formData.percentage : null,
+        schedule_details: scheduleDetails
       };
 
       if (formData.type === 'pool_transfer') {
@@ -150,7 +164,10 @@ const AutomationForm = ({ isOpen, onClose, onSuccess, pools, accountType }) => {
         destination_bank_name: '',
         destination_account_number: '',
         destination_account_name: '',
-        destination_pool_id: ''
+        destination_pool_id: '',
+        execution_time: "07:00", // 7 am default
+        day_of_week: "5", // Saturday default
+        day_of_month: "30", // Last day default
       });
 
       toast({
@@ -174,9 +191,106 @@ const AutomationForm = ({ isOpen, onClose, onSuccess, pools, accountType }) => {
     { value: 'monthly', label: 'Monthly' }
   ];
 
+  const renderScheduleOptions = () => {
+    switch (formData.schedule) {
+      case 'daily':
+        return (
+          <div className="space-y-2">
+            <Label>Time of Day</Label>
+            <Input
+              type="time"
+              value={formData.execution_time}
+              onChange={(e) => setFormData(prev => ({...prev, execution_time: e.target.value}))}
+              placeholder="07:00"
+            />
+          </div>
+        );
+
+      case 'weekly':
+      case 'biweekly':
+        return (
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Day of Week</Label>
+              <Select
+                value={formData.day_of_week}
+                onValueChange={(value) => setFormData(prev => ({...prev, day_of_week: value}))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select day" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="0">Sunday</SelectItem>
+                  <SelectItem value="1">Monday</SelectItem>
+                  <SelectItem value="2">Tuesday</SelectItem>
+                  <SelectItem value="3">Wednesday</SelectItem>
+                  <SelectItem value="4">Thursday</SelectItem>
+                  <SelectItem value="5">Saturday</SelectItem>
+                  <SelectItem value="6">Sunday</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Time of Day</Label>
+              <Input
+                type="time"
+                value={formData.execution_time}
+                onChange={(e) => setFormData(prev => ({...prev, execution_time: e.target.value}))}
+                placeholder="07:00"
+              />
+            </div>
+          </div>
+        );
+
+      case 'monthly':
+        return (
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Day of Month</Label>
+              <Select
+                value={formData.day_of_month}
+                onValueChange={(value) => setFormData(prev => ({...prev, day_of_month: value}))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select day" />
+                </SelectTrigger>
+                <SelectContent>
+                  {[...Array(30)].map((_, i) => (
+                    <SelectItem key={i + 1} value={(i + 1).toString()}>
+                      {i + 1}{getOrdinalSuffix(i + 1)}
+                    </SelectItem>
+                  ))}
+                  <SelectItem value="31">Last day</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Time of Day</Label>
+              <Input
+                type="time"
+                value={formData.execution_time}
+                onChange={(e) => setFormData(prev => ({...prev, execution_time: e.target.value}))}
+                placeholder="07:00"
+              />
+            </div>
+          </div>
+        );
+
+      default:
+        return null;
+    }
+  };
+
+  // Helper function for ordinal suffixes
+  const getOrdinalSuffix = (number) => {
+    const suffixes = ['th', 'st', 'nd', 'rd'];
+    const v = number % 100;
+    return suffixes[(v - 20) % 10] || suffixes[v] || suffixes[0];
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[600px]">
+      <DialogContent className="sm:max-w-[600px] h-[90vh] flex flex-col p-0">
         <DialogHeader>
           <DialogTitle>Create New Automation</DialogTitle>
           <DialogDescription>
@@ -184,8 +298,8 @@ const AutomationForm = ({ isOpen, onClose, onSuccess, pools, accountType }) => {
           </DialogDescription>
         </DialogHeader>
         
-        <div className="space-y-4">
-          <div className="space-y-2">
+        <div className="flex-1 overflow-y-auto px-6">
+          <div className="space-y-4 pb-6">
             <Label>Automation Name</Label>
             <Input
               value={formData.name}
@@ -380,11 +494,226 @@ const AutomationForm = ({ isOpen, onClose, onSuccess, pools, accountType }) => {
               </SelectContent>
             </Select>
           </div>
+          
+          {formData.schedule && renderScheduleOptions()}
+
+        </div>
+        
+        <DialogFooter className="p-6 pt-0">
+          <Button onClick={handleCreateAutomation}>
+            Create Automation
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+const EditAutomationForm = ({ isOpen, onClose, onSuccess, automation }) => {
+  const { toast } = useToast();
+  const [formData, setFormData] = useState({
+    execution_time: "07:00",
+    day_of_week: "5",
+    day_of_month: "30",
+    schedule: ''
+  });
+
+  useEffect(() => {
+    if (automation) {
+      setFormData({
+        execution_time: automation.schedule_details?.execution_time || "07:00",
+        day_of_week: automation.schedule_details?.day_of_week?.toString() || "5",
+        day_of_month: automation.schedule_details?.day_of_month?.toString() || "30",
+        schedule: automation.schedule || ''
+      });
+    }
+  }, [automation]);
+
+  const handleUpdateAutomation = async () => {
+    try {
+      const scheduleDetails = {
+        execution_time: formData.execution_time,
+        day_of_week: formData.schedule === "weekly" || formData.schedule === "biweekly" 
+          ? parseInt(formData.day_of_week) 
+          : null,
+        day_of_month: formData.schedule === "monthly" 
+          ? parseInt(formData.day_of_month) 
+          : null
+      };
+
+      const response = await fetch(`${apiBaseUrl}/banking/automations/${automation.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          schedule: formData.schedule,
+          schedule_details: scheduleDetails
+        })
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.detail || 'Failed to update automation');
+      }
+
+      onSuccess();
+      onClose();
+      toast({
+        title: "Success",
+        description: "Automation updated successfully",
+      });
+    } catch (error) {
+      console.error('Error updating automation:', error);
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  };
+
+  const scheduleOptions = [
+    { value: 'daily', label: 'Daily' },
+    { value: 'weekly', label: 'Weekly' },
+    { value: 'biweekly', label: 'Bi-weekly' },
+    { value: 'monthly', label: 'Monthly' }
+  ];
+
+  const renderScheduleOptions = () => {
+    switch (formData.schedule) {
+      case 'daily':
+        return (
+          <div className="space-y-2">
+            <Label>Time of Day</Label>
+            <Input
+              type="time"
+              value={formData.execution_time}
+              onChange={(e) => setFormData(prev => ({...prev, execution_time: e.target.value}))}
+              placeholder="07:00"
+            />
+          </div>
+        );
+
+      case 'weekly':
+      case 'biweekly':
+        return (
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Day of Week</Label>
+              <Select
+                value={formData.day_of_week}
+                onValueChange={(value) => setFormData(prev => ({...prev, day_of_week: value}))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select day" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="0">Sunday</SelectItem>
+                  <SelectItem value="1">Monday</SelectItem>
+                  <SelectItem value="2">Tuesday</SelectItem>
+                  <SelectItem value="3">Wednesday</SelectItem>
+                  <SelectItem value="4">Thursday</SelectItem>
+                  <SelectItem value="5">Saturday</SelectItem>
+                  <SelectItem value="6">Sunday</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Time of Day</Label>
+              <Input
+                type="time"
+                value={formData.execution_time}
+                onChange={(e) => setFormData(prev => ({...prev, execution_time: e.target.value}))}
+                placeholder="07:00"
+              />
+            </div>
+          </div>
+        );
+
+      case 'monthly':
+        return (
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Day of Month</Label>
+              <Select
+                value={formData.day_of_month}
+                onValueChange={(value) => setFormData(prev => ({...prev, day_of_month: value}))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select day" />
+                </SelectTrigger>
+                <SelectContent>
+                  {[...Array(30)].map((_, i) => (
+                    <SelectItem key={i + 1} value={(i + 1).toString()}>
+                      {i + 1}{getOrdinalSuffix(i + 1)}
+                    </SelectItem>
+                  ))}
+                  <SelectItem value="31">Last day</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Time of Day</Label>
+              <Input
+                type="time"
+                value={formData.execution_time}
+                onChange={(e) => setFormData(prev => ({...prev, execution_time: e.target.value}))}
+                placeholder="07:00"
+              />
+            </div>
+          </div>
+        );
+
+      default:
+        return null;
+    }
+  };
+
+  // Helper function for ordinal suffixes
+  const getOrdinalSuffix = (number) => {
+    const suffixes = ['th', 'st', 'nd', 'rd'];
+    const v = number % 100;
+    return suffixes[(v - 20) % 10] || suffixes[v] || suffixes[0];
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-[600px]">
+        <DialogHeader>
+          <DialogTitle>Edit Automation Schedule</DialogTitle>
+          <DialogDescription>
+            Modify the schedule for "{automation?.name}"
+          </DialogDescription>
+        </DialogHeader>
+        
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label>Schedule</Label>
+            <Select
+              value={formData.schedule}
+              onValueChange={(value) => setFormData(prev => ({...prev, schedule: value}))}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select schedule" />
+              </SelectTrigger>
+              <SelectContent>
+                {scheduleOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          
+          {formData.schedule && renderScheduleOptions()}
         </div>
         
         <DialogFooter>
-          <Button onClick={handleCreateAutomation}>
-            Create Automation
+          <Button onClick={handleUpdateAutomation}>
+            Update Automation
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -395,6 +724,9 @@ const AutomationForm = ({ isOpen, onClose, onSuccess, pools, accountType }) => {
 export const AutomationTab = ({ accountType }) => {
   const [automations, setAutomations] = useState([]);
   const [showAutomationForm, setShowAutomationForm] = useState(false);
+  const [showEditForm, setShowEditForm] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [selectedAutomation, setSelectedAutomation] = useState(null);
   const [pools, setPools] = useState([]);
   const [formData, setFormData] = useState({
     name: '',
@@ -456,6 +788,43 @@ export const AutomationTab = ({ accountType }) => {
     }
   }, [accountType, toast]);
 
+  const handleEdit = (automation) => {
+    setSelectedAutomation(automation);
+    setShowEditForm(true);
+  };
+
+  const handleDelete = (automation) => {
+    setSelectedAutomation(automation);
+    setShowDeleteDialog(true);
+  };
+
+  const confirmDelete = async () => {
+    try {
+      const response = await fetch(`${apiBaseUrl}/banking/automations/${selectedAutomation.id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+
+      if (!response.ok) throw new Error('Failed to delete automation');
+
+      setShowDeleteDialog(false);
+      fetchAutomations();
+      toast({
+        title: "Success",
+        description: "Automation deleted successfully",
+      });
+    } catch (error) {
+      console.error('Error deleting automation:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete automation",
+        variant: "destructive"
+      });
+    }
+  };
+
   useEffect(() => {
     fetchAutomations();
     fetchPools();
@@ -494,13 +863,13 @@ return (
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <Badge variant={automation.is_active ? 'success' : 'default'}>
+                <Badge variant={automation.is_active ? 'success' : 'destructive'}>
                   {automation.is_active ? 'Active' : 'Inactive'}
                 </Badge>
-                <Button variant="ghost" size="sm">
+                <Button variant="ghost" size="sm" onClick={() => handleEdit(automation)}>
                   <Pencil className="w-4 h-4" />
                 </Button>
-                <Button variant="ghost" size="sm">
+                <Button variant="ghost" size="sm" onClick={() => handleDelete(automation)}>
                   <Trash2 className="w-4 h-4" />
                 </Button>
               </div>
@@ -516,7 +885,40 @@ return (
         onSuccess={fetchAutomations}
         pools={pools}
         accountType={accountType}
+    />
+    
+    {selectedAutomation && (
+      <EditAutomationForm
+        isOpen={showEditForm}
+        onClose={() => {
+          setShowEditForm(false);
+          setSelectedAutomation(null);
+        }}
+        onSuccess={fetchAutomations}
+        automation={selectedAutomation}
       />
+    )}
+
+    <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Delete Automation</DialogTitle>
+          <DialogDescription>
+            Are you sure you want to delete this automation? This action cannot be undone.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <DialogClose asChild>
+            <Button variant="secondary" onClick={() => setShowDeleteDialog(false)}>
+              Cancel
+            </Button>
+          </DialogClose>
+          <Button variant="destructive" onClick={confirmDelete}>
+            Delete
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   </div>
 );
 };

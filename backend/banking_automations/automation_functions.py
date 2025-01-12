@@ -1,98 +1,73 @@
-from datetime import datetime, timedelta
-from fastapi import Depends 
-from sqlalchemy.orm import Session
+# automation_functions.py
+from datetime import datetime, timedelta, time
 from typing import Optional
-from models import BankAccount, FinancialPool, User
-from routes.auth import get_current_user
-from sql_database import get_db
+import calendar
 
-def calculate_next_run(schedule: str, from_date: Optional[datetime] = None) -> datetime:
+def calculate_next_run(schedule: str, schedule_details: dict, from_date: Optional[datetime] = None) -> datetime:
     if from_date is None:
         from_date = datetime.utcnow()
-        
+    
+    # Get execution time or default to 7 AM
+    execution_time = schedule_details.get('execution_time', time(7, 0))
+    base_date = from_date.replace(
+        hour=execution_time.hour,
+        minute=execution_time.minute,
+        second=0,
+        microsecond=0
+    )
+    
     if schedule == "daily":
-        next_run = from_date + timedelta(days=1)
-    elif schedule == "weekly":
-        next_run = from_date + timedelta(weeks=1)
-    elif schedule == "biweekly":
-        next_run = from_date + timedelta(weeks=2)
-    elif schedule == "monthly":
-        # Add a month while handling month transitions
-        year = from_date.year + ((from_date.month + 1) - 1) // 12
-        month = ((from_date.month + 1) - 1) % 12 + 1
-        day = min(from_date.day, [31, 29 if year % 4 == 0 and (year % 100 != 0 or year % 400 == 0) else 28,
-                                31, 30, 31, 30, 31, 31, 30, 31, 30, 31][month - 1])
-        next_run = from_date.replace(year=year, month=month, day=day)
-    else:
-        raise ValueError(f"Invalid schedule: {schedule}")
+        next_run = base_date + timedelta(days=1)
         
+    elif schedule == "weekly":
+        day_of_week = schedule_details.get('day_of_week', 5)  # Default to Saturday (5)
+        current_day = from_date.weekday()
+        days_ahead = day_of_week - current_day
+        if days_ahead <= 0:  # Target day already happened this week
+            days_ahead += 7
+        next_run = base_date + timedelta(days=days_ahead)
+        
+    elif schedule == "biweekly":
+        day_of_week = schedule_details.get('day_of_week', 5)  # Default to Saturday (5)
+        current_day = from_date.weekday()
+        days_ahead = day_of_week - current_day
+        if days_ahead <= 0:  # Target day already happened this week
+            days_ahead += 14  # Skip to next biweekly occurrence
+        else:
+            days_ahead += 7  # Add a week to get to next biweekly occurrence
+        next_run = base_date + timedelta(days=days_ahead)
+        
+    elif schedule == "monthly":
+        day_of_month = schedule_details.get('day_of_month', -1)  # -1 indicates last day
+        
+        if day_of_month == -1:
+            # Calculate last day of next month
+            if from_date.month == 12:
+                next_month = 1
+                next_year = from_date.year + 1
+            else:
+                next_month = from_date.month + 1
+                next_year = from_date.year
+                
+            # Get the last day of next month
+            _, last_day = calendar.monthrange(next_year, next_month)
+            next_run = datetime(next_year, next_month, last_day, 
+                              execution_time.hour, execution_time.minute)
+        else:
+            # Move to next month maintaining the specified day
+            if from_date.month == 12:
+                next_month = 1
+                next_year = from_date.year + 1
+            else:
+                next_month = from_date.month + 1
+                next_year = from_date.year
+                
+            # Ensure day exists in target month
+            _, last_day = calendar.monthrange(next_year, next_month)
+            target_day = min(day_of_month, last_day)
+            
+            next_run = datetime(next_year, next_month, target_day,
+                              execution_time.hour, execution_time.minute)
+    
     return next_run
 
-async def process_pool_transfer(
-    source_pool_id: int,
-    destination_pool_id: int,
-    amount: Optional[float],
-    percentage: Optional[float],
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-) -> bool:
-    """Process a pool-to-pool transfer"""
-    source_pool = db.query(FinancialPool).filter_by(id=source_pool_id).first()
-    if not source_pool:
-        raise ValueError("Source pool not found")
-        
-    # Calculate transfer amount
-    transfer_amount = amount if amount is not None else (source_pool.balance * percentage / 100)
-    
-    if transfer_amount > source_pool.balance:
-        raise ValueError("Insufficient funds in source pool")
-        
-    # Perform transfer
-    source_pool.balance -= transfer_amount
-    destination_pool = db.query(FinancialPool).filter_by(id=destination_pool_id).first()
-    destination_pool.balance += transfer_amount
-    
-    # Record transaction
-    # Add your transaction recording logic here
-    
-    return True
-
-async def process_bank_transfer(
-    source_pool_id: int,
-    destination_account_id: int,
-    is_external: bool,
-    amount: Optional[float],
-    percentage: Optional[float],
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-) -> bool:
-    """Process a transfer to a bank account"""
-    source_pool = db.query(FinancialPool).filter_by(id=source_pool_id).first()
-    if not source_pool:
-        raise ValueError("Source pool not found")
-        
-    # Calculate transfer amount
-    transfer_amount = amount if amount is not None else (source_pool.balance * percentage / 100)
-    
-    if transfer_amount > source_pool.balance:
-        raise ValueError("Insufficient funds in source pool")
-        
-    # Deduct from source pool
-    source_pool.balance -= transfer_amount
-    
-    if is_external:
-        # Process external bank transfer
-        # Add your external transfer logic here
-        pass
-    else:
-        # Process internal BAM transfer
-        destination_account = db.query(BankAccount).filter_by(id=destination_account_id).first()
-        if not destination_account:
-            raise ValueError("Destination account not found")
-            
-        destination_account.balance += transfer_amount
-        
-    # Record transaction
-    # Add your transaction recording logic here
-    
-    return True
