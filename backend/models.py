@@ -1,7 +1,7 @@
 from venv import logger
 from sqlalchemy.dialects.postgresql import JSONB
-from datetime import datetime
-from sqlalchemy import Column, Integer, String, Float, Text, DateTime, ForeignKey, UniqueConstraint, Enum, JSON, Boolean
+from datetime import datetime, time
+from sqlalchemy import Column, Integer, String, Float, Text, DateTime, ForeignKey, UniqueConstraint, Enum, JSON, Boolean, Time
 from starlette.concurrency import run_in_threadpool
 from sqlalchemy.orm import relationship
 from sql_database import Base, engine
@@ -447,10 +447,9 @@ class TransactionTag(enum.Enum):
 
 class AutomationType(enum.Enum):
     TRANSFER = "transfer"
-    POOL_DISTRIBUTION = "pool_distribution"
+    POOL_TRANSFER = "pool_transfer"
 
 class AutomationSchedule(enum.Enum):
-    INSTANT = "instant"
     DAILY = "daily"
     WEEKLY = "weekly"
     BIWEEKLY = "biweekly"
@@ -505,8 +504,8 @@ class BankAccount(Base):
     outgoing_payments = relationship("Payment", foreign_keys="[Payment.from_account_id]")
     incoming_payments = relationship("Payment", foreign_keys="[Payment.to_account_id]")
     loans = relationship("Loan", back_populates="bank_account")
-    automations = relationship("BankingAutomation", back_populates="bank_account")
-
+    automations = relationship("BankingAutomation", back_populates="bank_account", foreign_keys="[BankingAutomation.bank_account_id]")
+    
 class Transaction(Base):
     __tablename__ = "transactions"
     
@@ -583,6 +582,17 @@ class Payment(Base):
         if not self.reference_number:
             self.reference_number = f"PAY-{datetime.utcnow().strftime('%Y%m%d')}-{id:06d}"
 
+class AutomationScheduleDetails(Base):
+    __tablename__ = "automation_schedule_details"
+    
+    id = Column(Integer, primary_key=True)
+    automation_id = Column(Integer, ForeignKey('banking_automations.id'), nullable=False)
+    execution_time = Column(Time, nullable=False, default=time(7, 0))  # Default 7:00 AM
+    day_of_week = Column(Integer, nullable=True)  # 0-6 for Sunday-Saturday
+    day_of_month = Column(Integer, nullable=True)  # 1-31
+    
+    automation = relationship("BankingAutomation", back_populates="schedule_details")
+
 class BankingAutomation(Base):
     __tablename__ = "banking_automations"
     
@@ -597,7 +607,7 @@ class BankingAutomation(Base):
     source_pool_id = Column(Integer, ForeignKey('financial_pools.id'), nullable=False)
     destination_pool_id = Column(Integer, ForeignKey('financial_pools.id'), nullable=True)  # For pool transfers
     destination_account_id = Column(Integer, ForeignKey('external_accounts.id'), nullable=True)  # For external bank transfers
-    destination_bam_account_id = Column(Integer, ForeignKey('external_accounts.id'), nullable=True) # for BAM transfers
+    destination_bam_account_id = Column(Integer, ForeignKey('bank_accounts.id'), nullable=True) # for BAM transfers
     is_active = Column(Boolean, default=True)
     last_run = Column(DateTime, nullable=True)
     next_run = Column(DateTime, nullable=False)
@@ -605,10 +615,12 @@ class BankingAutomation(Base):
     
     # Relationships
     user = relationship("User", back_populates="automations")
-    bank_account = relationship("BankAccount", back_populates="automations")
+    bank_account = relationship("BankAccount", foreign_keys=[bank_account_id], back_populates="automations")  # The account doing the automation
+    destination_bam_account = relationship("BankAccount", foreign_keys=[destination_bam_account_id])  # The account receiving the transfers
     source_pool = relationship("FinancialPool", foreign_keys=[source_pool_id], back_populates="source_automations")
     destination_pool = relationship("FinancialPool", foreign_keys=[destination_pool_id], back_populates="destination_automations")
     destination_account = relationship("ExternalAccount", foreign_keys=[destination_account_id])
+    schedule_details = relationship("AutomationScheduleDetails", back_populates="automation", uselist=False)
 
 class FinancialPool(Base):
     __tablename__ = "financial_pools"

@@ -1,22 +1,23 @@
 #backend/routes/banking.py
 from fastapi.encoders import jsonable_encoder
 import re
-from fastapi import APIRouter, Depends, HTTPException, Query, Body
-from sqlalchemy.orm import Session
+from fastapi import APIRouter, Depends, HTTPException, Query, Body, Path
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy.sql import func
 from typing import Optional, List
 from pydantic import BaseModel
 from datetime import datetime, timedelta
 from sql_database import get_db
 from routes.auth import get_current_user
-from models import (AccountSource, User, BankAccount, AccountType, Payment, ExternalAccount, 
+from models import (AccountSource, AutomationSchedule, AutomationType, User, BankAccount, AccountType, Payment, ExternalAccount, 
                     Transaction, TransactionTag, TransactionType, MoneyRequest, 
                     Notification, Loan, NotificationType, BankingAutomation, Order,
                     FinancialPool, PaymentType, PaymentStatus, AccountSource, 
-                    RestockRequest, RestockRequestStatus, OrderStatus)
+                    RestockRequest, RestockRequestStatus, OrderStatus, AutomationScheduleDetails,
+                    AutomationType, AutomationSchedule)
 from utils.cache_decorators import cache_response, invalidate_cache
 from utils.cache_manager import cache_manager
-from utils.calculate_next_automation_run import calculate_next_run
+from banking_automations.automation_functions import calculate_next_run
 from config import BUSINESS_ACCOUNT_INITIAL_BALANCE, CACHE_EXPIRATION_TIME, MYAJE_BANK_ACCOUNT_ID, PERSONAL_ACCOUNT_INITIAL_BALANCE, PERSONAL_LOAN_TIERS, BUSINESS_LOAN_TIERS, BUSINESS_LOAN_EQUITY_PERCENTAGE
 from enum import Enum
 import random
@@ -465,7 +466,7 @@ async def transfer_money(
             
 
             # get receivers's credit pool
-            receiver_credit_pool = db.query(FinancialPool).filter(FinancialPool.bank_account_id == recipient_account.id).first()
+            receiver_credit_pool = db.query(FinancialPool).filter(FinancialPool.bank_account_id == recipient_account.id, FinancialPool.is_credit_pool == True).first()
 
             receiver_credit_pool.balance += transfer_data.amount
             recipient_account.balance += transfer_data.amount
@@ -1237,16 +1238,6 @@ async def request_loan(
 
 ########################################## Automation Routes #####################################################
 
-class AutomationType(str, Enum):
-    TRANSFER = "transfer"
-    POOL_TRANSFER = "pool_transfer"
-
-class AutomationSchedule(str, Enum):
-    DAILY = "daily"
-    WEEKLY = "weekly"
-    BIWEEKLY = "biweekly"
-    MONTHLY = "monthly"
-
 @router.get("/automations")
 async def get_automations(
     active_view: str = Query(..., regex="^(personal|business)$"),
@@ -1263,7 +1254,9 @@ async def get_automations(
     if not bank_account:
         raise HTTPException(status_code=404, detail="No bank account found for the selected view")
     
-    automations = db.query(BankingAutomation).filter(
+    automations = db.query(BankingAutomation).options(
+        joinedload(BankingAutomation.schedule_details)
+    ).filter(
         BankingAutomation.user_id == current_user.id,
         BankingAutomation.bank_account_id == bank_account.id
     ).all()
@@ -1279,7 +1272,12 @@ async def get_automations(
             "destination_pool_id": auto.destination_pool_id,
             "percentage": auto.percentage,
             "is_active": auto.is_active,
-            "next_run": auto.next_run
+            "next_run": auto.next_run,
+            "schedule_details": {
+                "execution_time": auto.schedule_details.execution_time.strftime("%H:%M") if auto.schedule_details else "07:00",
+                "day_of_week": auto.schedule_details.day_of_week if auto.schedule_details else None,
+                "day_of_month": auto.schedule_details.day_of_month if auto.schedule_details else None
+            }
         }
         for auto in automations
     ]
@@ -1310,17 +1308,47 @@ async def create_automation(
     if not source_pool:
         raise HTTPException(status_code=400, detail="Invalid source pool")
 
+    # Parse schedule details
+    schedule_details = automation.get("schedule_details", {})
+    execution_time = datetime.strptime(
+        schedule_details.get("execution_time", "07:00"),
+        "%H:%M"
+    ).time()
+    
+    # Calculate next run based on schedule details
+    next_run = calculate_next_run(
+        automation["schedule"],
+        {
+            "execution_time": execution_time,
+            "day_of_week": schedule_details.get("day_of_week"),
+            "day_of_month": schedule_details.get("day_of_month")
+        }
+    )
+
+    automation_type = AutomationType.TRANSFER if automation["type"] == "bank_transfer" else AutomationType.POOL_TRANSFER
+    automation_schedule = None
+    if automation["schedule"] == "daily":
+        automation_schedule = AutomationSchedule.DAILY
+    elif automation["schedule"] == "weekly":
+        automation_schedule = AutomationSchedule.WEEKLY
+    elif automation["schedule"] == "biweekly":
+        automation_schedule = AutomationSchedule.BIWEEKLY
+    elif automation["schedule"] == "monthly":
+        automation_schedule = AutomationSchedule.MONTHLY
+    else:
+        automation_schedule = None
+
     # Initialize automation data
     automation_data = {
         "user_id": current_user.id,
         "bank_account_id": bank_account.id,
         "name": automation["name"],
-        "type": automation["type"],
-        "schedule": automation["schedule"],
+        "type": automation_type,
+        "schedule": automation_schedule,
         "amount": automation.get("amount"),
         "percentage": automation.get("percentage"),
         "source_pool_id": automation["source_pool_id"],
-        "next_run": calculate_next_run(automation["schedule"]),
+        "next_run": next_run,
         "is_active": True
     }
     
@@ -1338,9 +1366,20 @@ async def create_automation(
     else:  # bank_transfer
         if "destination_bam_details" in automation:
             # BAM bank transfer
+            # Normalize phone number by removing non-numeric characters
+            formatted_phone = re.sub(r'(\d{3})(\d{3})(\d{4})', r'\1-\2-\3', automation["destination_bam_details"]["phone"])
+
+            # Map account type string to AccountType enum
+            account_type = (
+                AccountType.PERSONAL
+                if automation["destination_bam_details"]["account_type"].lower() == "personal"
+                else AccountType.BUSINESS
+            )
+
+            # Query the destination account
             destination_account = db.query(BankAccount).join(User).filter(
-                User.phone == automation["destination_bam_details"]["phone"],
-                BankAccount.account_type == automation["destination_bam_details"]["account_type"]
+                User.phone == formatted_phone,  # Normalize User.phone in the query
+                BankAccount.account_type == account_type
             ).first()
             
             if not destination_account:
@@ -1350,7 +1389,6 @@ async def create_automation(
             
         elif "destination_bank_details" in automation:
             # External bank transfer
-            # First, create or get external account
             external_account = db.query(ExternalAccount).filter(
                 ExternalAccount.user_id == current_user.id,
                 ExternalAccount.account_number == automation["destination_bank_details"]["account_number"],
@@ -1372,15 +1410,134 @@ async def create_automation(
         else:
             raise HTTPException(status_code=400, detail="Missing destination account details")
     
-    # Validate amount OR percentage is provided
-    if bool(automation_data.get("amount")) == bool(automation_data.get("percentage")):
-        raise HTTPException(
-            status_code=400,
-            detail="Exactly one of amount or percentage must be provided"
-        )
-    
+    # Create automation
     new_automation = BankingAutomation(**automation_data)
     db.add(new_automation)
-    db.commit()
+    db.flush()
+    
+    # Create schedule details
+    schedule_details_data = AutomationScheduleDetails(
+        automation_id=new_automation.id,
+        execution_time=execution_time,
+        day_of_week=schedule_details.get("day_of_week"),
+        day_of_month=schedule_details.get("day_of_month")
+    )
+    db.add(schedule_details_data)
+    
+    try:
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=str(e))
     
     return {"id": new_automation.id}
+
+@router.patch("/automations/{automation_id}")
+async def update_automation(
+    update_data: dict,
+    automation_id: int = Path(...),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Update an automation's schedule and timing details."""
+    # Query the automation with user validation
+    automation = db.query(BankingAutomation).filter(BankingAutomation.id == automation_id).first()
+    
+    if not automation:
+        raise HTTPException(status_code=404, detail="Automation not found")
+    
+    # Check if schedule details exist for this automation
+    automation_schedule_details = db.query(AutomationScheduleDetails).filter(
+        AutomationScheduleDetails.automation_id == automation_id
+    ).first()
+
+    if not automation_schedule_details:
+        raise HTTPException(status_code=404, detail="Schedule details for automation not found")
+    
+    # Parse schedule details
+    schedule_details = update_data.get("schedule_details", {})
+    execution_time = datetime.strptime(
+        schedule_details.get("execution_time", "07:00"),
+        "%H:%M"
+    ).time()
+
+    try:
+        if "execution_time" in schedule_details:
+            automation_schedule_details.execution_time = execution_time
+        if "day_of_week" in schedule_details:
+            automation_schedule_details.day_of_week = schedule_details["day_of_week"]
+        if "day_of_month" in schedule_details:
+            automation_schedule_details.day_of_month = schedule_details["day_of_month"]
+        
+        # Commit the updates for schedule details
+        db.commit()
+        db.refresh(automation_schedule_details)
+    except Exception:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Failed to update schedule details")
+    
+    
+    # Update the automation
+    automation_schedule = None
+    if update_data["schedule"] == "daily":
+        automation_schedule = AutomationSchedule.DAILY
+    elif update_data["schedule"] == "weekly":
+        automation_schedule = AutomationSchedule.WEEKLY
+    elif update_data["schedule"] == "biweekly":
+        automation_schedule = AutomationSchedule.BIWEEKLY
+    elif update_data["schedule"] == "monthly":
+        automation_schedule = AutomationSchedule.MONTHLY
+    else:
+        automation_schedule = None
+
+    automation.schedule = automation_schedule
+    
+    # Calculate next run based on schedule details
+    next_run = calculate_next_run(
+        update_data["schedule"],
+        {
+            "execution_time": execution_time,
+            "day_of_week": schedule_details.get("day_of_week"),
+            "day_of_month": schedule_details.get("day_of_month")
+        }
+    )
+
+    automation.next_run = next_run
+    
+    try:
+        db.commit()
+        db.refresh(automation)
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Failed to update automation")
+    
+    return automation
+
+@router.delete("/automations/{automation_id}")
+async def delete_automation(
+    automation_id: int = Path(...),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Delete an automation."""
+    # Query the automation with user validation
+    automation = db.query(BankingAutomation).filter(BankingAutomation.id == automation_id).first()
+
+    # Get automation schedule details
+    automation_schedule_details = db.query(AutomationScheduleDetails).filter(AutomationScheduleDetails.automation_id == automation_id).first()
+    
+    if not automation:
+        raise HTTPException(status_code=404, detail="Automation not found")
+    
+    if not automation_schedule_details:
+        raise HTTPException(status_code=404, detail="Schedule details for automation not found")
+    
+    try:
+        db.delete(automation_schedule_details)
+        db.delete(automation)
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Failed to delete automation")
+    
+    return {"message": "Automation deleted successfully"}
