@@ -43,6 +43,9 @@ class User(Base):
     automations = relationship("BankingAutomation", back_populates="user")
     external_accounts = relationship("ExternalAccount", back_populates="user")
     payout_bank_details = relationship("PayoutBankDetails", back_populates="user", uselist=False)
+    reviews = relationship('ProductReview', back_populates='user', cascade="all, delete-orphan")
+    wishlisted_products = relationship('ProductWishlist', back_populates='user', cascade="all, delete-orphan")
+    product_views = relationship('ProductView', back_populates='user', cascade="all, delete-orphan")
 
     def generate_store_slug(self, db):
         base_slug = slugify(self.business_name)
@@ -90,6 +93,9 @@ class Product(Base):
     owner = relationship('User', back_populates='products')
     images = relationship('ProductImage', back_populates='product', cascade="all, delete-orphan")
     restock_requests = relationship('RestockRequest', back_populates='product')
+    reviews = relationship('ProductReview', back_populates='product', cascade="all, delete-orphan")
+    wishlists = relationship('ProductWishlist', back_populates='product', cascade="all, delete-orphan")
+    views = relationship('ProductView', back_populates='product', cascade="all, delete-orphan")
     
     __table_args__ = (UniqueConstraint('user_id', 'sku'),)
 
@@ -102,6 +108,48 @@ class ProductImage(Base):
     
     # Relationships
     product = relationship('Product', back_populates='images')
+
+class ProductReview(Base):
+    __tablename__ = "product_reviews"
+    
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
+    product_id = Column(Integer, ForeignKey('products.id'), nullable=False)
+    rating = Column(Integer, nullable=False)
+    review_text = Column(Text)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    user = relationship('User', back_populates='reviews')
+    product = relationship('Product', back_populates='reviews')
+    
+    __table_args__ = (UniqueConstraint('user_id', 'product_id'),)  # One review per product per user
+
+class ProductWishlist(Base):
+    __tablename__ = "product_wishlists"
+    
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
+    product_id = Column(Integer, ForeignKey('products.id'), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    user = relationship('User', back_populates='wishlisted_products')
+    product = relationship('Product', back_populates='wishlists')
+    
+    __table_args__ = (UniqueConstraint('user_id', 'product_id'),)  # Can't wishlist same product twice
+
+class ProductView(Base):
+    __tablename__ = "product_views"
+    
+    id = Column(Integer, primary_key=True)
+    product_id = Column(Integer, ForeignKey('products.id'), nullable=False)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=True)  # Nullable for anonymous views
+    viewed_at = Column(DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    product = relationship('Product', back_populates='views')
+    user = relationship('User', back_populates='product_views')
 
 class StoreSettings(Base):
     __tablename__ = "store_settings"

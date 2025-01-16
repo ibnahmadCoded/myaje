@@ -24,7 +24,43 @@ const ProductImagePlaceholder = ({ onClick }) => (
 const ProductCard = ({ product, onAddToCart, onImageClick }) => {
   const [activeIndex, setActiveIndex] = useState(0);
   const [isHovered, setIsHovered] = useState(false);
+  const [user, setUser] = useState(null)
+  const [productStats, setProductStats] = useState({
+    views: 0,
+    average_rating: 0,
+    review_count: 0,
+    wishlist_count: 0
+  });
   const totalImages = product.images?.length || 0;
+
+  const fetchProductStats = async () => {
+    try {
+      const response = await fetch(`${apiBaseUrl}/marketplace/${product.id}/stats`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch stats');
+      }
+      
+      const stats = await response.json();
+      setProductStats(stats);
+    } catch (error) {
+      console.error('Failed to load product stats:', error);
+    }
+  };
+
+  useEffect(() => {
+    const userDataStr = localStorage.getItem('user');
+    if (userDataStr) {
+      const user = JSON.parse(userDataStr);
+      setUser(user)
+    }
+
+    fetchProductStats();
+  }, [product.id]);
 
   const handlePrevImage = (e) => {
     e.stopPropagation();
@@ -86,16 +122,22 @@ const ProductCard = ({ product, onAddToCart, onImageClick }) => {
             <ProductImagePlaceholder onClick={handleImageClick} />
           )}
         </div>
-        {/* Rest of the product card content remains the same */}
         <h3 className="text-lg font-semibold mb-2 line-clamp-2 hover:line-clamp-none transition-all duration-300">
           {product.name}
         </h3>
         <div className="flex items-center gap-2 mb-2">
           <div className="flex items-center">
             <Star size={16} className="text-yellow-400 fill-current" />
-            <span className="text-sm text-gray-600 ml-1">{product.rating}</span>
+            <span className="text-sm text-gray-600 ml-1">
+              {productStats.average_rating.toFixed(1)}
+            </span>
           </div>
-          <span className="text-sm text-gray-500">({product.reviews} reviews)</span>
+          <span className="text-sm text-gray-500">
+            ({productStats.review_count} reviews)
+          </span>
+          <span className="text-sm text-gray-500 ml-auto">
+            {productStats.views} views
+          </span>
         </div>
         <Link 
           href={`/store/${product.store.toLowerCase().replace(/\s+/g, '-')}`} 
@@ -107,13 +149,15 @@ const ProductCard = ({ product, onAddToCart, onImageClick }) => {
       <div className="p-4 border-t mt-auto bg-gray-50">
         <div className="flex justify-between items-center">
           <span className="text-lg font-bold">₦{product.price.toLocaleString()}</span>
-          <button
-            onClick={() => onAddToCart(product)}
-            className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-all duration-300 flex items-center gap-2 hover:gap-3"
-          >
-            <ShoppingCart size={16} />
-            Add to Cart
-          </button>
+          {user?.id !== product.user_id && 
+            <button
+              onClick={() => onAddToCart(product)}
+              className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-all duration-300 flex items-center gap-2 hover:gap-3"
+            >
+              <ShoppingCart size={16} />
+              Add to Cart
+            </button>
+          }
         </div>
       </div>
     </div>
