@@ -1,12 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Mail, Lock, Loader2 } from 'lucide-react';
 import { apiBaseUrl } from '@/config';
 
 export default function Login() {
-  const router = useRouter();
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
@@ -29,6 +29,18 @@ export default function Login() {
       hasCapital
     );
   };
+
+  const router = useRouter();
+  
+  useEffect(() => {
+    const userDataStr = localStorage.getItem('user');
+    const token = localStorage.getItem('token');
+
+    if (userDataStr && token) {
+      setIsAuthenticated(true);
+      router.push('/dashboard'); 
+    }
+  }, [router]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();

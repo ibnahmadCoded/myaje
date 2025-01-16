@@ -245,6 +245,15 @@ const addToCart = (product) => {
 };
 
 const addToCartWithQuantity = (product) => {
+  const userDataStr = localStorage.getItem('user');
+  if (userDataStr) {
+    const user = JSON.parse(userDataStr);
+    if (user.active_view === 'business') {
+      setIsBusinessWarningOpen(true);
+      return;
+    }
+  }
+
   setCartItems((prev) => {
     // Check if product already exists in the cart
     const existingProductIndex = prev.findIndex((item) => item.id === product.id);
@@ -272,6 +281,15 @@ const addToCartWithQuantity = (product) => {
 };
 
   const addToCartThroughChat = (product, quantity = 1) => {
+    const userDataStr = localStorage.getItem('user');
+    if (userDataStr) {
+      const user = JSON.parse(userDataStr);
+      if (user.active_view === 'business') {
+        setIsBusinessWarningOpen(true);
+        return false;
+      }
+    }
+
     setCartItems(prev => [
       ...prev,
       {
@@ -280,6 +298,7 @@ const addToCartWithQuantity = (product) => {
         quantity,          
       },
     ]);
+    return true;
   };
 
   const removeFromCart = (cartId) => {
@@ -364,23 +383,39 @@ const addToCartWithQuantity = (product) => {
           break;
 
         case 'add_to_cart':
-          const productIndex = result.position; // Now using zero-based index
-          const productToAdd = filteredProducts[productIndex - 1]; // if user says, add the first product, the position returned would be 1, but in array, it will be 0th position.
+          const productIndex = result.position; // Using zero-based index
+          const productToAdd = filteredProducts[productIndex - 1]; // Convert 1-based to 0-based index
           const quantity = result.quantity || 1;
-          
+        
           if (productToAdd) {
-            // Add the product to cart
-            addToCartThroughChat(productToAdd, quantity);
+            // Try to add the product to the cart
+            const success = addToCartThroughChat(productToAdd, quantity);
             
-            setChatMessages(prev => [...prev, {
-              type: 'bot',
-              text: `Added ${quantity} ${quantity > 1 ? 'units' : 'unit'} of ${productToAdd.name} to your cart.`
-            }]);
+            if (success) {
+              setChatMessages(prev => [
+                ...prev,
+                {
+                  type: 'bot',
+                  text: `Added ${quantity} ${quantity > 1 ? 'units' : 'unit'} of ${productToAdd.name} to your cart.`,
+                },
+              ]);
+            } else {
+              setChatMessages(prev => [
+                ...prev,
+                {
+                  type: 'bot',
+                  text: "Sorry, I can't add this product to your cart because you are currently in business mode.",
+                },
+              ]);
+            }
           } else {
-            setChatMessages(prev => [...prev, {
-              type: 'bot',
-              text: "I couldn't find the product you wanted to add to your cart."
-            }]);
+            setChatMessages(prev => [
+              ...prev,
+              {
+                type: 'bot',
+                text: "I couldn't find the product you wanted to add to your cart.",
+              },
+            ]);
           }
           break;
 
@@ -534,7 +569,6 @@ const addToCartWithQuantity = (product) => {
                         <button
                           key={i}
                           className="block w-full text-left px-3 py-2 rounded bg-white text-green-600 hover:bg-green-50 text-sm transition-all duration-300 hover:translate-x-1"
-                          onClick={() => setChatInput(option)}
                         >
                           {option}
                         </button>

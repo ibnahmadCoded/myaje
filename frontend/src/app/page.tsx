@@ -1,15 +1,32 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search, ShoppingCart, MessageCircle, Store } from 'lucide-react';
 import MarketplaceView from '@/components/Marketplace';
 import BusinessFeatures from '@/components/BusinessFeatures';
+import { useRouter } from 'next/navigation';
 import Logo from '@/components/ui/logo'
 
 export default function Home() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [activeTab, setActiveTab] = useState('marketplace');
   const [cartItems, setCartItems] = useState([]);
   const [showChat, setShowChat] = useState(false);
+
+  const router = useRouter();
+
+  useEffect(() => {
+      const userDataStr = localStorage.getItem('user');
+      const token = localStorage.getItem('token');
+        
+      if (userDataStr && token) {
+        try {
+          setIsAuthenticated(true);
+        } catch (error) {
+          console.error("Error in initialization:", error);
+        }
+      }
+    }, [router])
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -17,7 +34,9 @@ export default function Home() {
       <header className="sticky top-0 bg-white shadow-sm z-50">
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between h-16">
-          <Logo />
+            <div onClick={() => router.push('/')} className="cursor-pointer">
+              <Logo />
+            </div>
             
             <div className="flex space-x-8">
               <button 
@@ -35,6 +54,7 @@ export default function Home() {
             </div>
             
             <div className="flex items-center space-x-4">
+
               {activeTab === 'marketplace' && (
                 <button className="p-2 text-gray-600 hover:text-green-600 relative">
                   <ShoppingCart size={20} />
@@ -45,9 +65,23 @@ export default function Home() {
                   )}
                 </button>
               )}
-              <button className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700">
-                Sign In
-              </button>
+              
+              {isAuthenticated ? (
+                <button
+                  onClick={() => router.push('/dashboard')}
+                  className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700"
+                >
+                  Dashboard
+                </button>
+              ) : (
+                <button
+                  onClick={() => router.push('/login')}
+                  className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700"
+                >
+                  Sign In
+                </button>
+              )}
+
             </div>
           </div>
         </div>

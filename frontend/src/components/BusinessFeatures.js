@@ -55,13 +55,19 @@ const HeroSection = () => (
             accounting, we have everything your business needs.
           </p>
           <div className="flex flex-col sm:flex-row gap-4">
-            <button className="px-8 py-4 bg-green-700 text-white rounded-xl hover:bg-green-600 transition-all duration-300 flex items-center justify-center group shadow-lg shadow-green-700/20">
+            <button 
+              className="px-8 py-4 bg-green-700 text-white rounded-xl hover:bg-green-600 transition-all duration-300 flex items-center justify-center group shadow-lg shadow-green-700/20"
+              onClick={() => window.location.href = '/register'}
+            >
               Get Started
               <ArrowRight className="ml-2 h-5 w-5 transform group-hover:translate-x-1 transition-transform" />
             </button>
-            <button className="px-8 py-4 bg-white text-green-700 rounded-xl hover:bg-green-50 transition-all duration-300 flex items-center justify-center border border-green-200">
+            <a
+              href="#features"
+              className="px-8 py-4 bg-white text-green-700 rounded-xl hover:bg-green-50 transition-all duration-300 flex items-center justify-center border border-green-200"
+            >
               Learn More
-            </button>
+            </a>
           </div>
         </div>
         <div className="relative">
@@ -395,7 +401,7 @@ const BusinessFeatures = () => {
   const plans = [
     {
       name: "Free Plan",
-      price: "₦0",
+      price: "₦1000",
       description: "Perfect for individuals just starting their business journey",
       icon: <PackageSearch className="w-8 h-8 text-green-600" />,
       popular: false,
@@ -676,6 +682,7 @@ const BusinessFeatures = () => {
                   </button>
                   <button
                     className="px-6 py-3 bg-gradient-to-r from-green-600 to-green-500 hover:from-green-700 hover:to-green-600 rounded-xl text-white transition-colors font-medium"
+                    onClick={() => window.location.href = '/register'}
                   >
                     Get Started
                   </button>
@@ -758,6 +765,7 @@ const BusinessFeatures = () => {
                       ? 'bg-green-600 text-white hover:bg-green-700' 
                       : 'bg-white text-green-600 border-2 border-green-600 hover:bg-green-50'
                   }`}
+                  onClick={() => window.location.href = '/register'}
                 >
                   {plan.price === "Custom" ? "Contact Sales" : "Get Started"}
                 </button>
