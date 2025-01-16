@@ -2,9 +2,8 @@ from venv import logger
 from sqlalchemy.dialects.postgresql import JSONB
 from datetime import datetime, time
 from sqlalchemy import Column, Integer, String, Float, Text, DateTime, ForeignKey, UniqueConstraint, Enum, JSON, Boolean, Time
-from starlette.concurrency import run_in_threadpool
 from sqlalchemy.orm import relationship
-from sql_database import Base, engine
+from sql_database import Base
 from sqlalchemy.sql import func
 from slugify import slugify
 import enum
@@ -43,6 +42,7 @@ class User(Base):
     loans = relationship("Loan", back_populates="user")
     automations = relationship("BankingAutomation", back_populates="user")
     external_accounts = relationship("ExternalAccount", back_populates="user")
+    payout_bank_details = relationship("PayoutBankDetails", back_populates="user", uselist=False)
 
     def generate_store_slug(self, db):
         base_slug = slugify(self.business_name)
@@ -160,6 +160,7 @@ class MarketplaceOrder(Base):
     total_amount = Column(Float)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     payment_info = Column(JSON)  # Store payment details
+    payment_id = Column(Integer, ForeignKey("payments.id"), nullable=True)
     order_type=Column(String)  # "payment" or "invoice"
     
     # Relationships
@@ -188,8 +189,9 @@ class Order(Base):
     buyer = relationship("User", back_populates="purchases", foreign_keys="[Order.buyer_id]")
     marketplace_order = relationship("MarketplaceOrder", back_populates="seller_orders")
     items = relationship("OrderItem", back_populates="order", cascade="all, delete-orphan")
-    payments = relationship("Payment", back_populates="order")
+    payments = relationship("Payment", back_populates="order", foreign_keys="[Payment.order_id]")
     invoice_requests = relationship("InvoiceRequest", back_populates="order")
+    payout = relationship("Payout", uselist=False, back_populates="order")
 
 class OrderItem(Base):
     __tablename__ = "order_items"
@@ -203,6 +205,21 @@ class OrderItem(Base):
     # Relationships
     order = relationship("Order", back_populates="items")
     product = relationship("Product")
+
+class Payout(Base):
+    __tablename__ = "payouts"
+    
+    id = Column(Integer, primary_key=True)
+    seller_id = Column(Integer, ForeignKey('users.id'), nullable=False)
+    order_id = Column(Integer, ForeignKey('orders.id'), nullable=False)
+    amount = Column(Float, nullable=False)
+    status = Column(Enum('PENDING', 'PAID', name='payout_status'), default='PENDING')
+    created_at = Column(DateTime, default=datetime.utcnow)
+    paid_at = Column(DateTime, nullable=True)
+    
+    # Relationships
+    seller = relationship("User", backref="payouts")
+    order = relationship("Order", back_populates="payout")
 
 class InvoiceStatus(str, Enum):
     pending = "pending"
@@ -337,6 +354,7 @@ class NotificationType(str, enum.Enum):
     MONEY_REQUEST = "money_request"  
     MONEY_REQUEST_STATUS_CHANGE = "money_request_status_change"
     LOAN_STATUS_CHANGE = "loan_status_change"
+    PAYOUT = "payout"
 
 class Notification(Base):
     __tablename__ = "notifications"
@@ -420,7 +438,8 @@ class TransactionType(enum.Enum):
     DEBIT = "debit"
 
 class PaymentType(enum.Enum):
-    ORDER = "order" # marketplace order payment
+    ORDER_CARD = "order_card" # marketplace order payment with card
+    ORDER_TRANSFER = "order_transfer" # marketplace order payment with bank transfer
     INVOICE = "invoice"
     INSTALLMENT = "installment"
     LOAN = "loan"
@@ -559,6 +578,7 @@ class Payment(Base):
 
     # For Order payments
     order_id = Column(Integer, ForeignKey("orders.id"), nullable=True)
+    marketplace_order_id = Column(Integer, ForeignKey("marketplace_orders.id"), nullable=True)
 
     # For Invoice Payments
     invoice_request_id = Column(Integer, ForeignKey("invoice_requests.id"), nullable=True)
@@ -686,3 +706,16 @@ class MoneyRequest(Base):
     requester = relationship("User", foreign_keys=[requester_id], backref="sent_money_requests")
     requested_from = relationship("User", foreign_keys=[requested_from_id], backref="received_money_requests")
     payment = relationship("Payment", back_populates="money_request", uselist=False)
+
+class PayoutBankDetails(Base):
+    __tablename__ = "payout_bank_details"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), unique=True)
+    bank_name = Column(String, nullable=False)
+    account_number = Column(String, nullable=False)
+    account_name = Column(String, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    user = relationship("User", back_populates="payout_bank_details")

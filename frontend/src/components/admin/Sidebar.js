@@ -10,7 +10,8 @@ import {
   Bell,
   User,
   LineChart,
-  PackageOpen
+  PackageOpen,
+  BanknoteIcon
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -37,6 +38,7 @@ const Sidebar = ({
     { icon: <User size={20} />, label: 'Manage Admin Users', href: '/admin/users'},
     { icon: <LineChart size={20} />, label: 'Metrics', href: '/admin/metrics'},
     { icon: <PackageOpen size={20} />, label: 'Restock', href: '/admin/restock' },
+    { icon: <BanknoteIcon size={20} />, label: 'Payouts', href: '/admin/payouts' },
     { icon: <Banknote size={20} />, label: 'Loans', href: '/admin/loans' },
   ];
 

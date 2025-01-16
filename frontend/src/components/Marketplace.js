@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Search, ShoppingCart, PackageSearch, Star, Filter, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Dialog, DialogContent, DialogTitle, DialogDescription, DialogHeader, DialogFooter, DialogCancel, DialogAction } from "@/components/ui/dialog";
 import Link from 'next/link';
-import { CheckoutDialog } from '@/components/CheckoutDialog'
+//import { CheckoutDialog } from '@/components/CheckoutDialog'
+import { CheckoutWithScript } from '@/components/CheckoutWithScript'
 import { CartDialog } from '@/components/CartDialog'
 import { Button } from '@/components/ui/button';
 import { ProductModal } from '@/components/ProductModal'
@@ -141,7 +143,9 @@ const SearchBar = ({ onSearch }) => {
   );
 };
 
+
 const MarketplaceView = ({ products: initialProducts = [], isStorePage = false }) => { 
+  const [isBusinessWarningOpen, setIsBusinessWarningOpen] = useState(false);
   const [cartItems, setCartItems] = useState([]);
   const [chatInput, setChatInput] = useState('');
   const [isCartOpen, setIsCartOpen] = useState(false);
@@ -203,6 +207,17 @@ const handleCheckoutComplete = () => {
 };
 
 const addToCart = (product) => {
+  const userDataStr = localStorage.getItem('user');
+  if (userDataStr) {
+    const user = JSON.parse(userDataStr);
+    if (user.active_view === 'business') {
+      setIsBusinessWarningOpen(true);
+      return;
+    }
+  }
+
+  
+
   setCartItems((prev) => {
     const existingProductIndex = prev.findIndex((item) => item.id === product.id);
 
@@ -627,6 +642,21 @@ const addToCartWithQuantity = (product) => {
         </div>
       </div>
 
+      {/* Business Warning Modal */}
+      <Dialog open={isBusinessWarningOpen} onOpenChange={() => setIsBusinessWarningOpen(false)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Switch to Personal Account</DialogTitle>
+            <DialogDescription>
+              Purchases with business accounts are not allowed on MyAje. Please switch to your personal account view to continue shopping.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Cart Dialog */}
       <CartDialog
         isOpen={isCartOpen}
@@ -641,7 +671,7 @@ const addToCartWithQuantity = (product) => {
       />
 
       {/* Checkout Dialog */}
-      <CheckoutDialog
+      <CheckoutWithScript 
         isOpen={isCheckoutOpen}
         onClose={() => setIsCheckoutOpen(false)}
         cartItems={cartItems}

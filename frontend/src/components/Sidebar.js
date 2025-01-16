@@ -11,7 +11,8 @@ import {
   Search,
   Bell,
   NotebookIcon,
-  PackageOpen
+  PackageOpen,
+  BanknoteIcon
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -76,6 +77,7 @@ const Sidebar = ({
     { icon: <Store size={20} />, label: 'Storefront', href: '/storefront' },
     { icon: <NotebookIcon size={20} />, label: 'Invoicing', href: '/invoicing' },
     { icon: <PackageOpen size={20} />, label: 'Restock', href: '/restock' },
+    { icon: <BanknoteIcon size={20} />, label: 'Payouts', href: '/payouts' },
     { icon: <LineChart size={20} />, label: 'Banking', href: '/banking', badge: 'BAM' },
   ];
 
@@ -124,19 +126,6 @@ const Sidebar = ({
           hasBusinessAccount={hasBusinessAccount}
           onViewChange={handleViewChange}
         />
-
-        {/* Search Bar */}
-        <div className="p-4">
-          <div className="relative">
-            <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-500" />
-            <Input
-              placeholder="Search..."
-              className="pl-8 bg-gray-50"
-              value={searchQuery}
-              onChange={onSearchChange}
-            />
-          </div>
-        </div>
 
         {/* Navigation Menu */}
         <nav className="mt-2">

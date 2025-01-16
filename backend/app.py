@@ -7,8 +7,8 @@ from fastapi.staticfiles import StaticFiles
 from models import create_tables
 from routes import (auth, inventory, storefront, orders, 
                     marketplace, invoice, chat_inference, 
-                    notifications, dashboard, feedback, 
-                    admin, restock, admin_restock, banking)
+                    notifications, dashboard, feedback, payouts,
+                    admin, restock, admin_restock, banking, payment)
 from utils.chatInferenceQueryParser import QueryIntentParser
 from banking_automations.automation_processor import process_automations
 from sql_database import SessionLocal
@@ -92,6 +92,8 @@ app.include_router(admin.router, prefix=BASE_API_PREFIX + "/admin", tags=["admin
 app.include_router(restock.router, prefix=BASE_API_PREFIX + "/restock", tags=["restock"])
 app.include_router(router=admin_restock.router, prefix=BASE_API_PREFIX + "/admin/restock", tags=["admin_restock"])
 app.include_router(router=banking.router, prefix=BASE_API_PREFIX + "/banking", tags=["banking"])
+app.include_router(router=payment.router, prefix=BASE_API_PREFIX + "/payment", tags=["payments"])
+app.include_router(router=payouts.router, prefix=BASE_API_PREFIX + "/payouts", tags=["payouts"])
 
 if __name__ == "__main__":
     import uvicorn

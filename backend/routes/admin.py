@@ -1,14 +1,14 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from datetime import datetime
 from typing import List, Optional
 from sql_database import get_db
 from pydantic import BaseModel, EmailStr
 from routes.auth import get_admin_user, pwd_context
-from models import (AccountType, BankAccount, User, Loan, PaymentType, 
+from models import (AccountType, BankAccount, User, Loan, PaymentType, PayoutBankDetails, 
                     Payment, AccountSource, Transaction, PaymentStatus, 
-                    TransactionTag, TransactionType, Notification, 
-                    NotificationType, FinancialPool)
+                    TransactionTag, TransactionType, Notification, Order,
+                    NotificationType, FinancialPool, Payout, MarketplaceOrder)
 from enum import Enum
 from utils.app_metrics_calculator import get_all_metrics
 from utils.cache_decorators import cache_response, invalidate_cache
@@ -36,6 +36,69 @@ class AdminUserResponse(BaseModel):
     admin_role: str
     business_name: Optional[str] = None
     created_at: datetime
+
+class PayoutBankDetailsResponse(BaseModel):
+    id: int
+    bank_name: str
+    account_number: str
+    account_name: str
+    created_at: datetime
+    
+    class Config:
+        orm_mode = True
+
+class PayoutResponse(BaseModel):
+    id: int
+    seller_id: int
+    order_id: int
+    amount: float
+    status: str
+    created_at: datetime
+    paid_at: Optional[datetime]
+    seller_email: str
+    seller_phone: str
+    marketplace_order_id: int
+    bank_details: Optional[PayoutBankDetailsResponse]
+
+    class Config:
+        orm_mode = True
+
+class RelatedOrder(BaseModel):
+    id: int
+    seller_email: str
+    total_amount: float
+    status: str
+
+class RelatedPayout(BaseModel):
+    id: int
+    seller_email: str
+    amount: float
+    status: str
+
+class RelatedOrderResponse(BaseModel):
+    id: int
+    seller_email: Optional[str]
+    total_amount: float
+    status: str
+
+
+class RelatedPayoutResponse(BaseModel):
+    id: int
+    seller_email: Optional[str]
+    amount: float
+    status: str
+
+
+class MarketplaceOrderResponse(BaseModel):
+    id: int
+    customer_name: str
+    customer_email: str
+    customer_phone: str
+    shipping_address: str
+    total_amount: float
+    created_at: str
+    orders: List[RelatedOrderResponse]
+    payouts: List[RelatedPayoutResponse]
 
 @router.post("/create_admin_user", response_model=AdminUserResponse)
 @invalidate_cache(
@@ -305,3 +368,165 @@ async def reject_loan(
 
     db.commit()
     return {"status": "success"}
+
+@router.get("/payouts", response_model=List[PayoutResponse])
+async def get_payouts(
+    status: Optional[str] = None,
+    db: Session = Depends(get_db),
+    current_admin: User = Depends(get_admin_user)
+):
+    """Get all payouts with optional status filter"""
+    query = (
+        db.query(Payout)
+        .join(Payout.seller)
+        .join(Payout.order)
+        .options(joinedload(Payout.seller))  # Eager load seller relationship
+    )
+    
+    if status and status.upper() in ['PENDING', 'PAID']:
+        query = query.filter(Payout.status == status.upper())
+    
+    payouts = query.order_by(Payout.created_at.desc()).all()
+    
+    # Enhance payout objects with additional info
+    payouts_with_details = []
+    for payout in payouts:
+        # Get bank details for each seller
+        bank_details = (
+            db.query(PayoutBankDetails)
+            .filter(PayoutBankDetails.user_id == payout.seller_id)
+            .first()
+        )
+        
+        payouts_with_details.append({
+            "id": payout.id,
+            "seller_id": payout.seller_id,
+            "order_id": payout.order_id,
+            "amount": payout.amount,
+            "status": payout.status,
+            "created_at": payout.created_at,
+            "paid_at": payout.paid_at,
+            "seller_email": payout.seller.email,
+            "seller_phone": payout.seller.phone,
+            "marketplace_order_id": payout.order.marketplace_order_id,
+            "bank_details": {
+                "id": bank_details.id,
+                "bank_name": bank_details.bank_name,
+                "account_number": bank_details.account_number,
+                "account_name": bank_details.account_name,
+                "created_at": bank_details.created_at
+            } if bank_details else None,
+        })
+    
+    return payouts_with_details
+
+@router.put("/payouts/{payout_id}/complete")
+async def complete_payout(
+    payout_id: int,
+    db: Session = Depends(get_db),
+    current_admin: User = Depends(get_admin_user)
+):
+    """Mark a payout as completed/paid"""
+    payout = (
+        db.query(Payout)
+        .options(joinedload(Payout.seller))
+        .filter(Payout.id == payout_id)
+        .first()
+    )
+    
+    if not payout:
+        raise HTTPException(status_code=404, detail="Payout not found")
+    
+    if payout.status == 'PAID':
+        raise HTTPException(status_code=400, detail="Payout is already marked as paid")
+    
+    # Check if seller has bank details
+    bank_details = (
+        db.query(PayoutBankDetails)
+        .filter(PayoutBankDetails.user_id == payout.seller_id)
+        .first()
+    )
+    
+    if not bank_details:
+        raise HTTPException(
+            status_code=400,
+            detail="Seller has not provided bank details for payout"
+        )
+    
+    payout.status = 'PAID'
+    payout.paid_at = datetime.utcnow()
+    
+    # Send notification    
+    notification = Notification(
+        user_id=payout.seller_id, 
+        text=f"Your payout of ₦{payout.amount:,.2f} has been processed and sent to your bank account.",
+        type=NotificationType.PAYOUT,
+        notification_metadata={
+            'user_view': 'business',
+            "payout_id": payout.id,
+            "amount": payout.amount,
+            "bank_name": bank_details.bank_name,
+            "account_number": bank_details.account_number[-4:] # Last 4 digits only
+        })
+    db.add(notification)
+    db.commit()
+    
+    return {"message": "Payout marked as completed and notification sent"}
+
+@router.get(
+    "/payouts/marketplace-orders/{marketplace_order_id}",
+    response_model=MarketplaceOrderResponse
+)
+async def get_marketplace_order_details(
+    marketplace_order_id: int,
+    db: Session = Depends(get_db),
+    current_admin: User = Depends(get_admin_user)
+):
+    """Get marketplace order details with related orders and payouts"""
+    marketplace_order = (
+        db.query(MarketplaceOrder)
+        .filter(MarketplaceOrder.id == marketplace_order_id)
+        .options(joinedload(MarketplaceOrder.seller_orders).joinedload(Order.payout))
+        .first()
+    )
+    
+    if not marketplace_order:
+        raise HTTPException(status_code=404, detail="Marketplace order not found")
+    
+    # Serialize related orders
+    related_orders = [
+        {
+            "id": order.id,
+            "seller_email": order.seller.email if order.seller else None,
+            "total_amount": order.total_amount,
+            "status": order.status.value,
+        }
+        for order in marketplace_order.seller_orders
+    ]
+    
+    # Serialize related payouts
+    related_payouts = [
+        {
+            "id": order.payout.id,
+            "seller_email": order.payout.seller.email if order.payout and order.payout.seller else None,
+            "amount": order.payout.amount,
+            "status": order.payout.status,
+        }
+        for order in marketplace_order.seller_orders
+        if order.payout  # Only include orders with a payout
+    ]
+    
+    # Convert marketplace_order to dictionary
+    marketplace_order_data = {
+        "id": marketplace_order.id,
+        "customer_name": marketplace_order.customer_name,
+        "customer_email": marketplace_order.customer_email,
+        "customer_phone": marketplace_order.customer_phone,
+        "shipping_address": marketplace_order.shipping_address,
+        "total_amount": marketplace_order.total_amount,
+        "created_at": marketplace_order.created_at.isoformat(),
+        "orders": related_orders,
+        "payouts": related_payouts,
+    }
+    
+    return marketplace_order_data
