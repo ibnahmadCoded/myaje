@@ -1,11 +1,15 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, Store, ShoppingCart, Plus, Minus, Share2, Heart, PackageSearch } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Store, ShoppingCart, Plus, Minus, Share2, Heart, PackageSearch, MessageSquare } from 'lucide-react';
 import { Badge } from "@/components/ui/badge";
-import { backendUrl } from '@/config';
+import { ReviewsSection } from '@/components/ReviewsSection'
+import { ReviewModal } from '@/components/ReviewModal'
+import { backendUrl, apiBaseUrl } from '@/config';
+import { useToast } from "@/hooks/use-toast";
+
 
 // product image SVG
 const ProductImagePlaceholder = ({ onClick }) => (
@@ -22,8 +26,86 @@ export const ProductModal = ({ product, isOpen, onClose, onAddToCart }) => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [isWishListed, setIsWishListed] = useState(false);
+  const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
+  const [reviews, setReviews] = useState([]);
+  const [reviewStats, setReviewStats] = useState({ total: 0, average: 0 });
+  const [wishlistCount, setWishlistCount] = useState(0);
+  const [viewsCount, setViewsCount] = useState(0);
+  const [user, setUser] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const { toast } = useToast();
   const totalImages = product?.images?.length || 0;
 
+  // Group all data fetching functions
+  const fetchProductData = async () => {
+    try {
+      setIsLoading(true);
+      const [reviewsResponse, statsResponse] = await Promise.all([
+        fetch(`${apiBaseUrl}/marketplace/${product.id}/reviews`, {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('token')}`,
+          },
+        }),
+        fetch(`${apiBaseUrl}/marketplace/${product.id}/stats`, {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('token')}`,
+          },
+        })
+      ]);
+
+      const [reviewsData, statsData] = await Promise.all([
+        reviewsResponse.json(),
+        statsResponse.json()
+      ]);
+
+      setReviews(reviewsData.reviews);
+      setReviewStats({
+        total: reviewsData.total,
+        average: reviewsData.average_rating
+      });
+      setWishlistCount(statsData.wishlist_count);
+      setViewsCount(statsData.views);
+      setIsWishListed(statsData.wishlisted_by_current_user)
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to load product data",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const recordView = async () => {
+    try {
+      await fetch(`${apiBaseUrl}/marketplace/${product.id}/view`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
+        },
+      });
+    } catch (error) {
+      console.error('Failed to record view:', error);
+    }
+  };
+
+  // Place all useEffect hooks together
+  useEffect(() => {
+    if (isOpen && product) {
+      const userDataStr = localStorage.getItem('user');
+      if (userDataStr) {
+        const user = JSON.parse(userDataStr);
+        setUser(user)
+      }
+
+      fetchProductData();
+      recordView();
+    }
+  }, [isOpen, product]);
+
+  // Group all event handlers
   const nextImage = () => {
     setCurrentImageIndex((prev) => (prev + 1) % totalImages);
   };
@@ -56,6 +138,76 @@ export const ProductModal = ({ product, isOpen, onClose, onAddToCart }) => {
     setQuantity(1);
   };
 
+  const handleWishlist = async () => {
+    try {
+      const response = await fetch(`${apiBaseUrl}/marketplace/${product.id}/wishlist`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(response.statusText);
+      }
+
+      //setIsWishListed(!isWishListed);
+      //setWishlistCount(prev => isWishListed ? prev - 1 : prev + 1);
+      fetchProductData()
+    } catch (error) {
+      if (error.response?.status === 401) {
+        toast({
+          title: "Authentication Required",
+          description: "Please log in to add items to your wishlist",
+          variant: "destructive"
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to update wishlist",
+          variant: "destructive"
+        });
+      }
+    }
+  };
+
+  const handleReviewSubmit = async (reviewData) => {
+    try {
+      const response = await fetch(`${apiBaseUrl}/marketplace/${product.id}/review`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(reviewData),
+      });
+
+      if (!response.ok) {
+        throw new Error(response.statusText);
+      }
+
+      await fetchProductData();
+      toast({
+        title: "Success",
+        description: "Review submitted successfully"
+      });
+    } catch (error) {
+      if (error.response?.status === 401) {
+        toast({
+          title: "Authentication Required",
+          description: "Please log in to submit a review",
+          variant: "destructive"
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to submit review",
+          variant: "destructive"
+        });
+      }
+    }
+  };
+
   if (!product) return null;
 
   return (
@@ -65,21 +217,38 @@ export const ProductModal = ({ product, isOpen, onClose, onAddToCart }) => {
           <DialogHeader className="p-1 md:p-6 border-b sticky top-0 bg-white z-10">
             <div className="flex items-center justify-between">
               <div>
-                <DialogTitle className="text-xl md:text-2xl font-bold">{product.name}</DialogTitle>
+                <DialogTitle className="text-xl md:text-2xl font-bold">
+                  {product.name}
+                </DialogTitle>
                 <DialogDescription></DialogDescription>
-                <Badge variant="outline" className="mt-2">{product.category}</Badge>
+                <div className="mt-2">
+                  <Badge variant="outline">{product.category}</Badge>
+                  <div className="text-sm text-gray-500 mr-2">
+                    This product has been viewed {viewsCount} {viewsCount === 1 ? 'time.' : 'times'}
+                  </div>
+                </div>
               </div>
-              <div className="flex gap-2">
-                <Button 
+              <div className="flex gap-2 items-center">
+                <div className="text-sm text-gray-500 mr-2">
+                  {wishlistCount} {wishlistCount === 1 ? 'person likes' : 'people like'} this
+                </div>
+                {user && user.id !== product.user_id ?  (
+                  <Button 
                   variant="ghost" 
                   size="icon" 
-                  onClick={() => setIsWishListed(!isWishListed)}
+                  onClick={handleWishlist}
                   className="rounded-full"
                 >
                   <Heart 
                     className={`h-5 w-5 ${isWishListed ? 'fill-red-500 text-red-500' : ''}`} 
                   />
                 </Button>
+                ) : (
+                  <Heart 
+                    className={`h-5 w-5 ${isWishListed ? 'fill-red-500 text-red-500' : ''}`} 
+                  />
+                )
+                }
                 <Button 
                   variant="ghost" 
                   size="icon"
@@ -198,6 +367,29 @@ export const ProductModal = ({ product, isOpen, onClose, onAddToCart }) => {
                     <p className="text-gray-700 leading-relaxed">{product.description}</p>
                   </div>
                 </div>
+
+                {/* Reviews Section */}
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-sm font-medium text-gray-500">Customer Reviews</h3>
+                    {user && user?.id !== product.user_id && 
+                      <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => setIsReviewModalOpen(true)}
+                      >
+                      <MessageSquare className="h-4 w-4 mr-2" />
+                      Write a Review
+                      </Button>
+                    }
+                  </div>
+                  <ReviewsSection 
+                    reviews={reviews}
+                    totalReviews={reviewStats.total}
+                    averageRating={reviewStats.average}
+                  />
+                </div>
+
               </div>
             </div>
           </div>
@@ -205,15 +397,16 @@ export const ProductModal = ({ product, isOpen, onClose, onAddToCart }) => {
           {/* Fixed Bottom Actions */}
           <div className="sticky bottom-0 bg-white border-t p-4 mt-auto">
             <div className="flex gap-3">
-              <Button 
-                onClick={handleAddToCart}
-                className="flex-1 h-12 text-lg font-semibold"
-                size="lg"
-              >
-                <ShoppingCart className="mr-2" size={20} />
-                Add to Cart
-              </Button>
-              
+              {user?.id !== product.user_id && 
+                <Button 
+                  onClick={handleAddToCart}
+                  className="flex-1 h-12 text-lg font-semibold"
+                  size="lg"
+                >
+                  <ShoppingCart className="mr-2" size={20} />
+                  Add to Cart
+                </Button>
+              }
               <Button 
                 onClick={onClose}
                 className="h-12"
@@ -226,6 +419,13 @@ export const ProductModal = ({ product, isOpen, onClose, onAddToCart }) => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Review Modal */}
+      <ReviewModal
+        isOpen={isReviewModalOpen}
+        onClose={() => setIsReviewModalOpen(false)}
+        onSubmit={handleReviewSubmit}
+      />
 
       {/* Business Warning Modal */}
       <Dialog open={isBusinessWarningOpen} onOpenChange={() => setIsBusinessWarningOpen(false)}>

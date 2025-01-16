@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Plus, Eye, ChevronLeft, ChevronRight, Bell, Edit, Trash2, Share2, PackageSearch, ShoppingCart, CheckCircle } from 'lucide-react';
+import { Plus, Eye, ChevronLeft, ChevronRight, Bell, Edit, Trash2, Share2, PackageSearch, ShoppingCart, CheckCircle, Star } from 'lucide-react';
 import DashboardLayout from '@/components/DashboardLayout';
 import {
   Dialog,
@@ -427,6 +427,12 @@ const StorefrontManagement = () => {
   const ProductCard = ({ product, isPreview }) => {
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
     const images = product.images || [];
+    const [productStats, setProductStats] = useState({
+        views: 0,
+        average_rating: 0,
+        review_count: 0,
+        wishlist_count: 0
+      });
     const displayImages = images.length > 0 
       ? images.map(img => `${backendUrl}/${img.replace('./', '')}`)
       : [];
@@ -444,6 +450,29 @@ const StorefrontManagement = () => {
         prevIndex === 0 ? displayImages.length - 1 : prevIndex - 1
       );
     };
+
+    const fetchProductStats = async () => {
+        try {
+          const response = await fetch(`${apiBaseUrl}/marketplace/${product.id}/stats`, {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem('token')}`,
+            },
+          });
+          
+          if (!response.ok) {
+            throw new Error('Failed to fetch stats');
+          }
+          
+          const stats = await response.json();
+          setProductStats(stats);
+        } catch (error) {
+          console.error('Failed to load product stats:', error);
+        }
+      };
+    
+      useEffect(() => {
+        fetchProductStats();
+      }, [product.id]);
   
     return (
       <div className="bg-white rounded-lg shadow-md hover:shadow-lg transition-all duration-300 flex flex-col">
@@ -495,11 +524,25 @@ const StorefrontManagement = () => {
           <h3 className="text-lg font-semibold mb-2 line-clamp-2">{product.name}</h3>
           <p className="text-gray-600 text-sm mb-3 line-clamp-2">{product.description}</p>
         </div>
+
+        <div className="flex items-center gap-2 mb-2 p-2">
+              <div className="flex items-center">
+                <Star size={16} className="text-yellow-400 fill-current" />
+                <span className="text-sm text-gray-600 ml-1">
+                  {productStats.average_rating.toFixed(1)}
+                </span>
+              </div>
+              <span className="text-sm text-gray-500">
+                ({productStats.review_count} reviews)
+              </span>
+              <span className="text-sm text-gray-500 ml-auto">
+                {productStats.views} views
+              </span>
+            </div>
   
         <div className="p-4 border-t mt-auto">
           <div className="flex items-center justify-between">
-            <span className="text-lg font-bold">₦{product.storefront_price || product.price}</span>
-            
+            <span className="text-lg font-bold">₦{product.storefront_price || product.price}</span>    
             {isPreview ? (
               <button className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2">
                 <ShoppingCart size={16} />
@@ -590,6 +633,7 @@ const StorefrontManagement = () => {
               <DialogContent>
                 <DialogHeader>
                   <DialogTitle>Add Products to Store</DialogTitle>
+                  <DialogDescription></DialogDescription>
                 </DialogHeader>
                 <ProductSelector />
               </DialogContent>
@@ -700,6 +744,7 @@ const StorefrontManagement = () => {
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>Edit Price - {editingProduct.name}</DialogTitle>
+                <DialogDescription></DialogDescription>
               </DialogHeader>
               <div className="space-y-4">
                 <div>
@@ -764,6 +809,7 @@ const StorefrontManagement = () => {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Product Image</DialogTitle>
+            <DialogDescription></DialogDescription>
           </DialogHeader>
           <img
             src={selectedImage}

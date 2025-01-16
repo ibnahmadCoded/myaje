@@ -1,11 +1,20 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sql_database import get_db
-from models import StorefrontProduct, User
+from models import StorefrontProduct, User, Product, ProductReview, ProductView, ProductWishlist
+from pydantic import BaseModel
+from typing import Optional
+from routes.auth import get_current_user, get_optional_current_user
 from utils.cache_decorators import cache_response
 from utils.helper_functions import serialize_datetime
+from datetime import datetime
+from sqlalchemy import func, desc
 
 router = APIRouter()
+
+class ReviewCreate(BaseModel):
+    rating: int
+    review_text: Optional[str]
 
 @router.get("/get_products")
 @cache_response(expire=3600)
@@ -71,4 +80,189 @@ async def fetch_store_details(
             }
             for sp in storefront_products
         ]
+    }
+
+@router.post("/{product_id}/review")
+async def create_product_review(
+    product_id: int,
+    review: ReviewCreate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    # Check if product exists
+    product = db.query(Product).filter(Product.id == product_id).first()
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+    
+    if product.user_id == current_user.id:
+        raise HTTPException(status_code=404, detail="Sorry, you cannot review your own product!")
+        
+    # Check if user already reviewed this product
+    existing_review = db.query(ProductReview).filter(
+        ProductReview.user_id == current_user.id,
+        ProductReview.product_id == product_id
+    ).first()
+    
+    if existing_review:
+        # Update existing review
+        existing_review.rating = review.rating
+        existing_review.review_text = review.review_text
+        existing_review.created_at = datetime.utcnow()
+    else:
+        # Create new review
+        new_review = ProductReview(
+            user_id=current_user.id,
+            product_id=product_id,
+            rating=review.rating,
+            review_text=review.review_text
+        )
+        db.add(new_review)
+    
+    db.commit()
+    return {"message": "Review submitted successfully"}
+
+@router.get("/{product_id}/reviews")
+async def get_product_reviews(
+    product_id: int,
+    skip: int = 0,
+    limit: int = 10,
+    db: Session = Depends(get_db)
+):
+    reviews = db.query(ProductReview).filter(
+        ProductReview.product_id == product_id
+    ).order_by(desc(ProductReview.created_at)).offset(skip).limit(limit).all()
+    
+    total = db.query(func.count(ProductReview.id)).filter(
+        ProductReview.product_id == product_id
+    ).scalar()
+    
+    avg_rating = db.query(func.avg(ProductReview.rating)).filter(
+        ProductReview.product_id == product_id
+    ).scalar()
+    
+    return {
+        "reviews": [
+            {
+                "id": review.id,
+                "rating": review.rating,
+                "review_text": review.review_text,
+                "user_name": review.user.business_name,
+                "created_at": serialize_datetime(review.created_at)
+            }
+            for review in reviews
+        ],
+        "total": total,
+        "average_rating": float(avg_rating) if avg_rating else 0
+    }
+
+@router.post("/{product_id}/wishlist")
+async def toggle_wishlist(
+    product_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    # Check if product exists
+    product = db.query(Product).filter(Product.id == product_id).first()
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+    
+    if product.user_id == current_user.id:
+        raise HTTPException(status_code=404, detail="Sorry, you cannot review your own product!")
+
+    existing_wishlist = db.query(ProductWishlist).filter(
+        ProductWishlist.user_id == current_user.id,
+        ProductWishlist.product_id == product_id
+    ).first()
+    
+    if existing_wishlist:
+        db.delete(existing_wishlist)
+        action = "removed from"
+    else:
+        new_wishlist = ProductWishlist(
+            user_id=current_user.id,
+            product_id=product_id
+        )
+        db.add(new_wishlist)
+        action = "added to"
+    
+    db.commit()
+    return {"message": f"Product {action} wishlist"}
+
+@router.get("/{product_id}/wishlist-count")
+async def get_wishlist_count(
+    product_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_optional_current_user),
+):
+    count = db.query(func.count(ProductWishlist.id)).filter(
+        ProductWishlist.product_id == product_id
+    ).scalar()
+
+    existing_wishlist = db.query(ProductWishlist).filter(
+        ProductWishlist.user_id == current_user.id,
+        ProductWishlist.product_id == product_id
+    ).first()
+    
+    if existing_wishlist:
+        return {"count": count, "wishlisted_by_current_user": True}
+    
+    return {"count": count}
+
+@router.post("/{product_id}/view")
+async def record_product_view(
+    product_id: int,
+    current_user: Optional[User] = Depends(get_optional_current_user),
+    db: Session = Depends(get_db)
+):
+    # Check if product exists
+    product = db.query(Product).filter(Product.id == product_id).first()
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+    
+    new_view = ProductView(
+        product_id=product_id,
+        user_id=current_user.id if current_user else None
+    )
+    db.add(new_view)
+    db.commit()
+    return {"message": "View recorded"}
+
+@router.get("/{product_id}/stats")
+@cache_response(expire=3600)
+async def get_product_stats(
+    product_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_optional_current_user),
+):
+    # Get view count
+    view_count = db.query(func.count(ProductView.id)).filter(
+        ProductView.product_id == product_id
+    ).scalar()
+    
+    # Get average rating
+    avg_rating = db.query(func.avg(ProductReview.rating)).filter(
+        ProductReview.product_id == product_id
+    ).scalar()
+    
+    # Get review count
+    review_count = db.query(func.count(ProductReview.id)).filter(
+        ProductReview.product_id == product_id
+    ).scalar()
+    
+    # Get wishlist count
+    wishlist_count = db.query(func.count(ProductWishlist.id)).filter(
+        ProductWishlist.product_id == product_id
+    ).scalar()
+
+    existing_current_user_wishlist = db.query(ProductWishlist).filter(
+        ProductWishlist.user_id == current_user.id,
+        ProductWishlist.product_id == product_id
+    ).first()
+    
+    return {
+        "views": view_count,
+        "average_rating": float(avg_rating) if avg_rating else 0,
+        "review_count": review_count,
+        "wishlist_count": wishlist_count,
+        "wishlisted_by_current_user": True if existing_current_user_wishlist else False
     }
