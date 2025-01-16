@@ -67,7 +67,6 @@ async def get_optional_current_user(
     db: Session = Depends(get_db)
 ) -> Optional[User]:
     if not token:
-        print("############################################################")
         return None
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
