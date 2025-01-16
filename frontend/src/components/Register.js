@@ -11,6 +11,7 @@ export default function Register() {
     const [isLoading, setIsLoading] = useState(false);
     const [acceptedTerms, setAcceptedTerms] = useState(false);
     const [accountType, setAccountType] = useState('personal');
+    const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [formData, setFormData] = useState({
       email: '',
       password: '',
@@ -42,6 +43,16 @@ export default function Register() {
       };
       return Object.values(criteria).filter(Boolean).length;
     }, []);
+
+    useEffect(() => {
+      const userDataStr = localStorage.getItem('user');
+      const token = localStorage.getItem('token');
+  
+      if (userDataStr && token) {
+        setIsAuthenticated(true);
+        router.push('/dashboard'); 
+      }
+    }, [router]);
 
     // Update password criteria when password changes
     useEffect(() => {
