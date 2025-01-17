@@ -2,7 +2,8 @@ from sqlalchemy import func, desc, and_
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional
-from models import Product, Order, OrderItem, OrderStatus, Payment, InvoiceRequest, InvoiceStatus
+from models import (Product, Order, OrderStatus, InvoiceRequest, InvoiceStatus,
+                    ProductView, ProductWishlist, ProductReview)
 from decimal import Decimal
 import random  # For dummy data
 
@@ -211,8 +212,154 @@ class MetricsCalculator:
         trend = random.uniform(-20, 20)
         return f"+{trend:.1f}%" if trend >= 0 else f"{trend:.1f}%"
 
-async def get_all_metrics(db: Session, user_id: int) -> Dict:
-    """Get all metrics for the dashboard"""
+class PersonalMetricsCalculator:
+    def __init__(self, db: Session, user_id: int):
+        self.db = db
+        self.user_id = user_id
+
+    def get_viewing_metrics(self) -> Dict:
+        """Calculate viewing related metrics"""
+        total_views = self.db.query(ProductView).filter(
+            ProductView.user_id == self.user_id
+        ).count()
+
+        # Get views in last 30 days for trend
+        thirty_days_ago = datetime.utcnow() - timedelta(days=30)
+        recent_views = self.db.query(ProductView).filter(
+            ProductView.user_id == self.user_id,
+            ProductView.viewed_at >= thirty_days_ago
+        ).count()
+
+        # Calculate trend compared to previous 30 days
+        previous_period = self.db.query(ProductView).filter(
+            ProductView.user_id == self.user_id,
+            ProductView.viewed_at >= thirty_days_ago - timedelta(days=30),
+            ProductView.viewed_at < thirty_days_ago
+        ).count()
+
+        trend = calculate_trend(recent_views, previous_period)
+
+        return {
+            "total_views": {
+                "value": total_views,
+                "trend": trend
+            }
+        }
+
+    def get_wishlist_metrics(self) -> Dict:
+        """Calculate wishlist metrics"""
+        total_wishlisted = self.db.query(ProductWishlist).filter(
+            ProductWishlist.user_id == self.user_id
+        ).count()
+
+        thirty_days_ago = datetime.utcnow() - timedelta(days=30)
+        recent_wishlisted = self.db.query(ProductWishlist).filter(
+            ProductWishlist.user_id == self.user_id,
+            ProductWishlist.created_at >= thirty_days_ago
+        ).count()
+
+        previous_period = self.db.query(ProductWishlist).filter(
+            ProductWishlist.user_id == self.user_id,
+            ProductWishlist.created_at >= thirty_days_ago - timedelta(days=30),
+            ProductWishlist.created_at < thirty_days_ago
+        ).count()
+
+        trend = calculate_trend(recent_wishlisted, previous_period)
+
+        return {
+            "total_wishlisted": {
+                "value": total_wishlisted,
+                "trend": trend
+            }
+        }
+
+    def get_review_metrics(self) -> Dict:
+        """Calculate review metrics"""
+        total_reviews = self.db.query(ProductReview).filter(
+            ProductReview.user_id == self.user_id
+        ).count()
+
+        thirty_days_ago = datetime.utcnow() - timedelta(days=30)
+        recent_reviews = self.db.query(ProductReview).filter(
+            ProductReview.user_id == self.user_id,
+            ProductReview.created_at >= thirty_days_ago
+        ).count()
+
+        previous_period = self.db.query(ProductReview).filter(
+            ProductReview.user_id == self.user_id,
+            ProductReview.created_at >= thirty_days_ago - timedelta(days=30),
+            ProductReview.created_at < thirty_days_ago
+        ).count()
+
+        trend = calculate_trend(recent_reviews, previous_period)
+
+        return {
+            "total_reviews": {
+                "value": total_reviews,
+                "trend": trend
+            }
+        }
+
+    def get_purchase_metrics(self) -> Dict:
+        """Calculate purchase metrics"""
+        total_purchases = self.db.query(Order).filter(
+            Order.buyer_id == self.user_id,
+            Order.status == OrderStatus.fulfilled
+        ).count()
+
+        thirty_days_ago = datetime.utcnow() - timedelta(days=30)
+        recent_purchases = self.db.query(Order).filter(
+            Order.buyer_id == self.user_id,
+            Order.status == OrderStatus.fulfilled,
+            Order.created_at >= thirty_days_ago
+        ).count()
+
+        previous_period = self.db.query(Order).filter(
+            Order.buyer_id == self.user_id,
+            Order.status == OrderStatus.fulfilled,
+            Order.created_at >= thirty_days_ago - timedelta(days=30),
+            Order.created_at < thirty_days_ago
+        ).count()
+
+        trend = calculate_trend(recent_purchases, previous_period)
+
+        return {
+            "total_purchases": {
+                "value": total_purchases,
+                "trend": trend
+            }
+        }
+
+def calculate_trend(current: int, previous: int) -> str:
+    """Helper function to calculate trend percentage"""
+    if previous == 0:
+        return "+100%" if current > 0 else "0%"
+    
+    change = ((current - previous) / previous) * 100
+    return f"+{change:.1f}%" if change >= 0 else f"{change:.1f}%"
+
+async def get_all_metrics(db: Session, user_id: int, active_view: str) -> Dict:
+    """Get all metrics based on active view"""
+    if active_view == "business":
+        calculator = MetricsCalculator(db, user_id)
+        return {
+            "inventory": calculator.get_inventory_metrics(),
+            "orders": calculator.get_orders_metrics(),
+            "restock": calculator.get_restock_metrics(),
+            "invoicing": calculator.get_invoice_metrics(),
+            "gmv": calculator.get_gmv_metrics()
+        }
+    else:
+        calculator = PersonalMetricsCalculator(db, user_id)
+        return {
+            "viewing": calculator.get_viewing_metrics(),
+            "wishlist": calculator.get_wishlist_metrics(),
+            "reviews": calculator.get_review_metrics(),
+            "purchases": calculator.get_purchase_metrics()
+        }
+
+"""async def get_all_metrics(db: Session, user_id: int) -> Dict:
+
     calculator = MetricsCalculator(db, user_id)
     
     return {
@@ -221,4 +368,4 @@ async def get_all_metrics(db: Session, user_id: int) -> Dict:
         "restock": calculator.get_restock_metrics(),
         "invoicing": calculator.get_invoice_metrics(),
         "gmv": calculator.get_gmv_metrics()
-    }
+    }"""
