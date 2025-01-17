@@ -82,69 +82,6 @@ async def verify_user_eligibility(
 
     return True
 
-async def create_payment_record(
-    payment_data: Dict,
-    payment_method: PaymentMethod,
-    db: Session
-) -> Payment:
-    """Create payment record in database"""
-    payment_type = None
-    reference_number = None
-    if payment_data["payment_method"] == "card":
-        payment_type = PaymentType.ORDER_CARD
-        reference_number = f"ORDCRD-{uuid.uuid4().hex[:8].upper()}"
-    elif payment_data["payment_method"] == "bank_transfer":
-        payment_type = PaymentType.ORDER_TRANSFER
-        reference_number = f"ORDTRF-{uuid.uuid4().hex[:8].upper()}"
-    elif payment_data["payment_method"] == "installment":
-        payment_type = PaymentType.ORDER_TRANSFER
-        reference_number = f"ORDINS-{uuid.uuid4().hex[:8].upper()}"
-    elif payment_data["payment_method"] == "bnpl":
-        payment_type = PaymentType.BUY_NOW_PAY_LATER
-        reference_number = f"ORDBNPL-{uuid.uuid4().hex[:8].upper()}"
-
-    payment = Payment(
-        payment_type=payment_type,
-        amount=payment_data["amount"],
-        status=PaymentStatus.PENDING,
-        from_account_source=AccountSource.EXTERNAL, # fow now, no bam
-        to_account_source=AccountSource.EXTERNAL, # for now, no BAM pay
-        reference_number=reference_number
-    )
-
-    # Set payment specific fields
-    if payment_method in [PaymentMethod.BNPL_7, PaymentMethod.BNPL_15, PaymentMethod.BNPL_30]:
-        days = int(payment_method.value.split("_")[1])
-        payment.due_date = datetime.utcnow() + timedelta(days=days)
-    
-    elif payment_method in [
-        PaymentMethod.INSTALLMENT_2,
-        PaymentMethod.INSTALLMENT_3,
-        PaymentMethod.INSTALLMENT_4
-    ]:
-        installments = int(payment_method.value.split("_")[1])
-        payment.total_installments = installments
-        payment.current_installment = 1
-        payment.installment_amount = payment_data["amount"] / installments
-    
-    elif payment_method == PaymentMethod.BORROW:
-        # Create loan record (fix this later)
-        loan = Loan(
-            user_id=payment_data["user_id"],
-            bank_account_id=payment_data["from_account_id"],
-            amount=payment_data["amount"],
-            purpose="Purchase payment",
-            status="active",
-            remaining_amount=payment_data["amount"]
-        )
-        db.add(loan)
-        db.flush()
-        payment.loan_id = loan.id
-
-    db.add(payment)
-    db.flush()
-    return payment
-
 async def initialize_paystack_payment(amount: float, email: str, payment_method: str, reference: str) -> Dict:
     """Initialize payment with Paystack"""
     try:

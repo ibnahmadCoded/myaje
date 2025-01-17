@@ -38,6 +38,7 @@ export default function Login() {
 
     if (userDataStr && token) {
       setIsAuthenticated(true);
+      setIsLoading(true);
       router.push('/dashboard'); 
     }
   }, [router]);
@@ -78,7 +79,7 @@ export default function Login() {
         localStorage.setItem('personalBankingOnboarded', data.personalBankingOnboarded);
         localStorage.setItem('user', JSON.stringify(data.user));
         
-        
+        setIsLoading(true);
         router.push('/dashboard');
       } else {
         const errorData = await response.json();
@@ -88,9 +89,17 @@ export default function Login() {
       console.error('Login failed:', error);
       setError('An error occurred. Please try again later.');
     } finally {
-      setIsLoading(false);
+      if (!isLoading) setIsLoading(false);
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-green-50/40">
+        <Loader2 className="w-8 h-8 animate-spin text-green-600" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-green-50/40 flex items-center justify-center p-4">

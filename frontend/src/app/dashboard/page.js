@@ -275,8 +275,8 @@ const DashboardPage = () => {
   const personalNavigationShortcuts = [
     { icon: <LayoutGrid size={20} />, label: 'Dashboard', href: '/dashboard' },
     { icon: <Package size={20} />, label: 'My Items', href: '/my-items' },
-    { icon: <Bookmark size={20} />, label: 'Orders', href: '/my-items' },
-    { icon: <MessageSquare size={20} />, label: 'Reviews', href: '/my-items' },
+    { icon: <Bookmark size={20} />, label: 'My Orders', href: '/my-items' },
+    { icon: <MessageSquare size={20} />, label: 'My Reviews', href: '/my-items' },
     { icon: <Heart size={20} />, label: 'My Wishlist', href: '/my-items' },
     { icon: <StoreIcon size={20} />, label: 'Marketplace', href: '/' }
   ];
