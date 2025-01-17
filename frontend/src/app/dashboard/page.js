@@ -17,10 +17,13 @@ import {
   TrendingUp,
   ShoppingCart,
   Boxes,
+  Bookmark,
+  Heart,
+  StoreIcon,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -32,6 +35,7 @@ const DashboardPage = () => {
   const [currentDateTime, setCurrentDateTime] = useState('');
   const [metrics, setMetrics] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [activeView, setActiveView] = useState(null);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [feedbackForm, setFeedbackForm] = useState({ 
     name: '', 
@@ -42,8 +46,17 @@ const DashboardPage = () => {
   const { toast } = useToast();
 
   useEffect(() => {
+    const userDataStr = localStorage.getItem('user');
+    let active_view = null;
+
+    if (userDataStr) {
+      const user = JSON.parse(userDataStr);
+      active_view = user.active_view; // Ensure activeView is defined here
+      setActiveView(active_view)
+    }
+
     updateDateTime();
-    fetchMetrics();
+    fetchMetrics(active_view);
     
     const timer = setInterval(updateDateTime, 1000);
     // Refresh metrics every 5 minutes
@@ -60,10 +73,10 @@ const DashboardPage = () => {
     setCurrentDateTime(now.toLocaleString());
   };
 
-  const fetchMetrics = async () => {
+  const fetchMetrics = async (activeView = null) => {
     try {
       const token = localStorage.getItem('token'); // Or however you store your auth token
-      const response = await fetch(`${apiBaseUrl}/dashboard/metrics`, {
+      const response = await fetch(`${apiBaseUrl}/dashboard/metrics?active_view=${activeView}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -209,6 +222,65 @@ const DashboardPage = () => {
     }
   };
 
+  const personalMetricGroups = [
+    {
+      title: "Viewing Activity",
+      icon: LineChart,
+      metricsKey: "viewing",
+      metrics: [
+        { label: "Total Views", key: "total_views" }
+      ]
+    },
+    {
+      title: "Wishlists",
+      icon: Package,
+      metricsKey: "wishlist",
+      metrics: [
+        { label: "Total Wishlisted", key: "total_wishlisted" }
+      ]
+    },
+    {
+      title: "Reviews",
+      icon: MessageSquare,
+      metricsKey: "reviews",
+      metrics: [
+        { label: "Total Reviews", key: "total_reviews" }
+      ]
+    },
+    {
+      title: "Purchases",
+      icon: ShoppingCart,
+      metricsKey: "purchases",
+      metrics: [
+        { label: "Total Purchases", key: "total_purchases" }
+      ]
+    }
+  ];
+
+  const personalNews = [
+    {
+      title: "New Collection Launched",
+      summary: "Check out the latest summer collection from your favorite brands."
+    },
+    {
+      title: "Special Offers",
+      summary: "Exclusive discounts on items in your wishlist."
+    },
+    {
+      title: "Shopping Tips",
+      summary: "How to make the most of seasonal sales and promotions."
+    }
+  ];
+
+  const personalNavigationShortcuts = [
+    { icon: <LayoutGrid size={20} />, label: 'Dashboard', href: '/dashboard' },
+    { icon: <Package size={20} />, label: 'My Items', href: '/my-items' },
+    { icon: <Bookmark size={20} />, label: 'Orders', href: '/my-items' },
+    { icon: <MessageSquare size={20} />, label: 'Reviews', href: '/my-items' },
+    { icon: <Heart size={20} />, label: 'My Wishlist', href: '/my-items' },
+    { icon: <StoreIcon size={20} />, label: 'Marketplace', href: '/' }
+  ];
+
   return (
     <DashboardLayout>
       <div className="p-6 space-y-6">
@@ -263,7 +335,7 @@ const DashboardPage = () => {
 
         {/* Metrics Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {metricGroups.map((group, index) => (
+          {(activeView === 'business' ? metricGroups : personalMetricGroups).map((group, index) => (
             <Card key={index}>
               <CardHeader className="pb-4">
                 <div className="flex items-center justify-between">
@@ -297,16 +369,16 @@ const DashboardPage = () => {
           ))}
         </div>
 
-        {/* Business News */}
+        {/* News Section */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center">
               <TrendingUp className="mr-2 h-5 w-5" />
-              Business News
+              {activeView === 'business' ? 'Business News' : 'Shopping Updates'}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {businessNews.map((news, index) => (
+            {(activeView === 'business' ? businessNews : personalNews).map((news, index) => (
               <div key={index} className="border-b last:border-0 pb-4 last:pb-0">
                 <h3 className="font-medium flex items-center">
                   {news.title}
@@ -320,18 +392,13 @@ const DashboardPage = () => {
 
         {/* Navigation Shortcuts */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-          {navigationShortcuts.map((item, index) => (
+          {(activeView === 'business' ? navigationShortcuts : personalNavigationShortcuts).map((item, index) => (
             <Link key={index} href={item.href} className="block">
               <Card className="hover:bg-gray-50 cursor-pointer transition-colors duration-200">
                 <CardContent className="p-4 text-center">
                   <div className="flex flex-col items-center">
                     {item.icon}
                     <span className="mt-2 text-sm font-medium">{item.label}</span>
-                    {item.badge && (
-                      <span className="mt-1 px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded-full">
-                        {item.badge}
-                      </span>
-                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -344,6 +411,7 @@ const DashboardPage = () => {
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Contact Support</DialogTitle>
+              <DialogDescription></DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
               <div>
