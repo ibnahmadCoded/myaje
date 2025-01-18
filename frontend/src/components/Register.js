@@ -2,8 +2,10 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import LoadingScreen from '@/components/LoadingScreen';
 import { User, Mail, Lock, Check, X, Loader2, Building2, Phone } from 'lucide-react';
 import { apiBaseUrl } from '@/config';
+import { OTPVerification } from '@/components/OTPVerificationScreen'
 
 export default function Register() {
     const router = useRouter();
@@ -11,6 +13,7 @@ export default function Register() {
     const [isLoading, setIsLoading] = useState(false);
     const [acceptedTerms, setAcceptedTerms] = useState(false);
     const [accountType, setAccountType] = useState('personal');
+    const [showOTPScreen, setShowOTPScreen] = useState(false);
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [formData, setFormData] = useState({
       email: '',
@@ -137,10 +140,10 @@ export default function Register() {
         });
         
         if (response.ok) {
-          router.push('/login');
+          setShowOTPScreen(true);
         } else {
           const errorData = await response.json();
-          setError(errorData.message || 'Registration failed. Please try again.');
+          setError(errorData.detail || 'Registration failed. Please try again.');
         }
       } catch (error) {
         console.error('Registration failed:', error);
@@ -150,6 +153,25 @@ export default function Register() {
       }
     };
 
+    const handleResendOTP = async () => {
+      const response = await fetch(`${apiBaseUrl}/auth/resend-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: formData.email,
+          phone: formData.phone
+        })
+      });
+  
+      if (!response.ok) {
+        throw new Error('Failed to resend OTP');
+      }
+    };
+  
+    const handleVerificationSuccess = () => {
+      router.push('/login');
+    };
+
     const handleInputChange = useCallback((e) => {
       const { name, value } = e.target;
       setFormData(prev => ({
@@ -157,6 +179,23 @@ export default function Register() {
         [name]: value
       }));
     }, []);
+
+    if (isLoading) {
+      return <LoadingScreen />;
+    }
+
+    if (showOTPScreen) {
+      return (
+        <div className="min-h-screen bg-green-50/40 flex items-center justify-center p-4">
+          <OTPVerification
+            email={formData.email}
+            phone={formData.phone}
+            onSuccess={handleVerificationSuccess}
+            onResend={handleResendOTP}
+          />
+        </div>
+      );
+    }
 
     return (
       <div className="min-h-screen bg-green-50/40 flex items-center justify-center p-4">

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Mail, Lock, Loader2 } from 'lucide-react';
+import LoadingScreen from '@/components/LoadingScreen';
 import { apiBaseUrl } from '@/config';
 
 export default function Login() {
@@ -94,11 +95,7 @@ export default function Login() {
   };
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-green-50/40">
-        <Loader2 className="w-8 h-8 animate-spin text-green-600" />
-      </div>
-    );
+    return <LoadingScreen />;
   }
 
   return (

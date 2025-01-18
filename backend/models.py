@@ -61,6 +61,18 @@ class User(Base):
         
         self.store_slug = slug
 
+class OTPVerification(Base):
+    __tablename__ = "otp_verifications"
+
+    id = Column(Integer, primary_key=True, index=True)
+    email = Column(String, nullable=False)
+    phone = Column(String, nullable=False)
+    otp = Column(String, nullable=False)
+    type = Column(String, nullable=False)  # verification, password_reset, etc.
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    expires_at = Column(DateTime(timezone=True), nullable=False)
+    used_at = Column(DateTime(timezone=True), nullable=True)
+
 class BankDetails(Base):
     """Bank Details in Invocing page, not to be confuse with external bank account"""
     __tablename__ = 'bank_details'

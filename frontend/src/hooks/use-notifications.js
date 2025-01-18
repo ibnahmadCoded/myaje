@@ -21,7 +21,7 @@ export const useNotifications = () => {
     const fetchNotifications = async () => {
       const currentUserView = fetchUserView();
         if (!currentUserView) {
-            console.error('No active user_view found. Skipping notification fetch.');
+            console.error('No active user found. Skipping notification fetch.');
             setNotifications([]);
             setLoading(false);
             return;

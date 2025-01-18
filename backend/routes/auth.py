@@ -4,12 +4,13 @@ from fastapi.security import OAuth2PasswordBearer
 import pytz
 from sqlalchemy.orm import Session
 from jose import jwt, JWTError
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
+from utils.notification_service import NotificationService
 from config import SECRET_KEY, ALGORITHM, SUPER_ADMIN_EMAIL, SUPER_ADMIN_PASSWORD
 
 from sql_database import get_db
-from models import User, TokenBlacklist
+from models import User, TokenBlacklist, OTPVerification
 from passlib.context import CryptContext
 
 class OptionalOAuth2PasswordBearer(OAuth2PasswordBearer):
@@ -20,6 +21,8 @@ class OptionalOAuth2PasswordBearer(OAuth2PasswordBearer):
         return await super().__call__(request)
 
 router = APIRouter()
+notification_service = NotificationService()
+
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 oauth2_scheme_optional = OptionalOAuth2PasswordBearer(tokenUrl="token")
@@ -114,6 +117,12 @@ async def create_super_admin(db: Session):
         db.commit()
         print(f"Super admin created with email: {super_admin_email}")
 
+def format_phone_number(phone: str) -> str:
+    # Remove non-numeric characters
+    numeric_phone = ''.join(filter(str.isdigit, phone))
+    # Add country code +234
+    return f"+234{numeric_phone[-10:]}"
+
 @router.post("/signup")
 async def signup(request: Request, db: Session = Depends(get_db)):
     data = await request.json()
@@ -148,12 +157,117 @@ async def signup(request: Request, db: Session = Depends(get_db)):
         db.rollback()
         raise HTTPException(status_code=400, detail="Error creating user")
     
-    return {"message": "User created successfully"}
+     # Send OTP
+    try:
+        formatted_phone = format_phone_number(data['phone'])
+        await notification_service.send_otp_notification(
+            email=data['email'],
+            phone=formatted_phone,
+            notification_type="verification",
+            db=db
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Failed to send verification code")
+    
+    return {"message": "Verification code sent"}
+
+@router.post("/verify-signup")
+async def verify_signup(request: Request, db: Session = Depends(get_db)):
+    data = await request.json()
+
+    pending_user = db.query(User).filter_by(email=data['email'], is_verified=False, phone=data['phone']).first()
+    
+    if not pending_user:
+        raise HTTPException(status_code=400, detail="No pending registration found")
+    
+    # Verify OTP
+    is_valid = await notification_service.verify_otp(
+        email=pending_user.email,
+        phone=format_phone_number(pending_user.phone),
+        otp=data["otp"],
+        notification_type="verification",
+        db=db
+    )
+    
+    if not is_valid:
+        raise HTTPException(status_code=400, detail="Invalid or expired verification code")
+    
+    try:
+        pending_user.is_verified = True
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail="Error creating user")
+    
+    return {"message": "User verified and created successfully"}
+
+@router.post("/resend-otp")
+async def resend_otp(request: Request, db: Session = Depends(get_db)):
+    data = await request.json()
+    
+    # Validate required fields
+    if not data.get('email') or not data.get('phone'):
+        raise HTTPException(
+            status_code=400, 
+            detail="Both email and phone are required"
+        )
+    
+    # Find unverified user
+    user = db.query(User).filter_by(
+        email=data['email'], 
+        phone=data['phone'], 
+        is_verified=False
+    ).first()
+    
+    if not user:
+        raise HTTPException(
+            status_code=400, 
+            detail="No pending verification found for this email and phone"
+        )
+    
+    # Check if there's a recent OTP that hasn't expired yet
+    recent_otp = db.query(OTPVerification).filter(
+        OTPVerification.email == data['email'],
+        OTPVerification.phone == format_phone_number(data['phone']),
+        OTPVerification.type == "verification",
+        OTPVerification.expires_at > datetime.utcnow(),
+        OTPVerification.used_at.is_(None)
+    ).first()
+    
+    # If there's a recent valid OTP, optionally prevent spam
+    if recent_otp:
+        time_since_last_otp = datetime.utcnow().replace(tzinfo=timezone.utc) - recent_otp.created_at
+        if time_since_last_otp.total_seconds() < 30:  # 30-second cooldown
+            raise HTTPException(
+                status_code=400,
+                detail="Please wait before requesting a new code"
+            )
+    
+    # Send new OTP
+    try:
+        formatted_phone = format_phone_number(data['phone'])
+        await notification_service.send_otp_notification(
+            email=data['email'],
+            phone=formatted_phone,
+            notification_type="verification",
+            db=db
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to send verification code"
+        )
+    
+    return {"message": "New verification code sent successfully"}
 
 @router.post("/login")
 async def login(request: Request, db: Session = Depends(get_db)):
     data = await request.json()
     user = db.query(User).filter_by(email=data['email']).first()
+
+    if not user.is_verified:
+        raise HTTPException(status_code=400, detail="You are not verified")
+    
     if user and verify_password(data['password'], user.password):
         user.last_login = datetime.utcnow()
         db.commit()
@@ -168,7 +282,7 @@ async def login(request: Request, db: Session = Depends(get_db)):
                 'business_name': user.business_name,
                 'has_business_account': user.has_business_account,
                 'has_personal_account': user.has_personal_account,
-                'active_view': user.active_view
+                'active_view': user.active_view,
             },
             'businessBankingOnboarded': user.business_banking_onboarded, 
             'personalBankingOnboarded': user.personal_banking_onboarded

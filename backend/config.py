@@ -70,19 +70,22 @@ REDIS_CLIENT = redis.Redis(
     db=0,
     decode_responses=True
 )
-
 PERSONAL_LOAN_TIERS = [
     {"purchases": 5, "amount": 5000},
     {"purchases": 15, "amount": 10000},
     {"purchases": 50, "amount": 50000},
     {"purchases": 100, "amount": 100000}
 ]
-
 BUSINESS_LOAN_TIERS = [
     {"restock_orders": 20, "total_gmv": 10_000_000, "amount": 5_000_000},
     {"restock_orders": 5, "total_gmv": 5_000_000, "amount": 500_000},
 ]
-
 BUSINESS_LOAN_EQUITY_PERCENTAGE = 0.02
+
 PAYSTACK_SECRET = os.getenv("PAYSTACK_SECRET_KEY") 
-PAYSTACK_BASE_URL = os.getenv("PAYSTACK_BASE_URL") 
+PAYSTACK_BASE_URL = os.getenv("PAYSTACK_BASE_URL")
+
+TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID")
+TWILIO_SERVICE_SID = os.getenv("TWILIO_SERVICE_SID")
+TWILIO_AUTH_TOKEN = os.getenv("TWILIO_AUTH_TOKEN")
+TWILIO_PHONE_NUMBER = os.getenv("TWILIO_PHONE_NUMBER")
