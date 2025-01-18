@@ -26,27 +26,6 @@ jobs:
         key: ${{ secrets.EC2_SSH_KEY }}
         source: "."
         target: "/home/ubuntu/app"
-    
-    - name: Merge .env file
-      run: |
-        # Create or overwrite a temporary file with the secrets content
-        echo "${{ secrets.ENV_FILE }}" > .env.temp
-        
-        # If .env exists, merge it with the secrets content
-        if [ -f .env ]; then
-          while IFS= read -r line; do
-            key=$(echo "$line" | cut -d '=' -f 1)  # Extract the key
-            if grep -q "^$key=" .env.temp; then
-              # Skip the line if the key already exists in the temp file
-              continue
-            fi
-            # Append the original key-value pair to the temp file
-            echo "$line" >> .env.temp
-          done < .env
-        fi
-        
-        # Replace the original .env file with the merged one
-        mv .env.temp .env
 
     - name: Execute deployment commands
       uses: appleboy/ssh-action@master
@@ -56,7 +35,7 @@ jobs:
         key: ${{ secrets.EC2_SSH_KEY }}
         script: |
           cd /home/ubuntu/app
-          # echo "${{ secrets.ENV_FILE }}" >> .env this would cause issues, so added script to Merge .env file
+          echo "${{ secrets.ENV_FILE }}" > .env
           docker-compose -f docker-compose.prod.yml down
           docker system prune -af
           docker-compose -f docker-compose.prod.yml up -d --build
