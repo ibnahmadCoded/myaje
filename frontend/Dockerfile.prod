@@ -10,6 +10,8 @@ RUN npm install
 
 # Copy all project files
 COPY . .
+RUN ls -la /app/src/components/ui
+RUN ls -la /app/src/components/admin
 
 # Build the application
 RUN npm run build
