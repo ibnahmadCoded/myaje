@@ -8,6 +8,8 @@ import { CartDialog } from '@/components/CartDialog'
 import { Button } from '@/components/ui/button';
 import { ProductModal } from '@/components/ProductModal'
 import { apiBaseUrl, backendUrl } from '@/config';
+import { useCart } from '@/app/providers/cart-provider';
+import { toast } from '@/hooks/use-toast';
 
 const CATEGORIES = ['All', 'Electronics', 'Fashion', 'Home', 'Beauty', 'Sports'];
 
@@ -21,7 +23,8 @@ const ProductImagePlaceholder = ({ onClick }) => (
   </div>
 );
 
-const ProductCard = ({ product, onAddToCart, onImageClick }) => {
+const ProductCard = ({ product, onImageClick }) => {
+  const { addToCart } = useCart();
   const [activeIndex, setActiveIndex] = useState(0);
   const [isHovered, setIsHovered] = useState(false);
   const [user, setUser] = useState(null)
@@ -151,7 +154,18 @@ const ProductCard = ({ product, onAddToCart, onImageClick }) => {
           <span className="text-lg font-bold">₦{product.price.toLocaleString()}</span>
           {user?.id !== product.user_id && 
             <button
-              onClick={() => onAddToCart(product)}
+              onClick={() => {
+                const result = addToCart(product);
+                if (!result.success && result.error === 'business_view') {
+                  setIsBusinessWarningOpen(true);
+                } else {
+                  toast({
+                    title: "Success",
+                    description: "Product successfully added to cart",
+                    variant: "default"
+                  });
+                }
+              }}
               className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-all duration-300 flex items-center gap-2 hover:gap-3"
             >
               <ShoppingCart size={16} />
@@ -190,7 +204,7 @@ const SearchBar = ({ onSearch }) => {
 
 const MarketplaceView = ({ products: initialProducts = [], isStorePage = false }) => { 
   const [isBusinessWarningOpen, setIsBusinessWarningOpen] = useState(false);
-  const [cartItems, setCartItems] = useState([]);
+  //const [cartItems, setCartItems] = useState([]);
   const [chatInput, setChatInput] = useState('');
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('All');
@@ -209,6 +223,13 @@ const MarketplaceView = ({ products: initialProducts = [], isStorePage = false }
       ]
     }
   ]);
+  const { 
+    cartItems, 
+    addToCart, 
+    updateQuantity, 
+    removeFromCart, 
+    clearCart 
+  } = useCart();
 
 const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
 const [products, setProducts] = useState(initialProducts); 
@@ -237,120 +258,27 @@ const [filteredProducts, setFilteredProducts] = useState(products);
     }
   }, [isStorePage]);
 
-const updateQuantity = (cartId, newQuantity) => {
-  if (newQuantity < 1) return;
-  setCartItems(prev => prev.map(item => 
-    item.cartId === cartId ? { ...item, quantity: newQuantity } : item
-  ));
-};
+  // Handle checkout completion
+  const handleCheckoutComplete = () => {
+    clearCart();
+    setIsCartOpen(false);
+    setIsCheckoutOpen(false);
+  };
 
-const handleCheckoutComplete = () => {
-  setCartItems([]);
-  setIsCartOpen(false);
-  setIsCheckoutOpen(false);
-};
-
-const addToCart = (product) => {
-  const userDataStr = localStorage.getItem('user');
-  if (userDataStr) {
-    const user = JSON.parse(userDataStr);
-    if (user.active_view === 'business') {
+  // Modified addToCartWithQuantity for product modal
+  const addToCartWithQuantity = (product) => {
+    const result = addToCart(product, product.quantity);
+    if (result.success) {
+      setIsCartOpen(true);
+    } else if (result.error === 'business_view') {
       setIsBusinessWarningOpen(true);
-      return;
     }
-  }
+  };
 
-  
-
-  setCartItems((prev) => {
-    const existingProductIndex = prev.findIndex((item) => item.id === product.id);
-
-    if (existingProductIndex !== -1) {
-      // Product exists, increment its current quantity
-      return prev.map((item, index) => 
-        index === existingProductIndex 
-          ? { ...item, quantity: item.quantity + 1 }
-          : item
-      );
-    }
-
-    // Product does not exist, add it as a new entry with quantity 1
-    return [
-      ...prev,
-      {
-        ...product,
-        cartId: Date.now(),
-        quantity: 1,
-      },
-    ];
-  });
-
-  setIsCartOpen(true); // Open the cart after adding
-};
-
-const addToCartWithQuantity = (product) => {
-  const userDataStr = localStorage.getItem('user');
-  if (userDataStr) {
-    const user = JSON.parse(userDataStr);
-    if (user.active_view === 'business') {
-      setIsBusinessWarningOpen(true);
-      return;
-    }
-  }
-
-  setCartItems((prev) => {
-    // Check if product already exists in the cart
-    const existingProductIndex = prev.findIndex((item) => item.id === product.id);
-
-    if (existingProductIndex !== -1) {
-      // Update quantity if the product exists
-      return prev.map((item, index) =>
-        index === existingProductIndex
-          ? { ...item, quantity: item.quantity + product.quantity }
-          : item
-      );
-    }
-
-    // Add new product with the selected quantity
-    return [
-      ...prev,
-      { 
-        ...product, 
-        cartId: Date.now(), // Unique identifier for cart items
-      },
-    ];
-  });
-
-  setIsCartOpen(true); // Optionally open the cart after adding
-};
-
+  // Modified addToCartThroughChat for chat functionality
   const addToCartThroughChat = (product, quantity = 1) => {
-    const userDataStr = localStorage.getItem('user');
-    if (userDataStr) {
-      const user = JSON.parse(userDataStr);
-      if (user.active_view === 'business') {
-        setIsBusinessWarningOpen(true);
-        return false;
-      }
-    }
-
-    setCartItems(prev => [
-      ...prev,
-      {
-        ...product,
-        cartId: Date.now(), 
-        quantity,          
-      },
-    ]);
-    return true;
-  };
-
-  const removeFromCart = (cartId) => {
-    setCartItems(prev => prev.filter(item => item.cartId !== cartId));
-  };
-
-  const clearCart = () => {
-    setCartItems([]);
+    const result = addToCart(product, quantity);
+    return result.success;
   };
 
   const handleChatSubmit = async (e) => {
@@ -748,7 +676,6 @@ const addToCartWithQuantity = (product) => {
         }}
       />
 
-      {/* Checkout Dialog */}
       <CheckoutWithScript 
         isOpen={isCheckoutOpen}
         onClose={() => setIsCheckoutOpen(false)}
@@ -756,15 +683,11 @@ const addToCartWithQuantity = (product) => {
         onCheckoutComplete={handleCheckoutComplete}
       />
 
-      {/* Modal for Product */}
       <ProductModal 
-        isOpen={!!selectedImage}  // Ensure it only opens when selectedImage is truthy
+        isOpen={!!selectedImage}
         onClose={() => setSelectedImage(undefined)}
         product={selectedImage?.product}
-        onAddToCart={(productWithQuantity) => {
-          addToCartWithQuantity(productWithQuantity);
-          setSelectedImage(undefined);
-        }}
+        onAddToCart={addToCartWithQuantity}
       />
 
     </div>

@@ -9,6 +9,7 @@ import { ReviewsSection } from '@/components/ReviewsSection'
 import { ReviewModal } from '@/components/ReviewModal'
 import { backendUrl, apiBaseUrl } from '@/config';
 import { useToast } from "@/hooks/use-toast";
+import { useCart } from '@/app/providers/cart-provider';
 
 
 // product image SVG
@@ -33,6 +34,7 @@ export const ProductModal = ({ product, isOpen, onClose, onAddToCart }) => {
   const [viewsCount, setViewsCount] = useState(0);
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const { addToCart } = useCart();
 
   const { toast } = useToast();
   const totalImages = product?.images?.length || 0;
@@ -125,16 +127,19 @@ export const ProductModal = ({ product, isOpen, onClose, onAddToCart }) => {
   };
 
   const handleAddToCart = () => {
-    const userDataStr = localStorage.getItem('user');
-    if (userDataStr) {
-      const user = JSON.parse(userDataStr);
-      if (user.active_view === 'business') {
+    const result = addToCart(product, quantity);
+    if (!result.success) {
+      if (result.error === 'business_view') {
         setIsBusinessWarningOpen(true);
-        return;
       }
+    }else{
+      toast({
+        title: "Success",
+        description: "Product successfully added to cart",
+        variant: "default"
+      });
     }
 
-    onAddToCart({ ...product, quantity });
     setQuantity(1);
   };
 
