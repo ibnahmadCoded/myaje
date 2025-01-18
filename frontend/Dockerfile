@@ -13,6 +13,8 @@ RUN npm install
 
 # Copy the rest of the application code
 COPY . .
+RUN ls -la /app/src/components/ui
+RUN ls -la /app/src/components/admin
 
 # Expose the application port
 EXPOSE 3000
