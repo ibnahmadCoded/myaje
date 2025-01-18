@@ -1,0 +1,152 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.prod
+    container_name: myaje-backend
+    restart: unless-stopped
+    expose:
+      - "8000"
+    environment:
+      - PORT=8000
+    env_file:
+      - .env
+    depends_on:
+      alembic:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - myaje_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.prod
+    container_name: myaje-frontend
+    restart: unless-stopped
+    expose:
+      - "3000"
+    env_file:
+      - .env
+    networks:
+      - myaje_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+  
+  postgres:
+    image: postgres:17
+    container_name: myaje-postgres
+    restart: unless-stopped
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_HOST_AUTH_METHOD: scram-sha-256
+      POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256"
+    env_file:
+      - .env
+    networks:
+      - myaje_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: myaje-pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@admin.com}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin}
+      PGADMIN_CONFIG_SERVER_MODE: "False"
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: "False"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    expose:
+      - "80"
+    depends_on:
+      - postgres
+    networks:
+      - myaje_network
+
+  redis:
+    image: redis:7-alpine
+    container_name: myaje-redis
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    networks:
+      - myaje_network
+    command: redis-server --maxmemory 512mb --maxmemory-policy allkeys-lru --save 20 1 --loglevel warning
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  nginx:
+    image: nginx:latest
+    container_name: myaje-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx:/etc/nginx/conf.d
+      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
+    depends_on:
+      - backend
+      - frontend
+    networks:
+      - myaje_network
+    healthcheck:
+      test: ["CMD", "nginx", "-t"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  alembic:
+    build:
+      context: .
+      dockerfile: Dockerfile.prod
+    container_name: myaje-alembic
+    volumes:
+      - ./alembic/versions:/app/alembic/versions
+      - ./backend:/app/backend #sync backend files
+      - ./alembic.ini:/app/alembic.ini
+    depends_on:
+      - postgres
+    env_file:
+      - .env
+    networks:
+      - myaje_network
+    healthcheck:
+      test: ["CMD-SHELL", "/usr/local/bin/check_migrations.sh"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  postgres_data:
+  redis_data:
+  pgadmin_data:
+
+networks:
+  myaje_network:
+    driver: bridge
