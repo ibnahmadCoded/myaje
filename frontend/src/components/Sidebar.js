@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { UserMenu } from '@/components/ui/usermenu';
+import { UserMenu } from '@/components/ui/userMenu';
 import { 
   LayoutGrid, 
   Package, 

@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { UserMenu } from '@/components/admin/usermenu';
+import { UserMenu } from '@/components/admin/userMenu';
 import { 
   Banknote,
   LayoutGrid, 
