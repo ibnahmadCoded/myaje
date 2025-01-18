@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { LogOut, User, Settings, ChevronUp } from 'lucide-react';
 import { apiBaseUrl } from '@/config';
+import LoadingScreen from '@/components/LoadingScreen';
 
 export const UserMenu = () => {
   const [isDropupOpen, setIsDropupOpen] = useState(false);
@@ -64,6 +65,10 @@ export const UserMenu = () => {
     }
   };
 
+  if (isLoggingOut) {
+    return <LoadingScreen />;
+  }
+
   return (
     <div className="absolute bottom-0 left-0 right-0 p-4 border-t bg-amber-50 hover:bg-amber-100">
       <div className="relative">
@@ -106,8 +111,9 @@ export const UserMenu = () => {
               {userDetails ? (
                 <>
                   <div className="text-sm font-medium text-stone-800">
-                    {`${userDetails.first_name || ''} ${userDetails.last_name || ''}`.trim() || 'User'}
+                    {`${userDetails.business_name || userDetails.phone}`.trim()}
                   </div>
+                  
                   <div className="text-xs text-stone-500">{userDetails.email}</div>
                 </>
               ) : (
@@ -124,5 +130,3 @@ export const UserMenu = () => {
     </div>
   );
 };
-
-export default UserMenu;

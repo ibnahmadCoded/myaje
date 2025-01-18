@@ -254,10 +254,12 @@ async def get_product_stats(
         ProductWishlist.product_id == product_id
     ).scalar()
 
-    existing_current_user_wishlist = db.query(ProductWishlist).filter(
-        ProductWishlist.user_id == current_user.id,
-        ProductWishlist.product_id == product_id
-    ).first()
+    existing_current_user_wishlist = None
+    if current_user:
+        existing_current_user_wishlist = db.query(ProductWishlist).filter(
+            ProductWishlist.user_id == current_user.id,
+            ProductWishlist.product_id == product_id
+        ).first()
     
     return {
         "views": view_count,
