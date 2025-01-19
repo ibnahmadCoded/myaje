@@ -8,7 +8,8 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
+    - name: Checkout Repository
+      uses: actions/checkout@v2
 
     - name: Configure AWS credentials
       uses: aws-actions/configure-aws-credentials@v1
@@ -16,6 +17,10 @@ jobs:
         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: ${{ secrets.AWS_REGION }}
+
+    - name: Authenticate with Docker Hub
+      run: |
+        echo "${{ secrets.DOCKER_HUB_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_HUB_USERNAME }}" --password-stdin
 
     - name: Copy files to EC2
       uses: appleboy/scp-action@master
@@ -35,13 +40,6 @@ jobs:
         script: |
           cd /home/ubuntu/app
           
-          # Backup current migrations if they exist
-          if [ -d "alembic/versions" ]; then
-            echo "Backing up existing migrations..."
-            mkdir -p migrations_backup
-            cp -r alembic/versions/* migrations_backup/
-          fi
-          
           # Clean up old files
           echo "Cleaning up old files..."
           rm -rf alembic/versions/*
@@ -57,17 +55,9 @@ jobs:
           echo "Cleaning Docker system..."
           docker system prune -af
           
-          # Create versions directory with proper permissions
-          echo "Setting up migrations directory..."
-          mkdir -p alembic/versions
-          chmod 777 alembic/versions
-          
-          # Restore migrations if backup exists
-          if [ -d "migrations_backup" ] && [ "$(ls -A migrations_backup)" ]; then
-            echo "Restoring migrations from backup..."
-            cp -r migrations_backup/* alembic/versions/
-            rm -rf migrations_backup
-          fi
+          # Pull Docker images to reduce build time
+          echo "Pulling Docker images..."
+          docker-compose -f docker-compose.prod.yml pull
           
           # Start containers
           echo "Starting containers..."
@@ -79,4 +69,3 @@ jobs:
           
           # Check container status
           docker ps
-          docker-compose -f docker-compose.prod.yml logs alembic
