@@ -15,5 +15,5 @@ fi
 # Run migrations
 alembic upgrade head
 
-# Keep container running
+# Keep container running,.
 tail -f /dev/null
