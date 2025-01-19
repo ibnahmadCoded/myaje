@@ -39,30 +39,33 @@ export default function AdminUsers() {
 
   const fetchAdminUsers = useCallback(async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${apiBaseUrl}/admin/get_admin_users`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-
-      if (response.status === 401) {
-        router.push('/admin/login');
-        return;
-      }
-
-      if (response.status === 403) {
-        toast({
-          title: "Access Denied",
-          description: "Only super admins can view admin users",
-          variant: "destructive",
+      // Ensure we're in the client-side context before accessing localStorage
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const token = localStorage.getItem('token');
+        const response = await fetch(`${apiBaseUrl}/admin/get_admin_users`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
         });
-        router.push('/admin/feedback');
-        return;
+  
+        if (response.status === 401) {
+          router.push('/admin/login');
+          return;
+        }
+  
+        if (response.status === 403) {
+          toast({
+            title: "Access Denied",
+            description: "Only super admins can view admin users",
+            variant: "destructive",
+          });
+          router.push('/admin/feedback');
+          return;
+        }
+  
+        const data = await response.json();
+        setAdminUsers(data);
       }
-
-      const data = await response.json();
-      setAdminUsers(data);
     } catch (error) {
       toast({
         title: "Error",
@@ -71,41 +74,44 @@ export default function AdminUsers() {
       });
     }
   }, [toast, router]);
-
+  
   useEffect(() => {
     fetchAdminUsers();
   }, [fetchAdminUsers]);
-
+  
   const handleCreateUser = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${apiBaseUrl}/admin/create_admin_user`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(newUser),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.detail || 'Failed to create admin user');
+      // Ensure we're in the client-side context before accessing localStorage
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const token = localStorage.getItem('token');
+        const response = await fetch(`${apiBaseUrl}/admin/create_admin_user`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(newUser),
+        });
+  
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.detail || 'Failed to create admin user');
+        }
+  
+        toast({
+          title: "Success",
+          description: "Admin user created successfully",
+        });
+  
+        setShowCreateDialog(false);
+        setNewUser({
+          email: '',
+          password: '',
+          admin_role: '',
+          business_name: '',
+        });
+        fetchAdminUsers();
       }
-
-      toast({
-        title: "Success",
-        description: "Admin user created successfully",
-      });
-      
-      setShowCreateDialog(false);
-      setNewUser({
-        email: '',
-        password: '',
-        admin_role: '',
-        business_name: '',
-      });
-      fetchAdminUsers();
     } catch (error) {
       toast({
         title: "Error",
@@ -114,30 +120,33 @@ export default function AdminUsers() {
       });
     }
   };
-
+  
   const handleDeleteUser = async (userId) => {
     if (!confirm('Are you sure you want to delete this admin user?')) return;
-
+  
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${apiBaseUrl}/admin/users/${userId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.detail || 'Failed to delete admin user');
+      // Ensure we're in the client-side context before accessing localStorage
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const token = localStorage.getItem('token');
+        const response = await fetch(`${apiBaseUrl}/admin/users/${userId}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+  
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.detail || 'Failed to delete admin user');
+        }
+  
+        toast({
+          title: "Success",
+          description: "Admin user deleted successfully",
+        });
+  
+        fetchAdminUsers();
       }
-
-      toast({
-        title: "Success",
-        description: "Admin user deleted successfully",
-      });
-      
-      fetchAdminUsers();
     } catch (error) {
       toast({
         title: "Error",
@@ -145,7 +154,7 @@ export default function AdminUsers() {
         variant: "destructive",
       });
     }
-  };
+  };  
 
   return (
     <DashboardLayout>

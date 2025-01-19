@@ -61,6 +61,8 @@ const MoneyRequestsTab = () => {
   const [userView, setUserView] = useState("");
   
   useEffect(() => {
+    if (typeof window === 'undefined') return;
+
     const userDataStr = localStorage.getItem('user');
     if (userDataStr) {
       const user = JSON.parse(userDataStr);
@@ -72,6 +74,9 @@ const MoneyRequestsTab = () => {
     if (!userView) return;
     
     try {
+      
+      if (typeof window === 'undefined') return;
+
       const response = await fetch(`${apiBaseUrl}/banking/pools/available?active_view=${userView}`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -90,6 +95,8 @@ const MoneyRequestsTab = () => {
     if (!userView) return;
 
     try {
+      if (typeof window === 'undefined') return;
+
       const [receivedRes, sentRes] = await Promise.all([
         fetch(`${apiBaseUrl}/banking/money-requests/received?user_view=${userView}`, {
           headers: {
@@ -128,6 +135,8 @@ const MoneyRequestsTab = () => {
         poolId: parseInt(poolId, 10),
         selectedRequest
       });
+
+      if (typeof window === 'undefined') return;
 
       const response = await fetch(
         `${apiBaseUrl}/banking/money-requests/${parseInt(selectedRequest.id, 10)}/accept`,
@@ -181,6 +190,8 @@ const MoneyRequestsTab = () => {
 
   const handleRejectRequest = async (reason) => {
     try {
+      if (typeof window === 'undefined') return;
+
       const response = await fetch(
         `${apiBaseUrl}/banking/money-requests/${requestToReject.id}/reject`,
         {

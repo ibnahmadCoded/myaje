@@ -45,32 +45,37 @@ export const ProductModal = ({ product, isOpen, onClose }) => {
   const fetchProductData = useCallback(async () => {
     try {
       setIsLoading(true);
-      const [reviewsResponse, statsResponse] = await Promise.all([
-        fetch(`${apiBaseUrl}/marketplace/${product.id}/reviews`, {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
-          },
-        }),
-        fetch(`${apiBaseUrl}/marketplace/${product.id}/stats`, {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
-          },
-        })
-      ]);
-
-      const [reviewsData, statsData] = await Promise.all([
-        reviewsResponse.json(),
-        statsResponse.json()
-      ]);
-
-      setReviews(reviewsData.reviews);
-      setReviewStats({
-        total: reviewsData.total,
-        average: reviewsData.average_rating
-      });
-      setWishlistCount(statsData.wishlist_count);
-      setViewsCount(statsData.views);
-      setIsWishListed(statsData.wishlisted_by_current_user)
+      
+      // Ensure this code only runs on the client side
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const token = localStorage.getItem('token');
+        const [reviewsResponse, statsResponse] = await Promise.all([
+          fetch(`${apiBaseUrl}/marketplace/${product.id}/reviews`, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }),
+          fetch(`${apiBaseUrl}/marketplace/${product.id}/stats`, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          })
+        ]);
+  
+        const [reviewsData, statsData] = await Promise.all([
+          reviewsResponse.json(),
+          statsResponse.json()
+        ]);
+  
+        setReviews(reviewsData.reviews);
+        setReviewStats({
+          total: reviewsData.total,
+          average: reviewsData.average_rating
+        });
+        setWishlistCount(statsData.wishlist_count);
+        setViewsCount(statsData.views);
+        setIsWishListed(statsData.wishlisted_by_current_user);
+      }
     } catch (error) {
       toast({
         title: "Error",
@@ -80,16 +85,18 @@ export const ProductModal = ({ product, isOpen, onClose }) => {
     } finally {
       setIsLoading(false);
     }
-  }, [product?.id, toast]);
+  }, [product?.id, toast]);  
 
   const recordView = useCallback(async () => {
     try {
-      await fetch(`${apiBaseUrl}/marketplace/${product.id}/view`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
+      if (typeof window !== 'undefined' && window.localStorage) {
+        await fetch(`${apiBaseUrl}/marketplace/${product.id}/view`, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('token')}`,
+          },
+        });
+      }
     } catch (error) {
       console.error('Failed to record view:', error);
     }
@@ -98,10 +105,12 @@ export const ProductModal = ({ product, isOpen, onClose }) => {
   // Place all useEffect hooks together
   useEffect(() => {
     if (isOpen && product) {
-      const userDataStr = localStorage.getItem('user');
-      if (userDataStr) {
-        const user = JSON.parse(userDataStr);
-        setUser(user)
+      if (typeof window !== 'undefined') {
+        const userDataStr = localStorage.getItem('user');
+        if (userDataStr) {
+          const user = JSON.parse(userDataStr);
+          setUser(user);
+        }
       }
 
       fetchProductData();
@@ -147,73 +156,82 @@ export const ProductModal = ({ product, isOpen, onClose }) => {
 
   const handleWishlist = async () => {
     try {
-      const response = await fetch(`${apiBaseUrl}/marketplace/${product.id}/wishlist`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error(response.statusText);
+      // Ensure this code only runs on the client side
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const token = localStorage.getItem('token');
+  
+        const response = await fetch(`${apiBaseUrl}/marketplace/${product.id}/wishlist`, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+  
+        if (!response.ok) {
+          throw new Error(response.statusText);
+        }
+  
+        // Refresh product data after successful wishlist action
+        fetchProductData();
       }
-
-      //setIsWishListed(!isWishListed);
-      //setWishlistCount(prev => isWishListed ? prev - 1 : prev + 1);
-      fetchProductData()
     } catch (error) {
       if (error.response?.status === 401) {
         toast({
           title: "Authentication Required",
           description: "Please log in to add items to your wishlist",
-          variant: "destructive"
+          variant: "destructive",
         });
       } else {
         toast({
           title: "Error",
           description: "Failed to update wishlist",
-          variant: "destructive"
+          variant: "destructive",
         });
       }
     }
-  };
+  };  
 
   const handleReviewSubmit = async (reviewData) => {
     try {
-      const response = await fetch(`${apiBaseUrl}/marketplace/${product.id}/review`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(reviewData),
-      });
-
-      if (!response.ok) {
-        throw new Error(response.statusText);
+      // Check if window and localStorage are available
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const token = localStorage.getItem('token');
+  
+        const response = await fetch(`${apiBaseUrl}/marketplace/${product.id}/review`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(reviewData),
+        });
+  
+        if (!response.ok) {
+          throw new Error(response.statusText);
+        }
+  
+        await fetchProductData();
+        toast({
+          title: "Success",
+          description: "Review submitted successfully",
+        });
       }
-
-      await fetchProductData();
-      toast({
-        title: "Success",
-        description: "Review submitted successfully"
-      });
     } catch (error) {
       if (error.response?.status === 401) {
         toast({
           title: "Authentication Required",
           description: "Please log in to submit a review",
-          variant: "destructive"
+          variant: "destructive",
         });
       } else {
         toast({
           title: "Error",
           description: "Failed to submit review",
-          variant: "destructive"
+          variant: "destructive",
         });
       }
     }
-  };
+  };  
 
   if (!product) return null;
 

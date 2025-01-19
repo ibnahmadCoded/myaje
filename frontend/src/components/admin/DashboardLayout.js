@@ -57,38 +57,47 @@ export default function DashboardLayout ({ children }) {
   const handleMouseEnter = () => !isMobile && setIsSidebarOpen(true);
   //const handleMouseLeave = () => !isMobile && setIsSidebarOpen(false);
 
-  const validateToken = useCallback(async (token) => {
-    try {
-      const response = await fetch(`${apiBaseUrl}/auth/validate-token`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`
+  const validateToken = useCallback(
+    async (token) => {
+      try {
+        const response = await fetch(`${apiBaseUrl}/auth/validate-token`, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+  
+        if (!response.ok) {
+          // Token invalid, redirect to login
+          if (typeof window !== 'undefined') {
+            localStorage.removeItem('token');
+            router.push('/admin/login');
+          }
+        } else {
+          setIsAuthenticated(true);
         }
-      });
-
-      if (!response.ok) {
-        // Token invalid, redirect to login
-        localStorage.removeItem('token');
+      } catch (error) {
+        console.error(`Token validation failed: ${error}`);
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('token');
+          router.push('/admin/login');
+        }
+      }
+    },
+    [router]
+  );
+  
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      // Ensure this code runs only on the client
+      const token = localStorage.getItem('token');
+      if (!token) {
+        // Redirect to login if no token
         router.push('/admin/login');
       } else {
-        setIsAuthenticated(true);
+        // Optional: Validate token with backend
+        validateToken(token);
       }
-    } catch (error) {
-      console.error(`Token validation failed, ${error}`);
-      localStorage.removeItem('token');
-      router.push('/admin/login');
-    }
-  }, [router]);
-
-  useEffect(() => {
-    // Check authentication on component mount
-    const token = localStorage.getItem('token');
-    if (!token) {
-      // Redirect to login if no token
-      router.push('/admin/login');
-    } else {
-      // Optional: Validate token with backend
-      validateToken(token);
     }
   }, [validateToken, router]);
 

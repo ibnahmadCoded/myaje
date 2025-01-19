@@ -31,37 +31,51 @@ const UserPayoutsPage = () => {
 
   const fetchBankDetails = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${apiBaseUrl}/payouts/bank-details`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setBankDetails(data);
-        setHasBankDetails(true);
+      // Ensure we're in the browser before accessing localStorage
+      if (typeof window !== 'undefined') {
+        const token = localStorage.getItem('token');
+        if (!token) throw new Error('Token is missing');
+  
+        const response = await fetch(`${apiBaseUrl}/payouts/bank-details`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+  
+        if (response.ok) {
+          const data = await response.json();
+          setBankDetails(data);
+          setHasBankDetails(true);
+        }
+      } else {
+        throw new Error('Window not found, localStorage is unavailable');
       }
     } catch (error) {
       console.error('Error fetching bank details:', error);
     }
-  };
+  };  
 
   const fetchPayouts = useCallback(async () => {
     try {
-      const token = localStorage.getItem('token');
-      const url = `${apiBaseUrl}/payouts/get_payouts${statusFilter !== 'all' ? `?status=${statusFilter}` : ''}`;
-      const response = await fetch(url, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-
-      if (!response.ok) throw new Error('Failed to fetch payouts');
-
-      const data = await response.json();
-      setPayouts(data);
+      // Ensure we're in a browser environment before accessing localStorage
+      if (typeof window !== 'undefined') {
+        const token = localStorage.getItem('token');
+        if (!token) throw new Error('Token is missing');
+  
+        const url = `${apiBaseUrl}/payouts/get_payouts${statusFilter !== 'all' ? `?status=${statusFilter}` : ''}`;
+        const response = await fetch(url, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+  
+        if (!response.ok) throw new Error('Failed to fetch payouts');
+  
+        const data = await response.json();
+        setPayouts(data);
+      } else {
+        throw new Error('Window not found, localStorage is unavailable');
+      }
     } catch (error) {
       toast({
         title: "Error",
@@ -71,7 +85,7 @@ const UserPayoutsPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [statusFilter, toast]);
+  }, [statusFilter, toast]);  
 
   useEffect(() => {
     fetchPayouts();
@@ -144,29 +158,36 @@ const UserPayoutsPage = () => {
     const handleSubmit = async (e) => {
       e.preventDefault();
       setSaving(true);
-  
+    
       try {
-        const token = localStorage.getItem('token');
-        const response = await fetch(`${apiBaseUrl}/payouts/bank-details`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(formData),
-        });
-  
-        if (!response.ok) throw new Error('Failed to save bank details');
-  
-        toast({
-          title: "Success",
-          description: "Bank details saved successfully",
-        });
-        
-        await fetchBankDetails(); // Refresh bank details
-        if (onSuccess) onSuccess();
-        setShowBankDetailsForm(false);
-        setIsEditing(false);
+        // Ensure we're in the browser environment before accessing localStorage
+        if (typeof window !== 'undefined') {
+          const token = localStorage.getItem('token');
+          if (!token) throw new Error('Token is missing');
+    
+          const response = await fetch(`${apiBaseUrl}/payouts/bank-details`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(formData),
+          });
+    
+          if (!response.ok) throw new Error('Failed to save bank details');
+    
+          toast({
+            title: "Success",
+            description: "Bank details saved successfully",
+          });
+    
+          await fetchBankDetails(); // Refresh bank details
+          if (onSuccess) onSuccess();
+          setShowBankDetailsForm(false);
+          setIsEditing(false);
+        } else {
+          throw new Error('Window not found, localStorage is unavailable');
+        }
       } catch (error) {
         toast({
           title: "Error",
@@ -176,7 +197,7 @@ const UserPayoutsPage = () => {
       } finally {
         setSaving(false);
       }
-    };
+    };    
   
     return (
       <form onSubmit={handleSubmit}>

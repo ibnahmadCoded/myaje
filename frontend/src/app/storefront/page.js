@@ -44,96 +44,141 @@ const StorefrontManagement = () => {
   // Fetch functions
   const fetchInventoryProducts = async () => {
     try {
-      const response = await fetch(`${apiBaseUrl}/inventory/get_inventory`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-      const data = await response.json();
-      setInventoryProducts(data);
+      // Check for the presence of `window` to ensure we are in the browser
+      if (typeof window !== 'undefined') {
+        const token = localStorage.getItem('token');
+        if (!token) throw new Error('Token is missing');
+  
+        const response = await fetch(`${apiBaseUrl}/inventory/get_inventory`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        const data = await response.json();
+        setInventoryProducts(data);
+      } else {
+        throw new Error('Window not found, localStorage is unavailable');
+      }
     } catch (error) {
       setError(`Failed to fetch inventory products, ${error}`);
     }
-  };
+  };  
 
   const fetchStoreProducts = async () => {
     try {
-      const response = await fetch(`${apiBaseUrl}/storefront/get_products`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+      // Check for the presence of `window` to ensure we are in the browser
+      if (typeof window !== 'undefined') {
+        const token = localStorage.getItem('token');
+        if (!token) throw new Error('Token is missing');
+  
+        const response = await fetch(`${apiBaseUrl}/storefront/get_products`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        const data = await response.json();
+  
+        if (Array.isArray(data) && data.length === 0) {
+          setStoreProducts([]);
+        } else {
+          setStoreProducts(data);
         }
-      });
-      const data = await response.json();
-
-      if (Array.isArray(data) && data.length === 0) {
-        setStoreProducts([]);
       } else {
-        setStoreProducts(data);
+        throw new Error('Window not found, localStorage is unavailable');
       }
     } catch (error) {
       setError(`Failed to fetch store products, ${error}`);
     }
-  };
+  };  
 
   const fetchOrders = async () => {
     try {
-      const response = await fetch(`${apiBaseUrl}/orders/seller/list`, { 
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-      const data = await response.json();
-      setOrders(data);
+      // Check for the presence of `window` to ensure we are in the browser
+      if (typeof window !== 'undefined') {
+        const token = localStorage.getItem('token');
+        if (!token) throw new Error('Token is missing');
+  
+        const response = await fetch(`${apiBaseUrl}/orders/seller/list`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        const data = await response.json();
+        setOrders(data);
+      } else {
+        throw new Error('Window not found, localStorage is unavailable');
+      }
     } catch (error) {
       setError(`Failed to fetch orders, ${error}`);
     }
-  };
+  };  
 
   const fetchUserProfile = async () => {
     try {
-      // Check if user data is available in local storage
-      const storedUser = localStorage.getItem('user');
-      if (storedUser) {
-        // Parse the JSON string into an object and set the user state
-        const user = JSON.parse(storedUser);
-        setUser(user);
-      } 
+      // Check for the presence of `window` to ensure we are in the browser
+      if (typeof window !== 'undefined') {
+        const storedUser = localStorage.getItem('user');
+        if (storedUser) {
+          const user = JSON.parse(storedUser);
+          setUser(user);
+        } else {
+          throw new Error('User not found in localStorage');
+        }
+      } else {
+        throw new Error('Window not found, localStorage is unavailable');
+      }
     } catch (error) {
       console.error(error);
       setError('Failed to fetch user profile');
     }
-  };
+  };  
 
   const fetchStoreDetails = async () => {
     try {
-      const response = await fetch(`${apiBaseUrl}/storefront/get_store_details`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-      const data = await response.json();
-      setStoreDetails(data);
+      // Check for the presence of `window` to ensure we are in the browser
+      if (typeof window !== 'undefined') {
+        const token = localStorage.getItem('token');
+        if (!token) throw new Error('Token is missing');
+  
+        const response = await fetch(`${apiBaseUrl}/storefront/get_store_details`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        const data = await response.json();
+        setStoreDetails(data);
+      } else {
+        throw new Error('Window not found, localStorage is unavailable');
+      }
     } catch (error) {
       console.error('Failed to fetch store details', error);
     }
-  };
+  };  
 
   const handleUpdateStoreDetails = async () => {
     try {
-      await fetch(`${apiBaseUrl}/storefront/update_store_details`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify(storeDetails)
-      });
-      setIsEditingStoreDetails(false);
-      fetchStoreDetails();
-      toast({
-        title: "Success",
-        description: "Store details updated successfully.",
-      });
+      // Check for the presence of `window` to ensure we are in the browser
+      if (typeof window !== 'undefined') {
+        const token = localStorage.getItem('token');
+        if (!token) throw new Error('Token is missing');
+  
+        await fetch(`${apiBaseUrl}/storefront/update_store_details`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(storeDetails)
+        });
+        setIsEditingStoreDetails(false);
+        fetchStoreDetails();
+        toast({
+          title: "Success",
+          description: "Store details updated successfully.",
+        });
+      } else {
+        throw new Error('Window not found, localStorage is unavailable');
+      }
     } catch (error) {
       setError('Failed to update store details');
       toast({
@@ -141,7 +186,7 @@ const StorefrontManagement = () => {
         description: error.message,
       });
     }
-  };
+  };  
 
   // Initial data fetch
   useEffect(() => {
@@ -165,58 +210,88 @@ const StorefrontManagement = () => {
     fetchData();
   }, []);
 
-  
-
   const handleUpdatePrice = async () => {
     if (!editingProduct) return;
-
+  
+    // Check if window and localStorage are available
+    if (typeof window === 'undefined' || !localStorage.getItem('token')) {
+      setError('Token not available or localStorage is not accessible');
+      return;
+    }
+  
     try {
+      const token = localStorage.getItem('token');
+      const price = parseFloat(productPrices[editingProduct.id]);
+  
+      if (isNaN(price)) {
+        setError('Invalid price entered');
+        return;
+      }
+  
       await fetch(`${apiBaseUrl}/storefront/update_products/${editingProduct.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ 
-          storefront_price: parseFloat(productPrices[editingProduct.id])
-        })
+        body: JSON.stringify({ storefront_price: price })
       });
+  
       fetchStoreProducts();
       setEditingProduct(null);
       setProductPrices({});
     } catch (error) {
-      setError(`Failed to update product price, ${error}`);
+      setError(`Failed to update product price, ${error.message}`);
     }
   };
-
+  
   const handleFulfillOrder = async (orderId) => {
+    // Check if window and localStorage are available
+    if (typeof window === 'undefined' || !localStorage.getItem('token')) {
+      setError('Token not available or localStorage is not accessible');
+      return;
+    }
+  
     try {
+      const token = localStorage.getItem('token');
+  
       await fetch(`${apiBaseUrl}/orders/seller/${orderId}/fulfill`, {
         method: 'PUT',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${token}`
         }
       });
+  
       fetchOrders();
     } catch (error) {
-      setError(`Failed to fulfill order, ${error}`);
+      setError(`Failed to fulfill order, ${error.message}`);
     }
   };
 
   const handleDeleteOrder = async (orderId) => {
+    // Check if window and localStorage are available
+    if (typeof window === 'undefined' || !localStorage.getItem('token')) {
+      setError('Token not available or localStorage is not accessible');
+      return;
+    }
+  
     try {
+      const token = localStorage.getItem('token');
+  
       await fetch(`${apiBaseUrl}/orders/seller/${orderId}`, {
         method: 'DELETE',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${token}`
         }
       });
+  
       setOrderToDelete(null);
       fetchOrders();
     } catch (error) {
-      setError(`Failed to delete order, ${error}`);
+      setError(`Failed to delete order, ${error.message}`);
     }
   };
+  
 
   if(isEditingStoreDetails){
     //console.log("Editing store front")
@@ -331,30 +406,54 @@ const StorefrontManagement = () => {
     };
 
     const handleAddToStore = async () => {
+      // Check if window and localStorage are available
+      if (typeof window === 'undefined' || !localStorage.getItem('token')) {
+        setError('Token not available or localStorage is not accessible');
+        return;
+      }
+    
+      // Ensure there are selected products to add
+      if (!selectedProducts || selectedProducts.length === 0) {
+        setError('No products selected');
+        return;
+      }
+    
       try {
+        const token = localStorage.getItem('token');
+    
+        // Loop through each selected product and add it to the store
         for (const productId of selectedProducts) {
           const price = productPrices[productId];
+          
+          // Skip if price is not available for this product
           if (!price) continue;
-  
-          await fetch(`${apiBaseUrl}/storefront/add_products`, {
+    
+          // Add product to store
+          const response = await fetch(`${apiBaseUrl}/storefront/add_products`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': `Bearer ${localStorage.getItem('token')}`
+              'Authorization': `Bearer ${token}`,
             },
-            body: JSON.stringify({ 
+            body: JSON.stringify({
               product_id: productId,
-              storefront_price: parseFloat(price)
-            })
+              storefront_price: parseFloat(price),
+            }),
           });
+    
+          if (!response.ok) {
+            throw new Error(`Failed to add product ${productId} to store`);
+          }
         }
+    
+        // Successfully added products, now refresh the store products
         fetchStoreProducts();
         setSelectedProducts([]);
         setProductPrices({});
       } catch (error) {
         setError(`Failed to add products to store, ${error}`);
       }
-    };
+    };    
   
     return (
       <div className="space-y-4">
@@ -414,19 +513,35 @@ const StorefrontManagement = () => {
   };
 
   const handleDeleteFromStore = async (productId) => {
+    // Check if window and localStorage are available
+    if (typeof window === 'undefined' || !localStorage.getItem('token')) {
+      setError('Token not available or localStorage is not accessible');
+      return;
+    }
+  
     try {
-      await fetch(`${apiBaseUrl}/storefront/delete_products/${productId}`, {
+      const token = localStorage.getItem('token');
+  
+      // Make the delete request
+      const response = await fetch(`${apiBaseUrl}/storefront/delete_products/${productId}`, {
         method: 'DELETE',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
+          'Authorization': `Bearer ${token}`,
+        },
       });
+  
+      // If the response is not OK, throw an error
+      if (!response.ok) {
+        throw new Error('Failed to delete product from store');
+      }
+  
+      // Refresh the store products after successful deletion
       fetchStoreProducts();
       setDeleteConfirmation(null);
     } catch (error) {
-      setError(`Failed to remove product from store, ${error}`);
+      setError(`Failed to remove product from store, ${error.message || error}`);
     }
-  };
+  };  
 
   const ProductCard = ({ product, isPreview }) => {
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
@@ -456,23 +571,35 @@ const StorefrontManagement = () => {
     };
 
     const fetchProductStats = useCallback(async () => {
-        try {
-          const response = await fetch(`${apiBaseUrl}/marketplace/${product.id}/stats`, {
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem('token')}`,
-            },
-          });
-          
-          if (!response.ok) {
-            throw new Error('Failed to fetch stats');
-          }
-          
-          const stats = await response.json();
-          setProductStats(stats);
-        } catch (error) {
-          console.error('Failed to load product stats:', error);
+      // Ensure `localStorage` and `product.id` are accessible
+      if (typeof window === 'undefined' || !localStorage.getItem('token') || !product?.id) {
+        console.error('Token or product ID is missing');
+        return;
+      }
+    
+      try {
+        const token = localStorage.getItem('token');
+    
+        // Make the API call
+        const response = await fetch(`${apiBaseUrl}/marketplace/${product.id}/stats`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+    
+        // Check for successful response
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData?.detail || 'Failed to fetch stats');
         }
-      }, [product.id]);
+    
+        // Parse and set product stats
+        const stats = await response.json();
+        setProductStats(stats);
+      } catch (error) {
+        console.error('Failed to load product stats:', error.message || error);
+      }
+    }, [product?.id]);    
     
       useEffect(() => {
         fetchProductStats();

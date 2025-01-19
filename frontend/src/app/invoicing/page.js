@@ -41,41 +41,56 @@ const InvoicingPage = () => {
   const { toast } = useToast();
 
   const fetchInvoices = useCallback(async () => {
-    try {
-      const response = await fetch(`${apiBaseUrl}/invoicing/requests`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
-      const data = await response.json();
-      if (Array.isArray(data)) {
-        setInvoices(data);
+    if (typeof window !== 'undefined') { // Check if we're on the client side
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+          throw new Error('Authorization token is missing');
+        }
+  
+        const response = await fetch(`${apiBaseUrl}/invoicing/requests`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+  
+        const data = await response.json();
+        if (Array.isArray(data)) {
+          setInvoices(data);
+        }
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: `Failed to fetch invoices. Please try again., ${error}`,
+          variant: "destructive",
+        });
       }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: `Failed to fetch invoices. Please try again., ${error}`,
-        variant: "destructive",
-      });
     }
   }, [toast]);
-
+  
   const fetchBankDetails = useCallback(async () => {
-    try {
-      const response = await fetch(`${apiBaseUrl}/invoicing/get_bank_details`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
-      const data = await response.json();
-      setAccountDetails(data);
-
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: `Failed to fetch account. Please try again., ${error}`,
-        variant: "destructive",
-      });
+    if (typeof window !== 'undefined') { // Check if we're on the client side
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+          throw new Error('Authorization token is missing');
+        }
+  
+        const response = await fetch(`${apiBaseUrl}/invoicing/get_bank_details`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+  
+        const data = await response.json();
+        setAccountDetails(data);
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: `Failed to fetch account. Please try again., ${error}`,
+          variant: "destructive",
+        });
+      }
     }
   }, [toast]);
 
@@ -91,64 +106,79 @@ const InvoicingPage = () => {
 
   const handleGenerateConfirm = async () => {
     setIsGenerating(true);
-    try {
-      const response = await fetch(`${apiBaseUrl}/invoicing/generate/${generateInvoiceId}`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          payment_terms: paymentTerms,
-          due_date: dueDate || undefined,
-        }),
-      });
-      const data = await response.json();
-      if (response.ok) {
-        toast({
-          title: "Success",
-          description: "Invoice generated successfully",
+    if (typeof window !== 'undefined') { // Check if we're on the client side
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+          throw new Error('Authorization token is missing');
+        }
+  
+        const response = await fetch(`${apiBaseUrl}/invoicing/generate/${generateInvoiceId}`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            payment_terms: paymentTerms,
+            due_date: dueDate || undefined,
+          }),
         });
-        setShowGenerateDialog(false);
-        fetchInvoices();
-      } else {
-        throw new Error(data.detail);
+  
+        const data = await response.json();
+        if (response.ok) {
+          toast({
+            title: "Success",
+            description: "Invoice generated successfully",
+          });
+          setShowGenerateDialog(false);
+          fetchInvoices();
+        } else {
+          throw new Error(data.detail);
+        }
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: error.message || "Failed to generate invoice",
+          variant: "destructive",
+        });
+      } finally {
+        setIsGenerating(false);
       }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to generate invoice",
-        variant: "destructive",
-      });
-    } finally {
-      setIsGenerating(false);
     }
   };
-
+  
   const handleResendEmail = async (invoiceId) => {
     setIsSendingEmail(true);
-    try {
-      const response = await fetch(`${apiBaseUrl}/invoicing/${invoiceId}/send-email`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
-      
-      if (!response.ok) throw new Error('Failed to send email');
-      
-      toast({
-        title: "Success",
-        description: "Invoice sent to customer's email",
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: `Failed to send email, ${error}`,
-        variant: "destructive",
-      });
-    } finally {
-      setIsSendingEmail(false);
+    if (typeof window !== 'undefined') { // Check if we're on the client side
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+          throw new Error('Authorization token is missing');
+        }
+  
+        const response = await fetch(`${apiBaseUrl}/invoicing/${invoiceId}/send-email`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+  
+        if (!response.ok) throw new Error('Failed to send email');
+  
+        toast({
+          title: "Success",
+          description: "Invoice sent to customer's email",
+        });
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: `Failed to send email, ${error}`,
+          variant: "destructive",
+        });
+      } finally {
+        setIsSendingEmail(false);
+      }
     }
   };
 
@@ -276,31 +306,37 @@ const InvoicingPage = () => {
   );
 
   const handleAccountUpdate = async (formData) => {
-    try {
-      const response = await fetch(`${apiBaseUrl}/invoicing/save_bank_details`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
-      });
-      
-      if (!response.ok) throw new Error('Failed to update account details');
-      
-      //const data = await response.json();
-      fetchBankDetails();
-      setIsEditingAccount(false);
-      toast({
-        title: "Success",
-        description: "Account details updated successfully",
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to update account details",
-        variant: "destructive",
-      });
+    if (typeof window !== 'undefined') { // Check if we're on the client side
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+          throw new Error('Authorization token is missing');
+        }
+  
+        const response = await fetch(`${apiBaseUrl}/invoicing/save_bank_details`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(formData),
+        });
+  
+        if (!response.ok) throw new Error('Failed to update account details');
+  
+        fetchBankDetails();
+        setIsEditingAccount(false);
+        toast({
+          title: "Success",
+          description: "Account details updated successfully",
+        });
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: error.message || "Failed to update account details",
+          variant: "destructive",
+        });
+      }
     }
   };
 

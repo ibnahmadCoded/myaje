@@ -29,22 +29,27 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
 
   useEffect(() => {
-    const savedCart = localStorage.getItem('cart');
-    if (savedCart) {
-      setCartItems(JSON.parse(savedCart));
-    }
+    if (typeof window !== 'undefined') {
+      const savedCart = localStorage.getItem('cart');
+      if (savedCart) {
+        setCartItems(JSON.parse(savedCart));
+      }}
   }, []);
 
   useEffect(() => {
-    localStorage.setItem('cart', JSON.stringify(cartItems));
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('cart', JSON.stringify(cartItems));
+    }
   }, [cartItems]);
 
   const addToCart = (product: Product, quantity = 1) => {
-    const userDataStr = localStorage.getItem('user');
-    if (userDataStr) {
-      const user = JSON.parse(userDataStr);
-      if (user.active_view === 'business') {
-        return { success: false, error: 'business_view' };
+    if (typeof window !== 'undefined') {
+      const userDataStr = localStorage.getItem('user');
+      if (userDataStr) {
+        const user = JSON.parse(userDataStr);
+        if (user.active_view === 'business') {
+          return { success: false, error: 'business_view' };
+        }
       }
     }
 
@@ -85,7 +90,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   const clearCart = () => {
     setCartItems([]);
-    localStorage.removeItem('cart');
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('cart');
+    }
   };
 
   return (

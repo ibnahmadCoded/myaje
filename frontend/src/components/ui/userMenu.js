@@ -11,24 +11,33 @@ export const UserMenu = () => {
   const router = useRouter();
 
   useEffect(() => {
-    const userData = localStorage.getItem('user');
-    if (userData) {
-      try {
-        setUserDetails(JSON.parse(userData));
-      } catch (error) {
-        console.error('Error parsing user data:', error);
-        localStorage.removeItem('user'); // Clear invalid data
+    if (typeof window !== 'undefined') {
+      // Ensure this code runs only on the client
+      const userData = localStorage.getItem('user');
+      if (userData) {
+        try {
+          setUserDetails(JSON.parse(userData));
+        } catch (error) {
+          console.error('Error parsing user data:', error);
+          localStorage.removeItem('user'); // Clear invalid data
+        }
       }
     }
   }, []);
-
+  
   const handleLogout = async (e) => {
     e.preventDefault();
     if (isLoggingOut) return; // Prevent multiple clicks
-
+  
     setIsLoggingOut(true);
+  
+    if (typeof window === 'undefined') {
+      console.error('Logout attempted on server side where window is not available.');
+      return; // Avoid executing logout logic server-side
+    }
+  
     const token = localStorage.getItem('token');
-
+  
     try {
       if (!token) {
         // If no token exists, just clear local storage and redirect
@@ -36,7 +45,7 @@ export const UserMenu = () => {
         router.push('/login');
         return;
       }
-
+  
       const response = await fetch(`${apiBaseUrl}/auth/logout`, {
         method: 'POST',
         credentials: 'include',
@@ -45,7 +54,7 @@ export const UserMenu = () => {
           'Authorization': `Bearer ${token}`,
         },
       });
-
+  
       // Only clear storage after successful logout or if response indicates invalid token
       if (response.ok || response.status === 401) {
         localStorage.clear();
@@ -63,7 +72,7 @@ export const UserMenu = () => {
     } finally {
       setIsLoggingOut(false);
     }
-  };
+  };  
 
   if (isLoggingOut) {
     return <LoadingScreen />;

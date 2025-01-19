@@ -69,6 +69,8 @@ export const CheckoutDialog = ({
     // Initialize auth state and fetch eligibility
     useEffect(() => {
       const initializeAuth = async () => {
+        if (typeof window === 'undefined') return;
+
         const userDataStr = localStorage.getItem('user');
         const token = localStorage.getItem('token');
         
@@ -209,6 +211,8 @@ export const CheckoutDialog = ({
   const handlePaymentSuccess = async (response) => {
       try {
           setIsProcessing(true);
+
+          if (typeof window === 'undefined') return;
           
           // Verify payment on your backend
           const verifyResponse = await fetch(`${apiBaseUrl}/payment/verify`, {
@@ -266,6 +270,8 @@ export const CheckoutDialog = ({
 
     setIsProcessing(true);
     setError("");
+
+    if (typeof window === 'undefined') return;
 
     try {
         const paymentData = {
@@ -359,6 +365,8 @@ export const CheckoutDialog = ({
 
     setIsProcessing(true);
     setError("");
+
+    if (typeof window === 'undefined') return;
 
     try {
       const invoiceData = {

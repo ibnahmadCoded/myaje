@@ -24,14 +24,17 @@ const BankingPage = () => {
   const [showOnboarding, setShowOnboarding] = useState(false);
 
   useEffect(() => {
-    const userDataStr = localStorage.getItem('user');
-    if (userDataStr) {
-      const user = JSON.parse(userDataStr);
-      const onboardingKey = user.active_view === 'business'
-        ? 'businessBankingOnboarded'
-        : 'personalBankingOnboarded';
-      const isOnboarded = localStorage.getItem(onboardingKey) === 'true';
-      setShowOnboarding(!isOnboarded);
+    // Ensure the code runs only on the client side (browser)
+    if (typeof window !== 'undefined' && window.localStorage) {
+      const userDataStr = localStorage.getItem('user');
+      if (userDataStr) {
+        const user = JSON.parse(userDataStr);
+        const onboardingKey = user.active_view === 'business'
+          ? 'businessBankingOnboarded'
+          : 'personalBankingOnboarded';
+        const isOnboarded = localStorage.getItem(onboardingKey) === 'true';
+        setShowOnboarding(!isOnboarded);
+      }
     }
   }, []);
   const [onboardingStep, setOnboardingStep] = useState(0);
@@ -54,26 +57,29 @@ const BankingPage = () => {
 
   const fetchAccountDetails = useCallback(async () => {
     try {
-      const response = await fetch(`${apiBaseUrl}/banking/accounts/${userData?.active_view === 'business' ? 'business' : 'personal'}`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-
-      if (response.ok) {
-        const accountData = await response.json();
-        const mappedData = {
-          accountName: accountData.account_name,
-          accountNumber: accountData.account_number,
-          accountType: accountData.account_type === 'personal' ? 'Individual' : 'Business',
-          balance: accountData.balance,
-          isActive: accountData.is_active,
-        };
-
-        if (userData?.active_view === 'business') {
-          setBusinessAccountDetails(mappedData);
-        } else {
-          setPersonalAccountDetails(mappedData);
+      // Ensure the code runs only on the client side (browser)
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const response = await fetch(`${apiBaseUrl}/banking/accounts/${userData?.active_view === 'business' ? 'business' : 'personal'}`, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        });
+  
+        if (response.ok) {
+          const accountData = await response.json();
+          const mappedData = {
+            accountName: accountData.account_name,
+            accountNumber: accountData.account_number,
+            accountType: accountData.account_type === 'personal' ? 'Individual' : 'Business',
+            balance: accountData.balance,
+            isActive: accountData.is_active,
+          };
+  
+          if (userData?.active_view === 'business') {
+            setBusinessAccountDetails(mappedData);
+          } else {
+            setPersonalAccountDetails(mappedData);
+          }
         }
       }
     } catch (error) {
@@ -88,18 +94,21 @@ const BankingPage = () => {
   }, [fetchAccountDetails, userData]);
   
   useEffect(() => {
-    const userDataStr = localStorage.getItem('user');
-    if (userDataStr) {
-      const parsedUser = JSON.parse(userDataStr);
-      setUserData(parsedUser);
+    // Ensure the code runs only on the client side (browser)
+    if (typeof window !== 'undefined' && window.localStorage) {
+      const userDataStr = localStorage.getItem('user');
+      if (userDataStr) {
+        const parsedUser = JSON.parse(userDataStr);
+        setUserData(parsedUser);
   
-      const onboardingKey = parsedUser.active_view === 'business'
-        ? 'businessBankingOnboarded'
-        : 'personalBankingOnboarded';
+        const onboardingKey = parsedUser.active_view === 'business'
+          ? 'businessBankingOnboarded'
+          : 'personalBankingOnboarded';
   
-      const onboardingCompleted = localStorage.getItem(onboardingKey) === 'true';
-      if (onboardingCompleted) {
-        setShowOnboarding(false);
+        const onboardingCompleted = localStorage.getItem(onboardingKey) === 'true';
+        if (onboardingCompleted) {
+          setShowOnboarding(false);
+        }
       }
     }
   }, []); // Initial load
@@ -142,28 +151,31 @@ const BankingPage = () => {
     const handleOnboardingComplete = async () => {
       if (onboardingStep === 0) {
         if (!validateInputs()) return;
-
+    
         // Call the backend immediately after the first step
         try {
-          const accountResponse = await fetch(`${apiBaseUrl}/banking/accounts`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${localStorage.getItem('token')}`
-            },
-            body: JSON.stringify({
-              account_name: userData.active_view === 'business' ? userData?.business_name : accountName,
-              account_type: userData.active_view === 'business' ? 'business' : 'personal',
-              bank_name: 'BAM Bank',
-              bvn: bvn,
-            })
-          });
+          // Ensure the code runs only on the client side (browser)
+          if (typeof window !== 'undefined' && window.localStorage) {
+            const accountResponse = await fetch(`${apiBaseUrl}/banking/accounts`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+              },
+              body: JSON.stringify({
+                account_name: userData.active_view === 'business' ? userData?.business_name : accountName,
+                account_type: userData.active_view === 'business' ? 'business' : 'personal',
+                bank_name: 'BAM Bank',
+                bvn: bvn,
+              })
+            });
     
-          if (!accountResponse.ok) throw new Error('Failed to create bank account');
+            if (!accountResponse.ok) throw new Error('Failed to create bank account');
     
-          // Refresh account details immediately
-          await fetchAccountDetails();
+            // Refresh account details immediately
+            await fetchAccountDetails();
     
+          }
         } catch (error) {
           console.error('Error during onboarding step 1:', error);
           toast({
@@ -182,29 +194,31 @@ const BankingPage = () => {
     
       // Step 3 completion logic remains the same
       try {
-        const onboardingResponse = await fetch(`${apiBaseUrl}/banking/update-banking-onboarding`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          },
-          body: JSON.stringify({
-            view: userData.active_view
-          })
-        });
+        // Ensure the code runs only on the client side (browser)
+        if (typeof window !== 'undefined' && window.localStorage) {
+          const onboardingResponse = await fetch(`${apiBaseUrl}/banking/update-banking-onboarding`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${localStorage.getItem('token')}`
+            },
+            body: JSON.stringify({
+              view: userData.active_view
+            })
+          });
     
-        if (!onboardingResponse.ok) throw new Error('Failed to update onboarding status');
+          if (!onboardingResponse.ok) throw new Error('Failed to update onboarding status');
     
-        const onboardingKey = userData.active_view === 'business' ? 
-          'businessBankingOnboarded' : 'personalBankingOnboarded';
-        localStorage.setItem(onboardingKey, 'true');
-        setShowOnboarding(false);
+          const onboardingKey = userData.active_view === 'business' ? 
+            'businessBankingOnboarded' : 'personalBankingOnboarded';
+          localStorage.setItem(onboardingKey, 'true');
+          setShowOnboarding(false);
     
-        toast({
-          title: "Success",
-          description: "BAM setup successfully completed",
-        });
-    
+          toast({
+            title: "Success",
+            description: "BAM setup successfully completed",
+          });
+        }
       } catch (error) {
         console.error('Error completing onboarding:', error);
         toast({

@@ -29,23 +29,25 @@ export default function AdminFeedback() {
   const fetchFeedback = useCallback(async () => {
     setIsLoading(true);
     try {
-      const token = localStorage.getItem('token');
-      const url = `${apiBaseUrl}/feedback/admin/feedback${statusFilter !== 'all' ? `?status=${statusFilter}` : ''}`;
-      const response = await fetch(url, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-
-      if (response.status === 401) {
-        router.push('/admin/login');
-        return;
+      // Ensure we access localStorage only on the client side
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const token = localStorage.getItem('token');
+        const url = `${apiBaseUrl}/feedback/admin/feedback${statusFilter !== 'all' ? `?status=${statusFilter}` : ''}`;
+        const response = await fetch(url, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+  
+        if (response.status === 401) {
+          router.push('/admin/login');
+          return;
+        }
+  
+        const data = await response.json();
+        setFeedback(Array.isArray(data) ? data : []);
       }
-
-      const data = await response.json();
-      setFeedback(Array.isArray(data) ? data : []);
     } catch (error) {
-
       toast({
         title: "Error",
         description: `Failed to fetch feedback, ${error}`,
@@ -56,38 +58,41 @@ export default function AdminFeedback() {
       setIsLoading(false);
     }
   }, [statusFilter, router, toast]);
-
+  
   useEffect(() => {
     fetchFeedback();
   }, [fetchFeedback]);
-
+  
   const updateFeedbackStatus = async () => {
     if (!selectedFeedback) return;
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${apiBaseUrl}/feedback/admin/feedback/${selectedFeedback.id}`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          status: updatedStatus,
-          admin_notes: adminNotes,
-        }),
-      });
-
-      if (!response.ok) throw new Error('Update failed');
-
-      toast({
-        title: "Success",
-        description: "Feedback status updated",
-      });
-      
-      setSelectedFeedback(null);
-      setAdminNotes('');
-      setUpdatedStatus('');
-      fetchFeedback();
+      // Ensure we access localStorage only on the client side
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const token = localStorage.getItem('token');
+        const response = await fetch(`${apiBaseUrl}/feedback/admin/feedback/${selectedFeedback.id}`, {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            status: updatedStatus,
+            admin_notes: adminNotes,
+          }),
+        });
+  
+        if (!response.ok) throw new Error('Update failed');
+  
+        toast({
+          title: "Success",
+          description: "Feedback status updated",
+        });
+        
+        setSelectedFeedback(null);
+        setAdminNotes('');
+        setUpdatedStatus('');
+        fetchFeedback();
+      }
     } catch (error) {
       toast({
         title: "Error",

@@ -17,18 +17,21 @@ export default function AdminLogin() {
   const handleLogin = async (e) => {
     e.preventDefault();
     try {
-      const response = await fetch(`${apiBaseUrl}/auth/admin/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(credentials),
-      });
-
-      if (!response.ok) throw new Error('Login failed');
-
-      const data = await response.json();
-      localStorage.setItem('token', data.token);
-      localStorage.setItem('user', JSON.stringify(data.user));
-      router.push('/admin/feedback');
+      // Ensure we're in the client-side context before accessing localStorage
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const response = await fetch(`${apiBaseUrl}/auth/admin/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(credentials),
+        });
+  
+        if (!response.ok) throw new Error('Login failed');
+  
+        const data = await response.json();
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('user', JSON.stringify(data.user));
+        router.push('/admin/feedback');
+      }
     } catch (error) {
       toast({
         title: "Login Failed",

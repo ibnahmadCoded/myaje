@@ -2,11 +2,21 @@
 
 import React, { useState, useEffect } from 'react';
 import { ShoppingCart, MessageCircle } from 'lucide-react';
-import MarketplaceView from '@/components/Marketplace';
+//import MarketplaceView from '@/components/Marketplace';
 import BusinessFeatures from '@/components/BusinessFeatures';
 import { useRouter } from 'next/navigation';
 import Logo from '@/components/ui/logo'
 import { useCart } from '@/app/providers/cart-provider';
+import dynamic from 'next/dynamic'
+
+const MarketplaceView = dynamic(() => import('@/components/Marketplace'), {
+  ssr: false,
+  loading: () => (
+    <div className="flex-1 flex items-center justify-center">
+      <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-gray-900"></div>
+    </div>
+  ),
+});
 
 export default function Home() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -17,17 +27,20 @@ export default function Home() {
   const { cartItems } = useCart();
 
   useEffect(() => {
-    const userDataStr = localStorage.getItem('user');
-    const token = localStorage.getItem('token');
-      
-    if (userDataStr && token) {
-      try {
-        setIsAuthenticated(true);
-      } catch (error) {
-        console.error("Error in initialization:", error);
+    // Add check for window/browser environment
+    if (typeof window !== 'undefined') {
+      const userDataStr = localStorage.getItem('user');
+      const token = localStorage.getItem('token');
+        
+      if (userDataStr && token) {
+        try {
+          setIsAuthenticated(true);
+        } catch (error) {
+          console.error("Error in initialization:", error);
+        }
       }
     }
-  }, [router])
+  }, [router]);
 
   return (
     <div className="min-h-screen bg-gray-50">

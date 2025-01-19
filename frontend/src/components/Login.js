@@ -75,6 +75,8 @@ export default function Login() {
       
       if (response.ok) {
         const data = await response.json();
+
+        if (typeof window === 'undefined') return;
         
         // save token in local storage
         localStorage.setItem('token', data.token);

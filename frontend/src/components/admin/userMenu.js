@@ -9,36 +9,50 @@ export const UserMenu = () => {
   const router = useRouter();
 
   useEffect(() => {
-    const userData = localStorage.getItem('user');
-    if (userData) {
-      setUserDetails(JSON.parse(userData));
+    if (typeof window !== 'undefined') {
+      // Ensure this runs only on the client side
+      const userData = localStorage.getItem('user');
+      if (userData) {
+        try {
+          setUserDetails(JSON.parse(userData));
+        } catch (error) {
+          console.error('Error parsing user data:', error);
+          localStorage.removeItem('user'); // Clear invalid data
+        }
+      }
     }
   }, []);
-
+  
   const handleLogout = async (e) => {
     e.preventDefault();
+  
+    if (typeof window === 'undefined') {
+      console.error('Logout attempted in an environment without `window`.');
+      return;
+    }
+  
     try {
+      const token = localStorage.getItem('token');
       const response = await fetch(`${apiBaseUrl}/auth/logout`, {
         method: 'POST',
         credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Authorization': `Bearer ${token}`,
         },
       });
-
-      const data = await response.json();
-
+  
       if (response.ok) {
         localStorage.removeItem('token');
-        router.push('/admin/login');
+        router.push('/admin/login'); // Redirect to login
       } else {
+        const data = await response.json();
         console.error('Logout failed:', data);
       }
     } catch (error) {
       console.error('An error occurred during logout:', error);
     }
-  };
+  };  
 
   return (
     <div className="absolute bottom-0 left-0 right-0 p-4 border-t bg-amber-50 hover:bg-amber-100">

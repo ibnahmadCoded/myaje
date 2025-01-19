@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
 import { Package, Plus, Truck, Search, RefreshCw, Clock, CheckCircle2, PackageCheck } from 'lucide-react';
 import { Card } from "@/components/ui/card";
@@ -38,70 +38,106 @@ const RestockRequestPage = () => {
     urgency: 'normal'
   });
 
-  useEffect(() => {
-    fetchRequests();
-    fetchProducts();
-  }, []);
-
-  const fetchRequests = async () => {
-    const response = await fetch(`${apiBaseUrl}/restock/requests`, {
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem('token')}`,
-      },
-    });
-    const data = await response.json();
-    setRequests(data);
-  };
+  const fetchRequests = useCallback(async () => {
+    try {
+      // Ensure we're in a browser environment before accessing localStorage
+      if (typeof window !== 'undefined') {
+        const token = localStorage.getItem('token');
+        if (!token) throw new Error('Token is missing');
+  
+        const response = await fetch(`${apiBaseUrl}/restock/requests`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+  
+        const data = await response.json();
+        setRequests(data);
+      } else {
+        throw new Error('Window not found, localStorage is unavailable');
+      }
+    } catch (error) {
+      console.error('Error fetching restock requests:', error);
+      toast({
+        title: "Error",
+        description: `Failed to fetch restock requests, ${error}`,
+        variant: "destructive"
+      });
+    }
+  }, [toast]);
+  
 
   const fetchProducts = async () => {
     try {
-      const response = await fetch(`${apiBaseUrl}/inventory/get_inventory`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
-      const data = await response.json();
-      setExistingProducts(data);
+      // Ensure we're in a browser environment before accessing localStorage
+      if (typeof window !== 'undefined') {
+        const token = localStorage.getItem('token');
+        if (!token) throw new Error('Token is missing');
+  
+        const response = await fetch(`${apiBaseUrl}/inventory/get_inventory`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        
+        const data = await response.json();
+        setExistingProducts(data);
+      } else {
+        throw new Error('Window not found, localStorage is unavailable');
+      }
     } catch (error) {
       console.error('Error fetching products:', error);
       setError('Failed to fetch products');
     } finally {
       setLoading(false);
     }
-  };
+  };  
 
   if(loading){
     //console.log("Fetching Products")
   }
 
+  useEffect(() => {
+    fetchRequests();
+    fetchProducts();
+  }, [fetchRequests]);
+
   const handleSubmit = async () => {
     try {
-      const response = await fetch(`${apiBaseUrl}/restock/requests`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token')}` },
-        body: JSON.stringify({
-          product_id: formData.productId,
-          product_name: formData.productName,
-          quantity: parseInt(formData.quantity),
-          description: formData.description,
-          address: formData.address,
-          additional_notes: formData.additionalNotes,
-          urgency: formData.urgency,
-          type: requestType
-        })
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to submit request');
+      // Ensure we're in a browser environment before accessing localStorage
+      if (typeof window !== 'undefined') {
+        const token = localStorage.getItem('token');
+        if (!token) throw new Error('Token is missing');
+        
+        const response = await fetch(`${apiBaseUrl}/restock/requests`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({
+            product_id: formData.productId,
+            product_name: formData.productName,
+            quantity: parseInt(formData.quantity),
+            description: formData.description,
+            address: formData.address,
+            additional_notes: formData.additionalNotes,
+            urgency: formData.urgency,
+            type: requestType
+          })
+        });
+  
+        if (!response.ok) {
+          throw new Error('Failed to submit request');
+        }
+  
+        toast({
+          title: "Success",
+          description: "Restock request submitted successfully",
+        });
+        setShowNewRequestDialog(false);
+        fetchRequests();
+        resetForm();
+      } else {
+        throw new Error('Window not found, localStorage is unavailable');
       }
-      
-      toast({
-        title: "Success",
-        description: "Restock request submitted successfully",
-      });
-      setShowNewRequestDialog(false);
-      fetchRequests();
-      resetForm();
     } catch (error) {
       toast({
         title: "Error",
@@ -109,27 +145,35 @@ const RestockRequestPage = () => {
         variant: "destructive"
       });
     }
-  };
+  };  
 
   const handleCancelRequest = async (requestId) => {
     try {
-      const response = await fetch(`${apiBaseUrl}/restock/requests/${requestId}/cancel`, {
-        method: 'PUT',
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`
+      // Ensure we're in a browser environment before accessing localStorage
+      if (typeof window !== 'undefined') {
+        const token = localStorage.getItem('token');
+        if (!token) throw new Error('Token is missing');
+  
+        const response = await fetch(`${apiBaseUrl}/restock/requests/${requestId}/cancel`, {
+          method: 'PUT',
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        });
+  
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.detail || 'Failed to cancel request');
         }
-      });
-      
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.detail || 'Failed to cancel request');
+  
+        toast({
+          title: "Success",
+          description: "Request cancelled successfully",
+        });
+        fetchRequests();
+      } else {
+        throw new Error('Window not found, localStorage is unavailable');
       }
-      
-      toast({
-        title: "Success",
-        description: "Request cancelled successfully",
-      });
-      fetchRequests();
     } catch (error) {
       toast({
         title: "Error",
@@ -137,29 +181,37 @@ const RestockRequestPage = () => {
         variant: "destructive"
       });
     }
-  };
+  };  
 
   const handleUpdateRequest = async (requestId, newQuantity) => {
     try {
-      const response = await fetch(`${apiBaseUrl}/restock/requests/${requestId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({ quantity: parseInt(newQuantity) })
-      });
-      
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.detail || 'Failed to update request');
+      // Ensure we're in a browser environment before accessing localStorage
+      if (typeof window !== 'undefined') {
+        const token = localStorage.getItem('token');
+        if (!token) throw new Error('Token is missing');
+  
+        const response = await fetch(`${apiBaseUrl}/restock/requests/${requestId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify({ quantity: parseInt(newQuantity) })
+        });
+  
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.detail || 'Failed to update request');
+        }
+  
+        toast({
+          title: "Success",
+          description: "Request updated successfully",
+        });
+        fetchRequests();
+      } else {
+        throw new Error('Window not found, localStorage is unavailable');
       }
-      
-      toast({
-        title: "Success",
-        description: "Request updated successfully",
-      });
-      fetchRequests();
     } catch (error) {
       toast({
         title: "Error",
@@ -167,7 +219,7 @@ const RestockRequestPage = () => {
         variant: "destructive"
       });
     }
-  };
+  };  
 
   const isWithinEditWindow = (requestDate) => {
     const timeDifference = new Date() - new Date(requestDate);

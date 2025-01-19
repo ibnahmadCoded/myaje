@@ -33,18 +33,27 @@ const Sidebar = ({
   onMouseLeave,
   sidebarRef 
 }) => {
-  const [activeView, setActiveView] = useState(() => {
-    const user = JSON.parse(localStorage.getItem('user') || '{}');
-    return user.active_view || 'personal';
-  });
+  const [activeView, setActiveView] = useState('personal');
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      setActiveView(user.active_view || 'personal');
+    }
+  }, []);
 
   //const [hasBusinessAccount, setHasBusinessAccount] = useState(() => {
   //  const user = JSON.parse(localStorage.getItem('user') || '{}');
   //  return user.has_business_account || false;
   //});
 
-  const user = JSON.parse(localStorage.getItem('user') || '{}');
-  const hasBusinessAccount = user.has_business_account || false;
+  let user = {};
+  let hasBusinessAccount = false;
+
+  if (typeof window !== 'undefined') {
+    user = JSON.parse(localStorage.getItem('user') || '{}');
+    hasBusinessAccount = user.has_business_account || false;
+  }
 
   if(searchQuery){
     //console.log("")
@@ -59,6 +68,9 @@ const Sidebar = ({
 
   const handleViewChange = (newView, newHasBusinessAccount) => {
     setActiveView(newView);
+
+    if (typeof window === 'undefined') return;
+
     const user = JSON.parse(localStorage.getItem('user') || '{}');
     localStorage.setItem('user', JSON.stringify({ ...user, active_view: newView, has_business_account: newHasBusinessAccount }));
   

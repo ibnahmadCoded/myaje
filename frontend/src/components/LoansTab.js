@@ -147,6 +147,8 @@ export const LoansTab = ({ accountType }) => {
     
     const fetchLoansData = useCallback(async () => {
         try {
+            if (typeof window === 'undefined') return;
+
             const token = localStorage.getItem('token'); // Retrieve token from localStorage
 
             const activeView = accountType === "Individual" ? "personal" : "business";
@@ -198,6 +200,8 @@ export const LoansTab = ({ accountType }) => {
     
     const handleLoanRequest = async () => {
         try {
+            if (typeof window === 'undefined') return;
+
             const activeView = accountType === "Individual" ? "personal" : "business";
 
             const response = await fetch(`${apiBaseUrl}/banking/loans/request?active_view=${activeView}`, {

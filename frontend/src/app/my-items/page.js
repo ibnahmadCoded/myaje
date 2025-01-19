@@ -30,29 +30,39 @@ const MyItemsView = () => {
   const fetchItems = useCallback(async () => {
     setLoading(true);
     try {
-      const params = new URLSearchParams({
-        page,
-        limit: 12,
-        search: searchTerm,
-        //...(startDate && { start_date: startDate.toISOString() }),
-        //...(endDate && { end_date: endDate.toISOString() }),
-        ...(activeTab === 'orders' && { status: orderStatus })
-      });
-
-      const response = await fetch(
-        `${apiBaseUrl}/my_items/${activeTab}?${params}`,
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`
-          }
+      // Ensure we're in a browser environment before accessing localStorage
+      if (typeof window !== 'undefined') {
+        const token = localStorage.getItem('token');
+        if (!token) {
+          throw new Error('Authorization token is missing');
         }
-      );
-
-      if (!response.ok) throw new Error('Failed to fetch items');
-
-      const data = await response.json();
-      setItems(data.items);
-      setTotalPages(data.pages);
+  
+        const params = new URLSearchParams({
+          page,
+          limit: 12,
+          search: searchTerm,
+          // ...(startDate && { start_date: startDate.toISOString() }),
+          // ...(endDate && { end_date: endDate.toISOString() }),
+          ...(activeTab === 'orders' && { status: orderStatus })
+        });
+  
+        const response = await fetch(
+          `${apiBaseUrl}/my_items/${activeTab}?${params}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`
+            }
+          }
+        );
+  
+        if (!response.ok) throw new Error('Failed to fetch items');
+  
+        const data = await response.json();
+        setItems(data.items);
+        setTotalPages(data.pages);
+      } else {
+        throw new Error('Window not found, localStorage is unavailable');
+      }
     } catch (error) {
       console.error('Error fetching items:', error);
       toast({
@@ -63,7 +73,7 @@ const MyItemsView = () => {
     } finally {
       setLoading(false);
     }
-  }, [activeTab, orderStatus, page, searchTerm, toast]);
+  }, [activeTab, orderStatus, page, searchTerm, toast]);  
 
   useEffect(() => {
     fetchItems();

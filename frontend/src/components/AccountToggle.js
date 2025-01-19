@@ -25,6 +25,8 @@ export const AccountToggle = ({ activeView, hasBusinessAccount, onViewChange }) 
       return;
     }
 
+    if (typeof window === 'undefined') return;
+
     try {
       const response = await fetch(`${apiBaseUrl}/auth/toggle-view`, {
         method: 'POST',
@@ -47,6 +49,8 @@ export const AccountToggle = ({ activeView, hasBusinessAccount, onViewChange }) 
   const handleBusinessSetup = async () => {
     setIsLoading(true);
     setError('');
+
+    if (typeof window === 'undefined') return;
 
     try {
       const response = await fetch(`${apiBaseUrl}/auth/toggle-view`, {

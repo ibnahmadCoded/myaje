@@ -28,6 +28,8 @@ export const FinancialsTab = () => {
   const { toast } = useToast();
 
   useEffect(() => {
+      if (typeof window === 'undefined') return;
+
       const userDataStr = localStorage.getItem('user');
       if (userDataStr) {
         const parsedUser = JSON.parse(userDataStr);
@@ -66,6 +68,8 @@ export const FinancialsTab = () => {
 
   const fetchPools = useCallback(async () => {
     try {
+      if (typeof window === 'undefined') return;
+
       const userDataStr = localStorage.getItem('user');
       if (!userDataStr) return;
       
@@ -199,6 +203,8 @@ export const FinancialsTab = () => {
 
   const updatePoolDistributions = async (updatedPools) => {
     setIsUpdatingPools(true);
+    if (typeof window === 'undefined') return;
+    
     try {
       const userDataStr = localStorage.getItem('user');
       if (!userDataStr) throw new Error('User data not found');

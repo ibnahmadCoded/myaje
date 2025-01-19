@@ -52,6 +52,8 @@ export default function Register() {
     }, []);
 
     useEffect(() => {
+      if (typeof window === 'undefined') return;
+      
       const userDataStr = localStorage.getItem('user');
       const token = localStorage.getItem('token');
   

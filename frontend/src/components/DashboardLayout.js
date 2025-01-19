@@ -58,6 +58,8 @@ export default function DashboardLayout ({ children }) {
 
   const validateToken = useCallback(async (token) => {
     try {
+      if (typeof window === 'undefined') return;
+
       const response = await fetch(`${apiBaseUrl}/auth/validate-token`, {
         method: 'POST',
         headers: {
@@ -80,6 +82,8 @@ export default function DashboardLayout ({ children }) {
   }, [router]);
 
   useEffect(() => {
+    if (typeof window === 'undefined') return;
+    
     // Check authentication on component mount
     const token = localStorage.getItem('token');
     if (!token) {

@@ -21,15 +21,19 @@ export default function AdminLoans () {
 
   const fetchLoans = useCallback(async () => {
     try {
-      const response = await fetch(`${apiBaseUrl}/admin/loans`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-      
-      if (!response.ok) throw new Error('Failed to fetch loans');
-      const data = await response.json();
-      setLoans(data);
+      // Ensure we're in the client-side context before accessing localStorage
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const token = localStorage.getItem('token');
+        const response = await fetch(`${apiBaseUrl}/admin/loans`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        if (!response.ok) throw new Error('Failed to fetch loans');
+        const data = await response.json();
+        setLoans(data);
+      }
     } catch (error) {
       toast({
         title: "Error",
@@ -45,30 +49,34 @@ export default function AdminLoans () {
 
   const handleAction = async () => {
     try {
-      const url = actionType === 'accept' 
-        ? `${apiBaseUrl}/admin/loans/${selectedLoan.id}/accept`
-        : `${apiBaseUrl}/admin/loans/${selectedLoan.id}/reject`;
-
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(actionType === 'reject' ? { reason: rejectionReason } : {})
-      });
-
-      if (!response.ok) throw new Error('Failed to process loan');
-
-      toast({
-        title: "Success",
-        description: `Loan ${actionType}ed successfully`
-      });
-
-      setShowActionModal(false);
-      setSelectedLoan(null);
-      setRejectionReason('');
-      fetchLoans();
+      // Ensure we're in the client-side context before accessing localStorage
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const token = localStorage.getItem('token');
+        const url = actionType === 'accept' 
+          ? `${apiBaseUrl}/admin/loans/${selectedLoan.id}/accept`
+          : `${apiBaseUrl}/admin/loans/${selectedLoan.id}/reject`;
+  
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(actionType === 'reject' ? { reason: rejectionReason } : {})
+        });
+  
+        if (!response.ok) throw new Error('Failed to process loan');
+  
+        toast({
+          title: "Success",
+          description: `Loan ${actionType}ed successfully`
+        });
+  
+        setShowActionModal(false);
+        setSelectedLoan(null);
+        setRejectionReason('');
+        fetchLoans();
+      }
     } catch (error) {
       toast({
         title: "Error",

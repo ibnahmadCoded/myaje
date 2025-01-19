@@ -27,19 +27,32 @@ const InventoryManagement = () => {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
   const fetchProducts = async () => {
-    try {
-      const response = await fetch(`${apiBaseUrl}/inventory/get_inventory`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
-      const data = await response.json();
-      setProducts(data);
-    } catch (error) {
-      console.error('Error fetching products:', error);
-      setError('Failed to fetch products');
-    } finally {
-      setLoading(false);
+    // Check if we're on the client side before using localStorage
+    if (typeof window !== 'undefined') {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+          throw new Error('Authorization token is missing');
+        }
+  
+        const response = await fetch(`${apiBaseUrl}/inventory/get_inventory`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+  
+        if (!response.ok) {
+          throw new Error('Failed to fetch products');
+        }
+  
+        const data = await response.json();
+        setProducts(data);
+      } catch (error) {
+        console.error('Error fetching products:', error);
+        setError('Failed to fetch products');
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
@@ -304,7 +317,7 @@ const ProductForm = ({ onSuccess, onClose }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     const formDataToSubmit = new FormData();
-
+  
     // Append formData
     for (let key in formData) {
       if (key === "quantity" || key === "low_stock_threshold") {
@@ -315,9 +328,9 @@ const ProductForm = ({ onSuccess, onClose }) => {
         formDataToSubmit.append(key, formData[key]);
       }
     }
-
+  
     // Append files
-    if (Array.isArray(selectedFiles)) {
+    if (typeof window !== 'undefined' && Array.isArray(selectedFiles)) {
       selectedFiles.forEach((file) => {
         if (file instanceof File) {
           formDataToSubmit.append('images', file);
@@ -326,38 +339,49 @@ const ProductForm = ({ onSuccess, onClose }) => {
         }
       });
     }
-
-    try {
-      const response = await fetch(`${apiBaseUrl}/inventory/add_to_inventory`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
-        body: formDataToSubmit,
-      });
-
-      if (response.ok) {
-        onSuccess();
-        setFormData({
-          name: '',
-          sku: '',
-          quantity: '',
-          price: '',
-          category: '',
-          description: '',
-          low_stock_threshold: '10',
+  
+    // Make sure we're running on the client-side before accessing localStorage
+    if (typeof window !== 'undefined') {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+          throw new Error('Authorization token is missing');
+        }
+  
+        const response = await fetch(`${apiBaseUrl}/inventory/add_to_inventory`, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          body: formDataToSubmit,
         });
-        setSelectedFiles([]);
-        setFilePreviews([]);
-        onClose();
-      } else {
-        const data = await response.json();
-        alert(data.message);
+  
+        if (response.ok) {
+          onSuccess();
+          setFormData({
+            name: '',
+            sku: '',
+            quantity: '',
+            price: '',
+            category: '',
+            description: '',
+            low_stock_threshold: '10',
+          });
+          setSelectedFiles([]);
+          setFilePreviews([]);
+          onClose();
+        } else {
+          const data = await response.json();
+          alert(data.message);
+        }
+      } catch (error) {
+        console.error('Failed to add product:', error);
+        alert(`Failed to add product: ${error.message || error}`);
       }
-    } catch (error) {
-      alert(`Failed to add product, ${error}`);
+    } else {
+      console.error('This code should only run in the browser');
     }
-  };
+  };  
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
@@ -514,47 +538,58 @@ const EditProductForm = ({ product, onSuccess, onClose }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     const formDataToSubmit = new FormData();
-
+  
     // Append form fields
     for (let key in formData) {
-      if (key === "quantity" || key === "low_stock_threshold") {
+      if (key === 'quantity' || key === 'low_stock_threshold') {
         formDataToSubmit.append(key, parseInt(formData[key], 10));
-      } else if (key === "price") {
+      } else if (key === 'price') {
         formDataToSubmit.append(key, parseFloat(formData[key]));
       } else {
         formDataToSubmit.append(key, formData[key]);
       }
     }
-
+  
     // Append existing images that weren't removed
     formDataToSubmit.append('existing_images', JSON.stringify(existingImages));
-
+  
     // Append new files
-    selectedFiles.forEach((file) => {
-      formDataToSubmit.append('images', file);
-    });
-
+    if (typeof window !== 'undefined' && Array.isArray(selectedFiles)) {
+      selectedFiles.forEach((file) => {
+        if (file instanceof File) {
+          formDataToSubmit.append('images', file);
+        } else {
+          console.error('Invalid file:', file); // Handle invalid file types gracefully
+        }
+      });
+    }
+  
     try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+      if (!token) {
+        throw new Error('Authorization token is missing');
+      }
+  
       const response = await fetch(`${apiBaseUrl}/inventory/update_product/${product.id}`, {
         method: 'PUT',
         headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
+          Authorization: `Bearer ${token}`,
         },
         body: formDataToSubmit,
       });
-
+  
       if (response.ok) {
         onSuccess();
         onClose();
       } else {
         const data = await response.json();
-        alert(data.detail);
+        alert(data.detail || 'Failed to update product');
       }
     } catch (error) {
       console.error('Error updating product:', error);
-      alert('Failed to update product');
+      alert(error.message || 'Failed to update product');
     }
-  };
+  };  
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">

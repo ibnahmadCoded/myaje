@@ -30,21 +30,24 @@ export default function AdminPayoutManagement() {
   const fetchPayouts = useCallback(async () => {
     setIsLoading(true);
     try {
-      const token = localStorage.getItem('token');
-      const url = `${apiBaseUrl}/admin/payouts${statusFilter !== 'all' ? `?status=${statusFilter}` : ''}`;
-      const response = await fetch(url, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-
-      if (response.status === 401) {
-        router.push('/admin/login');
-        return;
+      // Ensure we're in the client-side context before accessing localStorage
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const token = localStorage.getItem('token');
+        const url = `${apiBaseUrl}/admin/payouts${statusFilter !== 'all' ? `?status=${statusFilter}` : ''}`;
+        const response = await fetch(url, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+  
+        if (response.status === 401) {
+          router.push('/admin/login');
+          return;
+        }
+  
+        const data = await response.json();
+        setPayouts(Array.isArray(data) ? data : []);
       }
-
-      const data = await response.json();
-      setPayouts(Array.isArray(data) ? data : []);
     } catch (error) {
       toast({
         title: "Error",
@@ -56,30 +59,33 @@ export default function AdminPayoutManagement() {
       setIsLoading(false);
     }
   }, [statusFilter, router, toast]);
-
+  
   useEffect(() => {
     fetchPayouts();
   }, [fetchPayouts]);
-
+  
   const markPayoutAsCompleted = async (payoutId) => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${apiBaseUrl}/admin/payouts/${payoutId}/complete`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!response.ok) throw new Error('Update failed');
-
-      toast({
-        title: "Success",
-        description: "Payout marked as completed",
-      });
-      
-      fetchPayouts();
+      // Ensure we're in the client-side context before accessing localStorage
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const token = localStorage.getItem('token');
+        const response = await fetch(`${apiBaseUrl}/admin/payouts/${payoutId}/complete`, {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+  
+        if (!response.ok) throw new Error('Update failed');
+  
+        toast({
+          title: "Success",
+          description: "Payout marked as completed",
+        });
+  
+        fetchPayouts();
+      }
     } catch (error) {
       toast({
         title: "Error",
@@ -88,22 +94,25 @@ export default function AdminPayoutManagement() {
       });
     }
   };
-
+  
   const fetchMarketplaceOrderDetails = async (marketplaceOrderId) => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${apiBaseUrl}/admin/payouts/marketplace-orders/${marketplaceOrderId}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
+      // Ensure we're in the client-side context before accessing localStorage
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const token = localStorage.getItem('token');
+        const response = await fetch(`${apiBaseUrl}/admin/payouts/marketplace-orders/${marketplaceOrderId}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
   
-      if (!response.ok) throw new Error('Failed to fetch marketplace order details');
+        if (!response.ok) throw new Error('Failed to fetch marketplace order details');
   
-      const data = await response.json();
-      setSelectedMarketplaceOrder(data);
-      setRelatedOrders(data.orders || []);
-      setRelatedPayouts(data.payouts || []);
+        const data = await response.json();
+        setSelectedMarketplaceOrder(data);
+        setRelatedOrders(data.orders || []);
+        setRelatedPayouts(data.payouts || []);
+      }
     } catch (error) {
       console.error('Error:', error); // Add this debug log
       toast({
@@ -112,7 +121,7 @@ export default function AdminPayoutManagement() {
         variant: "destructive",
       });
     }
-  };
+  };  
 
   return (
     <DashboardLayout>

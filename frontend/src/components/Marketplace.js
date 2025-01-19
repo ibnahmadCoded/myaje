@@ -56,13 +56,15 @@ const ProductCard = ({ product, onImageClick }) => {
   }, [product?.id]);
 
   useEffect(() => {
-    const userDataStr = localStorage.getItem('user');
-    if (userDataStr) {
-      const user = JSON.parse(userDataStr);
-      setUser(user)
-    }
+    if (typeof window !== 'undefined') {
+      const userDataStr = localStorage.getItem('user');
+      if (userDataStr) {
+        const user = JSON.parse(userDataStr);
+        setUser(user)
+      }
 
-    fetchProductStats();
+      fetchProductStats();
+    }
   }, [fetchProductStats]);
 
   const handlePrevImage = (e) => {

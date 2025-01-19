@@ -55,6 +55,11 @@ const DashboardPage = () => {
   const fetchMetrics = useCallback(async (activeView = null) => {
     try {
       const token = localStorage.getItem('token'); // Or however you store your auth token
+      
+      if (!token) {
+        throw new Error('Authorization token missing');
+      }
+
       const response = await fetch(`${apiBaseUrl}/dashboard/metrics?active_view=${activeView}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -75,7 +80,7 @@ const DashboardPage = () => {
     } catch (error) {
       toast({
         title: "Error",
-        description: `Failed to load dashboard metrics, ${error}`,
+        description: `Failed to load dashboard metrics, ${error.message}`,
         variant: "destructive",
       });
     } finally {
@@ -83,28 +88,31 @@ const DashboardPage = () => {
     }
   }, [toast, router]);
 
-  useEffect(() => {
+useEffect(() => {
+  // Ensure localStorage access is only done on the client side
+  if (typeof window !== 'undefined' && window.localStorage) {
     const userDataStr = localStorage.getItem('user');
     let active_view = null;
 
     if (userDataStr) {
       const user = JSON.parse(userDataStr);
       active_view = user.active_view; // Ensure activeView is defined here
-      setActiveView(active_view)
+      setActiveView(active_view);
     }
 
     updateDateTime();
     fetchMetrics(active_view);
     
+    // Clear previous timers if any exist
     const timer = setInterval(updateDateTime, 1000);
-    // Refresh metrics every 5 minutes
-    const metricsTimer = setInterval(fetchMetrics, 300000);
+    const metricsTimer = setInterval(() => fetchMetrics(active_view), 300000); // Refresh metrics every 5 minutes
     
     return () => {
       clearInterval(timer);
       clearInterval(metricsTimer);
     };
-  }, [fetchMetrics]);
+  }
+}, [fetchMetrics]);
 
   const businessNews = [
     {
@@ -196,6 +204,11 @@ const DashboardPage = () => {
   const handleFeedbackSubmit = async () => {
     try {
       const token = localStorage.getItem('token');
+      
+      if (!token) {
+        throw new Error('Authorization token missing');
+      }
+
       const response = await fetch(`${apiBaseUrl}/feedback/submit`, {
         method: 'POST',
         headers: {
@@ -218,7 +231,7 @@ const DashboardPage = () => {
     } catch (error) {
       toast({
         title: "Error",
-        description: `Failed to submit feedback. Please try again., ${error}`,
+        description: `Failed to submit feedback. Please try again. ${error.message}`,
         variant: "destructive",
       });
     }

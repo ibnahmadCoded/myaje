@@ -134,6 +134,8 @@ const AutomationForm = ({ isOpen, onClose, onSuccess, pools, accountType }) => {
         }
       }
 
+      if (typeof window === 'undefined') return;
+
       const response = await fetch(`${apiBaseUrl}/banking/automations?active_view=${activeView}`, {
         method: 'POST',
         headers: {
@@ -541,6 +543,8 @@ const EditAutomationForm = ({ isOpen, onClose, onSuccess, automation }) => {
           : null
       };
 
+      if (typeof window === 'undefined') return;
+
       const response = await fetch(`${apiBaseUrl}/banking/automations/${automation.id}`, {
         method: 'PATCH',
         headers: {
@@ -749,6 +753,9 @@ export const AutomationTab = ({ accountType }) => {
   const fetchAutomations = useCallback(async () => {
     try {
       const activeView = accountType === "Individual" ? "personal" : "business";
+
+      if (typeof window === 'undefined') return;
+
       const response = await fetch(`${apiBaseUrl}/banking/automations?active_view=${activeView}`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -770,6 +777,9 @@ export const AutomationTab = ({ accountType }) => {
   const fetchPools = useCallback(async () => {
     try {
       const activeView = accountType === "Individual" ? "personal" : "business";
+
+      if (typeof window === 'undefined') return;
+
       const response = await fetch(`${apiBaseUrl}/banking/pools/available?active_view=${activeView}`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -800,6 +810,8 @@ export const AutomationTab = ({ accountType }) => {
 
   const confirmDelete = async () => {
     try {
+      if (typeof window === 'undefined') return;
+      
       const response = await fetch(`${apiBaseUrl}/banking/automations/${selectedAutomation.id}`, {
         method: 'DELETE',
         headers: {

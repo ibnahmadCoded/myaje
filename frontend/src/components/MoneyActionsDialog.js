@@ -169,6 +169,8 @@ const MoneyActionsDialog = () => {
     const [infoMessage, setInfoMessage] = useState("");
 
     useEffect(() => {
+      if (typeof window === 'undefined') return;
+
       const userDataStr = localStorage.getItem('user');
       if (userDataStr) {
         const user = JSON.parse(userDataStr);
@@ -189,6 +191,8 @@ const MoneyActionsDialog = () => {
     useEffect(() => {
       const fetchPools = async () => {
         try {
+          if (typeof window === 'undefined') return;
+
           const response = await fetch(`${apiBaseUrl}/banking/pools/available?active_view=${activeView}`, {
             headers: {
               'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -233,6 +237,8 @@ const MoneyActionsDialog = () => {
           amount: parseFloat(pendingTransferData.amount), // Convert to float
           selected_pool_id: pendingTransferData.selected_pool_id,
         };
+
+        if (typeof window === 'undefined') return;
 
         const response = await fetch(`${apiBaseUrl}/banking/transfer`, {
           method: 'POST',
@@ -441,6 +447,8 @@ const MoneyActionsDialog = () => {
     }
 
     useEffect(() => {
+      if (typeof window === 'undefined') return;
+
       const userDataStr = localStorage.getItem('user');
       if (userDataStr) {
         const user = JSON.parse(userDataStr);
@@ -470,6 +478,8 @@ const MoneyActionsDialog = () => {
           ...formData,
           amount: unformattedAmount,
         };
+
+        if (typeof window === 'undefined') return;
 
         const response = await fetch(`${apiBaseUrl}/banking/request-money`, {
           method: 'POST',

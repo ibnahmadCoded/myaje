@@ -26,22 +26,25 @@ export default function AdminMetrics() {
 
   const fetchMetrics = useCallback(async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${apiBaseUrl}/admin/metrics`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
+      // Ensure we're in the client-side context before accessing localStorage
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const token = localStorage.getItem('token');
+        const response = await fetch(`${apiBaseUrl}/admin/metrics`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          }
+        });
+        
+        if (response.status === 401) {
+          router.push('/admin/login');
+          return;
         }
-      });
-      
-      if (response.status === 401) {
-        router.push('/admin/login');
-        return;
+        
+        if (!response.ok) throw new Error('Failed to fetch metrics');
+        
+        const data = await response.json();
+        setMetrics(data);
       }
-      
-      if (!response.ok) throw new Error('Failed to fetch metrics');
-      
-      const data = await response.json();
-      setMetrics(data);
     } catch (error) {
       toast({
         title: "Error",
@@ -51,7 +54,7 @@ export default function AdminMetrics() {
     } finally {
       setLoading(false);
     }
-  }, [toast, router]);
+  }, [toast, router]);  
 
   useEffect(() => {
     fetchMetrics();

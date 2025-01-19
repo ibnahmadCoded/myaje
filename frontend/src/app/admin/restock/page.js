@@ -30,21 +30,24 @@ export default function AdminRestockManagement() {
   const fetchRestockRequests = useCallback(async () => {
     setIsLoading(true);
     try {
-      const token = localStorage.getItem('token');
-      const url = `${apiBaseUrl}/admin/restock${statusFilter !== 'all' ? `?status=${statusFilter}` : ''}`;
-      const response = await fetch(url, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-
-      if (response.status === 401) {
-        router.push('/admin/login');
-        return;
+      // Ensure we're in the client-side context before accessing localStorage
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const token = localStorage.getItem('token');
+        const url = `${apiBaseUrl}/admin/restock${statusFilter !== 'all' ? `?status=${statusFilter}` : ''}`;
+        const response = await fetch(url, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+  
+        if (response.status === 401) {
+          router.push('/admin/login');
+          return;
+        }
+  
+        const data = await response.json();
+        setRestockRequests(Array.isArray(data) ? data : []);
       }
-
-      const data = await response.json();
-      setRestockRequests(Array.isArray(data) ? data : []);
     } catch (error) {
       toast({
         title: "Error",
@@ -56,38 +59,41 @@ export default function AdminRestockManagement() {
       setIsLoading(false);
     }
   }, [statusFilter, router, toast]);
-
+  
   useEffect(() => {
     fetchRestockRequests();
   }, [fetchRestockRequests]);
-
+  
   const updateRestockStatus = async () => {
     if (!selectedRequest) return;
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${apiBaseUrl}/admin/restock/${selectedRequest.id}`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          status: updatedStatus,
-          admin_notes: adminNotes,
-        }),
-      });
-
-      if (!response.ok) throw new Error('Update failed');
-
-      toast({
-        title: "Success",
-        description: "Restock request status updated",
-      });
-      
-      setSelectedRequest(null);
-      setAdminNotes('');
-      setUpdatedStatus('');
-      fetchRestockRequests();
+      // Ensure we're in the client-side context before accessing localStorage
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const token = localStorage.getItem('token');
+        const response = await fetch(`${apiBaseUrl}/admin/restock/${selectedRequest.id}`, {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            status: updatedStatus,
+            admin_notes: adminNotes,
+          }),
+        });
+  
+        if (!response.ok) throw new Error('Update failed');
+  
+        toast({
+          title: "Success",
+          description: "Restock request status updated",
+        });
+  
+        setSelectedRequest(null);
+        setAdminNotes('');
+        setUpdatedStatus('');
+        fetchRestockRequests();
+      }
     } catch (error) {
       toast({
         title: "Error",
@@ -95,7 +101,7 @@ export default function AdminRestockManagement() {
         variant: "destructive",
       });
     }
-  };
+  };  
 
   const getStatusBadgeVariant = (status) => {
     switch (status) {

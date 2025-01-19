@@ -75,6 +75,8 @@ export const TransactionsTab = () => {
 
     const fetchTransactions = useCallback(async () => {
       try {
+        if (typeof window === 'undefined') return; 
+        
         const userDataStr = localStorage.getItem('user');
         const userData = JSON.parse(userDataStr);
         const userView = userData.active_view;
