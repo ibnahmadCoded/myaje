@@ -4,7 +4,7 @@
 ./wait-for-it.sh myaje-postgres:5432
 
 # Check if this is first run (no migrations exist)
-if [ ! -f "/app/alembic/versions/"* ]; then
+if [ -z "$(ls -A /app/alembic/versions 2>/dev/null)" ]; then
     echo "No migrations found. Creating initial migration..."
     alembic revision --autogenerate -m "initial_migration"
 fi
