@@ -1,4 +1,3 @@
-# .github/workflows/deploy.yml
 name: Deploy to EC2
 
 on:
@@ -35,7 +34,49 @@ jobs:
         key: ${{ secrets.EC2_SSH_KEY }}
         script: |
           cd /home/ubuntu/app
+          
+          # Backup current migrations if they exist
+          if [ -d "alembic/versions" ]; then
+            echo "Backing up existing migrations..."
+            mkdir -p migrations_backup
+            cp -r alembic/versions/* migrations_backup/
+          fi
+          
+          # Clean up old files
+          echo "Cleaning up old files..."
+          rm -rf alembic/versions/*
+          
+          # Set up environment
           echo "${{ secrets.ENV_FILE }}" > .env
-          docker-compose -f docker-compose.prod.yml down
+          
+          # Stop containers and remove volumes
+          echo "Stopping containers..."
+          docker-compose -f docker-compose.prod.yml down -v
+          
+          # Clean up Docker
+          echo "Cleaning Docker system..."
           docker system prune -af
+          
+          # Create versions directory with proper permissions
+          echo "Setting up migrations directory..."
+          mkdir -p alembic/versions
+          chmod 777 alembic/versions
+          
+          # Restore migrations if backup exists
+          if [ -d "migrations_backup" ] && [ "$(ls -A migrations_backup)" ]; then
+            echo "Restoring migrations from backup..."
+            cp -r migrations_backup/* alembic/versions/
+            rm -rf migrations_backup
+          fi
+          
+          # Start containers
+          echo "Starting containers..."
           docker-compose -f docker-compose.prod.yml up -d --build
+          
+          # Wait for services to be healthy
+          echo "Waiting for services to be healthy..."
+          sleep 30
+          
+          # Check container status
+          docker ps
+          docker-compose -f docker-compose.prod.yml logs alembic
