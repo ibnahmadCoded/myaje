@@ -14,8 +14,6 @@ services:
     env_file:
       - .env
     depends_on:
-      alembic:
-        condition: service_healthy
       redis:
         condition: service_healthy
     networks:
@@ -120,34 +118,6 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-
-  alembic:
-    build:
-      context: .
-      dockerfile: Dockerfile.prod
-    container_name: myaje-alembic
-    command: ["./entrypoint.sh"]
-    volumes:
-      - ./alembic/versions:/app/alembic/versions
-      - ./backend:/app/backend #sync backend files
-      - ./alembic.ini:/app/alembic.ini
-    depends_on:
-      postgres:
-        condition: service_healthy
-    env_file:
-      - .env
-    networks:
-      - myaje_network
-    environment:
-      PGUSER: ${DB_USER}
-      PGPASSWORD: ${DB_PASSWORD}
-      PGDATABASE: ${DB_NAME}
-      PGHOST: myaje-postgres
-      PGPORT: 5432
-    healthcheck:
-      test: ["CMD", "pg_isready", "-h", "myaje-postgres", "-U", "${DB_USER}"]
-      interval: 10s
-      retries: 30
 
 volumes:
   postgres_data:

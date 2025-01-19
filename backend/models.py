@@ -481,12 +481,6 @@ class RestockRequest(Base):
     user = relationship('User', back_populates='restock_requests')
     product = relationship('Product', back_populates='restock_requests')
 
-# Create tables function
-async def create_tables():
-    #await run_in_threadpool(Base.metadata.create_all, bind=engine)
-    logger.info("Skipping table creation - handled by Alembic migrations")
-    pass
-
 ###############################################################
 #################### BANKING_RELATED MODELS ###################
 class AccountType(enum.Enum):
