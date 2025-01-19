@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Plus, Eye, ChevronLeft, ChevronRight, Bell, Edit, Trash2, Share2, PackageSearch, ShoppingCart, CheckCircle, Star } from 'lucide-react';
 import DashboardLayout from '@/components/DashboardLayout';
 import {
