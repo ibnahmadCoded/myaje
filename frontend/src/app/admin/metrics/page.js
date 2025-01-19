@@ -51,7 +51,7 @@ export default function AdminMetrics() {
     } finally {
       setLoading(false);
     }
-  }, [toast]);
+  }, [toast, router]);
 
   useEffect(() => {
     fetchMetrics();

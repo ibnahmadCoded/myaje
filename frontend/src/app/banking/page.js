@@ -85,7 +85,7 @@ const BankingPage = () => {
     if (userData) {
       fetchAccountDetails();
     }
-  }, [fetchAccountDetails]);
+  }, [fetchAccountDetails, userData]);
   
   useEffect(() => {
     const userDataStr = localStorage.getItem('user');

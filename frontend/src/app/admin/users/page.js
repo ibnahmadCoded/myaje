@@ -70,7 +70,7 @@ export default function AdminUsers() {
         variant: "destructive",
       });
     }
-  }, [toast]);
+  }, [toast, router]);
 
   useEffect(() => {
     fetchAdminUsers();

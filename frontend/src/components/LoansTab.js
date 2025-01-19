@@ -194,7 +194,7 @@ export const LoansTab = ({ accountType }) => {
                 variant: "destructive"
             });
         }
-    }, [accountType]);
+    }, [accountType, toast]);
     
     const handleLoanRequest = async () => {
         try {

@@ -92,7 +92,7 @@ export const FinancialsTab = () => {
         variant: "destructive"
       });
     }
-  }, []);
+  }, [toast]);
 
   const handleToggleLock = (poolId) => {
     const updatedPools = pools.map((pool) =>

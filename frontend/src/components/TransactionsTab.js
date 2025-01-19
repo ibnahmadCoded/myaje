@@ -104,7 +104,7 @@ export const TransactionsTab = () => {
       } finally {
         setLoading(false);
       }
-    }, [startDate, endDate, transactionType, transactionTag]);
+    }, [startDate, endDate, transactionType, transactionTag, toast]);
 
     useEffect(() => {
       fetchTransactions();

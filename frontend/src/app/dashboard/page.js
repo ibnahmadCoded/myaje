@@ -81,7 +81,7 @@ const DashboardPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [toast, router, activeView]);
+  }, [toast, router]);
 
   useEffect(() => {
     const userDataStr = localStorage.getItem('user');

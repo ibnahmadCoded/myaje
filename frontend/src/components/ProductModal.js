@@ -80,7 +80,7 @@ export const ProductModal = ({ product, isOpen, onClose }) => {
     } finally {
       setIsLoading(false);
     }
-  }, [product?.id]);
+  }, [product?.id, toast]);
 
   const recordView = useCallback(async () => {
     try {
