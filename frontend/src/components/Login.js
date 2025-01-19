@@ -202,7 +202,7 @@ export default function Login() {
           </div>
 
           <p className="text-center text-sm text-stone-600">
-            `Don't have an account?{' '}`
+            Don&apos;t have an account?{' '}
             <button
               type="button"
               disabled={isLoading}

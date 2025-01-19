@@ -302,7 +302,7 @@ const MoneyActionsDialog = () => {
             {recipientType === 'bam' ? (
             <>
                 <div className="space-y-2">
-                  `<Label>Recipient's Phone Number</Label>`
+                  <Label>Recipient&apos;s Phone Number</Label>
                   <PhoneNumberInput
                     value={formData.recipient_identifier}
                     onChange={(value) => setFormData({
@@ -312,7 +312,7 @@ const MoneyActionsDialog = () => {
                   />
                 </div>
                 <div className="space-y-2">
-                `<Label>Recipient's Account Type</Label>`
+                <Label>Recipient&apos;s Account Type</Label>
                 <Select 
                     value={formData.recipient_account_type}
                     onValueChange={(value) => setFormData({

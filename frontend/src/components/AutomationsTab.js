@@ -385,14 +385,14 @@ const AutomationForm = ({ isOpen, onClose, onSuccess, pools, accountType }) => {
                 {formData.bank_type === 'bam' ? (
                   <>
                     <div className="space-y-2">
-                      `<Label>Recipient's Phone Number</Label>`
+                      `<Label>Recipient&apos;s Phone Number</Label>`
                       <PhoneNumberInput
                         value={formData.destination_phone}
                         onChange={(value) => setFormData(prev => ({...prev, destination_phone: value}))}
                       />
                     </div>
                     <div className="space-y-2">
-                      `<Label>Recipient's Account Type</Label>`
+                      <Label>Recipient&apos;s Account Type</Label>
                       <Select
                         value={formData.destination_account_type}
                         onValueChange={(value) => setFormData(prev => ({...prev, destination_account_type: value}))}

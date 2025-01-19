@@ -783,8 +783,8 @@ const StorefrontManagement = () => {
               <DialogHeader>
                 <DialogTitle>Remove Product from Store</DialogTitle>
                 <DialogDescription>
-                  `Are you sure you want to remove {deleteConfirmation.name} from your store?
-                  This action can't be undone.`
+                  Are you sure you want to remove {deleteConfirmation.name} from your store?
+                  This action can&apos;t be undone.
                 </DialogDescription>
               </DialogHeader>
               <DialogFooter>
