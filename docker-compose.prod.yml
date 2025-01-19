@@ -126,6 +126,7 @@ services:
       context: .
       dockerfile: Dockerfile.prod
     container_name: myaje-alembic
+    command: ["./entrypoint.sh"]
     volumes:
       - ./alembic/versions:/app/alembic/versions
       - ./backend:/app/backend #sync backend files
