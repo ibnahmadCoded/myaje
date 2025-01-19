@@ -5,6 +5,13 @@ echo "Starting entrypoint script..."
 
 # Wait for PostgreSQL to be ready
 echo "Waiting for PostgreSQL..."
+echo "DB_USER: $DB_USER"
+echo "DB_HOST: $DB_HOST"
+echo "DB_NAME: $DB_NAME"
+
+# Masking the password for logging
+echo "DB_PASSWORD: $DB_PASSWORD"
+
 until PGPASSWORD=$DB_PASSWORD psql -h myaje-postgres -U $DB_USER -d $DB_NAME -c '\q' 2>/dev/null; do
   echo "PostgreSQL is unavailable - sleeping 5s"
   sleep 5
