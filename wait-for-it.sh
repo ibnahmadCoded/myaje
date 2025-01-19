@@ -5,8 +5,34 @@ WAITFORIT_cmdname=$(basename "$0")
 
 echoerr() { 
     if [ "$WAITFORIT_QUIET" != "1" ]; then 
-        printf "%s\n" "$*" 1>&2
+        printf "[%s] %s\n" "$(date +'%Y-%m-%d %H:%M:%S')" "$*" 1>&2
     fi 
+}
+
+debug_connection() {
+    if [ "$WAITFORIT_QUIET" != "1" ]; then
+        echoerr "Debugging connection to $WAITFORIT_HOST:$WAITFORIT_PORT"
+        
+        # Try DNS lookup
+        echoerr "DNS lookup for host:"
+        getent hosts "$WAITFORIT_HOST" || echoerr "DNS lookup failed"
+        
+        # Try netcat if available
+        if command -v nc >/dev/null 2>&1; then
+            echoerr "Testing connection with netcat:"
+            nc -zv "$WAITFORIT_HOST" "$WAITFORIT_PORT" 2>&1 || echoerr "Netcat connection failed"
+        fi
+        
+        # Try ping
+        if command -v ping >/dev/null 2>&1; then
+            echoerr "Testing with ping:"
+            ping -c 1 "$WAITFORIT_HOST" 2>&1 || echoerr "Ping failed"
+        fi
+        
+        # Show network interfaces
+        echoerr "Network interfaces:"
+        ip addr show 2>/dev/null || ifconfig 2>/dev/null || echoerr "Could not show network interfaces"
+    fi
 }
 
 usage() {
@@ -27,13 +53,16 @@ USAGE
 
 wait_for() {
     if [ "$WAITFORIT_TIMEOUT" -gt 0 ]; then
-        echoerr "$WAITFORIT_cmdname: waiting $WAITFORIT_TIMEOUT seconds for $WAITFORIT_HOST:$WAITFORIT_PORT"
+        echoerr "Waiting $WAITFORIT_TIMEOUT seconds for $WAITFORIT_HOST:$WAITFORIT_PORT"
     else
-        echoerr "$WAITFORIT_cmdname: waiting for $WAITFORIT_HOST:$WAITFORIT_PORT without a timeout"
+        echoerr "Waiting for $WAITFORIT_HOST:$WAITFORIT_PORT without a timeout"
     fi
     
     WAITFORIT_start_ts=$(date +%s)
+    attempts=0
     while true; do
+        attempts=$((attempts + 1))
+        
         if [ "$WAITFORIT_ISBUSY" = "1" ]; then
             nc -z "$WAITFORIT_HOST" "$WAITFORIT_PORT" > /dev/null 2>&1
             WAITFORIT_result=$?
@@ -41,18 +70,36 @@ wait_for() {
             (echo > "/dev/tcp/$WAITFORIT_HOST/$WAITFORIT_PORT") > /dev/null 2>&1
             WAITFORIT_result=$?
         fi
+        
         if [ $WAITFORIT_result -eq 0 ]; then
             WAITFORIT_end_ts=$(date +%s)
-            echoerr "$WAITFORIT_cmdname: $WAITFORIT_HOST:$WAITFORIT_PORT is available after $((WAITFORIT_end_ts - WAITFORIT_start_ts)) seconds"
+            echoerr "$WAITFORIT_HOST:$WAITFORIT_PORT is available after $((WAITFORIT_end_ts - WAITFORIT_start_ts)) seconds"
             break
         fi
+        
+        # Run debug every 15 attempts
+        if [ $((attempts % 15)) -eq 0 ]; then
+            debug_connection
+        fi
+        
+        # Calculate remaining time
+        if [ "$WAITFORIT_TIMEOUT" -gt 0 ]; then
+            elapsed=$(($(date +%s) - WAITFORIT_start_ts))
+            remaining=$((WAITFORIT_TIMEOUT - elapsed))
+            if [ $remaining -le 0 ]; then
+                echoerr "Timeout occurred after waiting $WAITFORIT_TIMEOUT seconds for $WAITFORIT_HOST:$WAITFORIT_PORT"
+                return 1
+            fi
+            echoerr "Still waiting... $remaining seconds remaining"
+        fi
+        
         sleep 1
     done
     return $WAITFORIT_result
 }
 
+# Rest of your original script remains exactly the same from here...
 wait_for_wrapper() {
-    # In order to support SIGINT during timeout: http://unix.stackexchange.com/a/57692
     if [ "$WAITFORIT_QUIET" = "1" ]; then
         timeout $WAITFORIT_BUSYTIMEFLAG $WAITFORIT_TIMEOUT "$0" --quiet --child --host="$WAITFORIT_HOST" --port="$WAITFORIT_PORT" --timeout="$WAITFORIT_TIMEOUT" &
     else

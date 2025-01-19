@@ -61,7 +61,7 @@ services:
     networks:
       - myaje_network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -132,11 +132,18 @@ services:
       - ./backend:/app/backend #sync backend files
       - ./alembic.ini:/app/alembic.ini
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     env_file:
       - .env
     networks:
       - myaje_network
+    environment:
+      PGUSER: ${DB_USER}
+      PGPASSWORD: ${DB_PASSWORD}
+      PGDATABASE: ${DB_NAME}
+      PGHOST: myaje-postgres
+      PGPORT: 5432
     healthcheck:
       test: ["CMD-SHELL", "/usr/local/bin/check_migrations.sh"]
       interval: 10s
