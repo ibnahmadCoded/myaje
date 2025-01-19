@@ -7,6 +7,11 @@ RUN pip install --no-cache-dir -r requirements.txt --target=/install
 
 RUN pip install alembic
 
+RUN pip install alembic psycopg2-binary
+
+# Install PostgreSQL client
+RUN apt-get update && apt-get install -y postgresql-client && rm -rf /var/lib/apt/lists/*
+
 FROM python:3.10-slim
 
 WORKDIR /app

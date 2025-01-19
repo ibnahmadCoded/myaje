@@ -1,31 +1,16 @@
 #!/bin/sh
 set -e
 
-# Add debug function
-debug_postgres_connection() {
-    echo "Debugging PostgreSQL connection..."
-    echo "Current environment:"
-    env | grep -E "PG|DB_"
-    
-    echo "\nTesting PostgreSQL connection with psql..."
-    PGPASSWORD="$DB_PASSWORD" psql -h "$DB_HOST" -U "$DB_USER" -d "$DB_NAME" -c "SELECT 1" || true
-    
-    echo "\nChecking network..."
-    getent hosts myaje-postgres || true
-    
-    echo "\nTesting raw connection..."
-    nc -zv myaje-postgres 5432 || true
-}
-
 echo "Starting entrypoint script..."
-echo "Waiting for PostgreSQL..."
 
-# Increase timeout and add debugging
-./wait-for-it.sh myaje-postgres:5432 --timeout=120 || {
-    echo "Failed to connect to PostgreSQL. Running diagnostics..."
-    debug_postgres_connection
-    exit 1
-}
+# Wait for PostgreSQL to be ready
+echo "Waiting for PostgreSQL..."
+until PGPASSWORD=$DB_PASSWORD psql -h myaje-postgres -U $DB_USER -d $DB_NAME -c '\q' 2>/dev/null; do
+  echo "PostgreSQL is unavailable - sleeping 5s"
+  sleep 5
+done
+
+echo "PostgreSQL is up - executing migrations"
 
 # Ensure the versions directory exists
 mkdir -p /app/alembic/versions
@@ -37,13 +22,8 @@ if [ -z "$(ls -A /app/alembic/versions 2>/dev/null)" ]; then
     alembic revision --autogenerate -m "initial_migration"
 fi
 
-# Run migrations with verbose output
+# Run migrations
 echo "Running migrations..."
-alembic upgrade head --sql || {
-    echo "Migration failed. Checking database status..."
-    debug_postgres_connection
-    exit 1
-}
+alembic upgrade head
 
-echo "Migrations complete, keeping container alive..."
-tail -f /dev/null
+echo "Migrations complete"
