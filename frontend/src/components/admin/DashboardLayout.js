@@ -28,26 +28,30 @@ export default function DashboardLayout ({ children }) {
   const unreadCount = notifications.filter(n => !n.is_read).length;
 
   useEffect(() => {
-    const checkMobileView = () => {
-      const isMobileWidth = window.innerWidth <= 768;
-      setIsMobile(isMobileWidth);
-      setIsSidebarOpen(!isMobileWidth);
-    };
+    // Ensure the code runs only on the client (browser)
+    if (typeof window !== 'undefined') {
+      const checkMobileView = () => {
+        const isMobileWidth = window.innerWidth <= 768;
+        setIsMobile(isMobileWidth);
+        setIsSidebarOpen(!isMobileWidth);
+      };
 
-    const handleClickOutside = (event) => {
-      if (isMobile && sidebarRef.current && !sidebarRef.current.contains(event.target)) {
-        setIsSidebarOpen(false);
-      }
-    };
+      const handleClickOutside = (event) => {
+        if (isMobile && sidebarRef.current && !sidebarRef.current.contains(event.target)) {
+          setIsSidebarOpen(false);
+        }
+      };
 
-    checkMobileView();
-    window.addEventListener('resize', checkMobileView);
-    document.addEventListener('mousedown', handleClickOutside);
+      checkMobileView(); // Run on mount
+      window.addEventListener('resize', checkMobileView);
+      document.addEventListener('mousedown', handleClickOutside);
 
-    return () => {
-      window.removeEventListener('resize', checkMobileView);
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
+      // Clean up the event listeners when the component unmounts
+      return () => {
+        window.removeEventListener('resize', checkMobileView);
+        document.removeEventListener('mousedown', handleClickOutside);
+      };
+    }
   }, [isMobile]);
 
   const handleMouseEnter = () => !isMobile && setIsSidebarOpen(true);

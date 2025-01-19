@@ -33,16 +33,19 @@ const StorePage = (props) => {
   }, [slug]);
 
   const handleShare = async () => {
-    try {
-      await navigator.share({
-        title: storeData?.store?.name,
-        text: storeData?.store?.tagline,
-        url: window.location.href,
-      });
-    } catch (error) {
-      console.log('Error sharing:', error);
+    // Check if we're in the browser (client-side)
+    if (typeof window !== 'undefined') {
+      try {
+        await navigator.share({
+          title: storeData?.store?.name,
+          text: storeData?.store?.tagline,
+          url: window.location.href,
+        });
+      } catch (error) {
+        console.log('Error sharing:', error);
+      }
     }
-  };
+  }
 
   if (isLoading) {
     return <div>Loading...</div>;
@@ -72,7 +75,11 @@ const StorePage = (props) => {
         </button>
         {/* Back Button */}
         <button
-          onClick={() => (window.location.href = '/')}
+          onClick={() => {
+            if (typeof window !== 'undefined') {
+              window.location.href = '/';
+            }
+          }}
           className="absolute bottom-4 left-4 flex items-center gap-2 px-5 py-3 bg-white hover:bg-gray-100 rounded-full shadow-lg text-gray-800 font-medium transition-all duration-200"
         >
           <ArrowLeft size={20} />

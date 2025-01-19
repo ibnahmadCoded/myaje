@@ -10,10 +10,13 @@ export const BankingTransactionsView = () => {
 
   // Check URL parameters for money requests tab
   React.useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('tab') === 'requests') {
-      setActiveTab('requests');
-      setShowMoneyRequests(true);
+    // Ensure the code runs only on the client (browser)
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('tab') === 'requests') {
+        setActiveTab('requests');
+        setShowMoneyRequests(true);
+      }
     }
   }, []);
 

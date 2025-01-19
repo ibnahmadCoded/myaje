@@ -351,7 +351,11 @@ export default function Register() {
                 I accept the{' '}
                 <button
                   type="button"
-                  onClick={() => window.open('/terms', '_blank')}
+                  onClick={() => {
+                    if (typeof window !== 'undefined') {
+                      window.open('/terms', '_blank');
+                    }
+                  }}
                   className="text-green-600 hover:text-green-700 hover:underline focus:outline-none focus:ring-2 focus:ring-green-200 rounded"
                 >
                   terms and conditions

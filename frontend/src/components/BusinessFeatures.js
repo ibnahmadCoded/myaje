@@ -123,11 +123,18 @@ const BusinessFeatures = () => {
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
-    const handleScroll = () => {
-      setScrolled(window.scrollY > 20);
-    };
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+    // Ensure the code runs only in the client (browser)
+    if (typeof window !== 'undefined') {
+      const handleScroll = () => {
+        setScrolled(window.scrollY > 20);
+      };
+  
+      window.addEventListener('scroll', handleScroll);
+  
+      return () => {
+        window.removeEventListener('scroll', handleScroll);
+      };
+    }
   }, []);
 
   if(scrolled){
@@ -686,7 +693,12 @@ const BusinessFeatures = () => {
                   </button>
                   <button
                     className="px-6 py-3 bg-gradient-to-r from-green-600 to-green-500 hover:from-green-700 hover:to-green-600 rounded-xl text-white transition-colors font-medium"
-                    onClick={() => window.location.href = '/register'}
+                    onClick={() => {
+                      // Ensure the code runs only on the client (browser)
+                      if (typeof window !== 'undefined') {
+                        window.location.href = '/register';
+                      }
+                    }}
                   >
                     Get Started
                   </button>

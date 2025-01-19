@@ -258,11 +258,11 @@ export const CheckoutDialog = ({
         return;
     }
 
-    if (!window.PaystackPop) {
+    if (typeof window !== 'undefined' && !window.PaystackPop) {
       console.error('PaystackPop is not defined. Ensure the Paystack script is correctly loaded.');
       setError("Payment system is not ready. Please try again.");
       return;
-    }
+  }
 
     setIsProcessing(true);
     setError("");
@@ -314,7 +314,7 @@ export const CheckoutDialog = ({
 
         setPaymentReference(data.reference_number);
 
-        if ([PAYMENT_METHODS.CARD, PAYMENT_METHODS.BANK_TRANSFER].includes(selectedPaymentMethod)) {
+        if (typeof window !== 'undefined' && [PAYMENT_METHODS.CARD, PAYMENT_METHODS.BANK_TRANSFER].includes(selectedPaymentMethod)) {
             const paystack = new PaystackPop();
             if (!paystack) {
                 throw new Error('Payment system not initialized');
@@ -711,11 +711,15 @@ export const CheckoutDialog = ({
                             Close
                         </Button>
                         <Button onClick={() => {
-                            setShowFeatureModal(false);
-                            window.location.href = '/register';
-                        }}>
-                            Create Account
-                        </Button>
+                          setShowFeatureModal(false);
+
+                          // Ensure this only runs on the client-side
+                          if (typeof window !== 'undefined') {
+                              window.location.href = '/register';
+                          }
+                      }}>
+                          Create Account
+                      </Button>
                     </DialogFooter>
                 </>
             )}

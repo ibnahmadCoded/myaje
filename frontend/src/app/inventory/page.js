@@ -48,25 +48,28 @@ const InventoryManagement = () => {
   }, []);
 
   const handleDelete = async (productId) => {
-    if (window.confirm('Are you sure you want to delete this product?')) {
-      try {
-        const response = await fetch(
-          `${apiBaseUrl}/inventory/delete_from_inventory/${productId}`,
-          {
-            method: 'DELETE',
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem('token')}`,
-            },
+    // Check if we're in the browser (client-side)
+    if (typeof window !== 'undefined') {
+      if (window.confirm('Are you sure you want to delete this product?')) {
+        try {
+          const response = await fetch(
+            `${apiBaseUrl}/inventory/delete_from_inventory/${productId}`,
+            {
+              method: 'DELETE',
+              headers: {
+                Authorization: `Bearer ${localStorage.getItem('token')}`,
+              },
+            }
+          );
+  
+          if (response.ok) {
+            fetchProducts();
+          } else {
+            setError('Failed to delete product');
           }
-        );
-
-        if (response.ok) {
-          fetchProducts();
-        } else {
-          setError('Failed to delete product');
+        } catch (error) {
+          setError(`Failed to delete product, ${error}`);
         }
-      } catch (error) {
-        setError(`Failed to delete product, ${error}`);
       }
     }
   };

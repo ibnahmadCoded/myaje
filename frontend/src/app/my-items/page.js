@@ -70,31 +70,34 @@ const MyItemsView = () => {
   }, [fetchItems]);
 
   const handleAddToCart = (product) => {
-    const result = addToCart(product);
-    
-    if (!result.success && result.error === 'business_view') {
+    // Check if we're in the browser (client-side)
+    if (typeof window !== 'undefined') {
+      const result = addToCart(product);
+      
+      if (!result.success && result.error === 'business_view') {
+        toast({
+          title: "Switch to Personal Account",
+          description: "Purchases with business accounts are not allowed. Please switch to your personal account view to continue shopping.",
+          variant: "destructive"
+        });
+        return;
+      }
+      
       toast({
-        title: "Switch to Personal Account",
-        description: "Purchases with business accounts are not allowed. Please switch to your personal account view to continue shopping.",
-        variant: "destructive"
+        title: "Added to Cart",
+        description: "Item has been added to cart. Please go to marketplace to proceed to checkout.",
+        action: (
+          <Button 
+            variant="outline"
+            size="sm" 
+            onClick={() => window.location.href = '/'}
+          >
+            Open Marketplace
+          </Button>
+        ),
       });
-      return;
     }
-    
-    toast({
-      title: "Added to Cart",
-      description: "Item has been added to cart. Please go to marketplace to proceed to checkout.",
-      action: (
-        <Button 
-          variant="outline"
-          size="sm" 
-          onClick={() => window.location.href = '/'}
-        >
-          Open Marketplace
-        </Button>
-      ),
-    });
-  };
+  };  
 
   return (
     <DashboardLayout>

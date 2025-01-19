@@ -61,16 +61,19 @@ const Sidebar = ({
     setActiveView(newView);
     const user = JSON.parse(localStorage.getItem('user') || '{}');
     localStorage.setItem('user', JSON.stringify({ ...user, active_view: newView, has_business_account: newHasBusinessAccount }));
-
-    // Get current route
-    const currentRoute = window.location.pathname;
-    
-    // Check if route exists in new view
-    const routesForNewView = newView === 'personal' ? personalRoutes : businessRoutes;
-    const routeExists = routesForNewView.includes(currentRoute);
-
-    // Redirect to same route if it exists, otherwise to dashboard
-    window.location.href = routeExists ? currentRoute : '/dashboard';
+  
+    // Ensure we're in the browser (client-side) before accessing window
+    if (typeof window !== 'undefined') {
+      // Get current route
+      const currentRoute = window.location.pathname;
+  
+      // Check if route exists in new view
+      const routesForNewView = newView === 'personal' ? personalRoutes : businessRoutes;
+      const routeExists = routesForNewView.includes(currentRoute);
+  
+      // Redirect to same route if it exists, otherwise to dashboard
+      window.location.href = routeExists ? currentRoute : '/dashboard';
+    }
   };
 
   // Separate menu items for different views
@@ -116,7 +119,11 @@ const Sidebar = ({
         <div className="flex items-center justify-between p-4 border-b">
         <h1 
           className="font-bold text-xl text-green-700 cursor-pointer"
-          onClick={() => (window.location.href = '/dashboard')}
+          onClick={() => {
+            if (typeof window !== 'undefined') {
+              window.location.href = '/dashboard';
+            }
+          }}
         >
           Myaje
         </h1>
@@ -190,12 +197,17 @@ const Sidebar = ({
                     <div 
                       key={notification.id}
                       onClick={() => {
-                        if (notification.type === 'new_order') {
-                          window.location.href = '/storefront';
-                        } else if (notification.type === 'new_invoice') {
-                          window.location.href = '/invoicing';
+                        // Ensure the code runs only on the client (browser)
+                        if (typeof window !== 'undefined') {
+                          if (notification.type === 'new_order') {
+                            window.location.href = '/storefront';
+                          } else if (notification.type === 'new_invoice') {
+                            window.location.href = '/invoicing';
+                          }
                         }
-                        onNotificationClick(notification.id); // Always call this
+                    
+                        // Always call this function, regardless of the window check
+                        onNotificationClick(notification.id); 
                       }}
                       className={`flex items-start gap-2 p-2 rounded-lg cursor-pointer
                         ${!notification.is_read ? 'bg-green-50 hover:bg-green-100' : 'hover:bg-gray-50'}`}
