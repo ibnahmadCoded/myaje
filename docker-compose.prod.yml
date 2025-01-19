@@ -62,9 +62,9 @@ services:
       - myaje_network
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME} && psql -U ${DB_USER} -d ${DB_NAME} -c 'SELECT 1'"]
-      interval: 5s
+      interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 30
 
   pgadmin:
     image: dpage/pgadmin4
@@ -147,8 +147,7 @@ services:
     healthcheck:
       test: ["CMD", "pg_isready", "-h", "myaje-postgres", "-U", "${DB_USER}"]
       interval: 10s
-      timeout: 5s
-      retries: 3
+      retries: 30
 
 volumes:
   postgres_data:
