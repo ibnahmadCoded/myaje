@@ -68,7 +68,7 @@ const MoneyRequestsTab = () => {
     }
   }, []);
 
-  const fetchPools = async () => {
+  const fetchPools = useCallback(async () => {
     if (!userView) return;
     
     try {
@@ -84,9 +84,9 @@ const MoneyRequestsTab = () => {
     } catch (error) {
       console.error('Error fetching pools:', error);
     }
-  };
+  }, [userView]);
 
-  const fetchRequests = async () => {
+  const fetchRequests = useCallback(async () => {
     if (!userView) return;
 
     try {
@@ -114,12 +114,12 @@ const MoneyRequestsTab = () => {
     } catch (error) {
       console.error('Error fetching requests:', error);
     }
-  };
+  }, [userView]);
 
   useEffect(() => {
     fetchRequests();
     fetchPools();
-  }, [userView]);
+  }, [fetchPools, fetchRequests]);
 
   const handleAcceptRequest = async (poolId) => {
     try {

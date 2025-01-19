@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useToast } from "@/hooks/use-toast";
 import DashboardLayout from '@/components/admin/DashboardLayout';
@@ -26,11 +26,7 @@ export default function AdminFeedback() {
   const router = useRouter();
   const { toast } = useToast();
 
-  useEffect(() => {
-    fetchFeedback();
-  }, [statusFilter]);
-
-  const fetchFeedback = async () => {
+  const fetchFeedback = useCallback(async () => {
     setIsLoading(true);
     try {
       const token = localStorage.getItem('token');
@@ -49,16 +45,21 @@ export default function AdminFeedback() {
       const data = await response.json();
       setFeedback(Array.isArray(data) ? data : []);
     } catch (error) {
+
       toast({
         title: "Error",
-        description: "Failed to fetch feedback",
+        description: `Failed to fetch feedback, ${error}`,
         variant: "destructive",
       });
       setFeedback([]);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [statusFilter, router, toast]);
+
+  useEffect(() => {
+    fetchFeedback();
+  }, [fetchFeedback]);
 
   const updateFeedbackStatus = async () => {
     if (!selectedFeedback) return;
@@ -90,7 +91,7 @@ export default function AdminFeedback() {
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to update feedback status",
+        description: `Failed to update feedback status, ${error}`,
         variant: "destructive",
       });
     }

@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle, Copy, CheckCircle } from "lucide-react";
+import { AlertCircle } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { apiBaseUrl } from '@/config';
@@ -428,6 +428,14 @@ export const CheckoutDialog = ({
       return;
     }
   };
+
+  if(paymentReference){
+    //console.log("")
+  }
+
+  if(activeView){
+    //console.log("")
+  }
 
   return (
     <>

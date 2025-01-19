@@ -5,10 +5,8 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useToast } from "@/hooks/use-toast";
-import { format } from 'date-fns';
-import { cn } from "@/lib/utils";
 
-import { Search, Calendar as CalendarIcon, ShoppingCart, Star, PackageSearch } from 'lucide-react';
+import { Search, Calendar, ShoppingCart, Star, PackageSearch } from 'lucide-react';
 import { ProductCard } from '@/components/ProductCard'; // We'll create this 
 import DashboardLayout from '@/components/DashboardLayout';
 import { apiBaseUrl } from '@/config';
@@ -19,8 +17,8 @@ const MyItemsView = () => {
   const [activeTab, setActiveTab] = useState('orders');
   const [searchTerm, setSearchTerm] = useState('');
   const [orderStatus, setOrderStatus] = useState('all');
-  const [startDate, setStartDate] = useState(null);
-  const [endDate, setEndDate] = useState(null);
+  //const [startDate, setStartDate] = useState(null);
+  //const [endDate, setEndDate] = useState(null);
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
@@ -29,15 +27,15 @@ const MyItemsView = () => {
 
   const { addToCart } = useCart();
 
-  const fetchItems = async () => {
+  const fetchItems = useCallback(async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams({
         page,
         limit: 12,
         search: searchTerm,
-        ...(startDate && { start_date: startDate.toISOString() }),
-        ...(endDate && { end_date: endDate.toISOString() }),
+        //...(startDate && { start_date: startDate.toISOString() }),
+        //...(endDate && { end_date: endDate.toISOString() }),
         ...(activeTab === 'orders' && { status: orderStatus })
       });
 
@@ -65,11 +63,11 @@ const MyItemsView = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [activeTab, orderStatus, page, searchTerm, toast]);
 
   useEffect(() => {
     fetchItems();
-  }, [activeTab, orderStatus, page, searchTerm, startDate, endDate]);
+  }, [fetchItems]);
 
   const handleAddToCart = (product) => {
     const result = addToCart(product);

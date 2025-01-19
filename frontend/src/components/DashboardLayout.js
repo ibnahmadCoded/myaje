@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Menu } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
@@ -50,21 +50,9 @@ export default function DashboardLayout ({ children }) {
   }, [isMobile]);
 
   const handleMouseEnter = () => !isMobile && setIsSidebarOpen(true);
-  const handleMouseLeave = () => !isMobile && setIsSidebarOpen(false);
+  //const handleMouseLeave = () => !isMobile && setIsSidebarOpen(false);
 
-  useEffect(() => {
-    // Check authentication on component mount
-    const token = localStorage.getItem('token');
-    if (!token) {
-      // Redirect to login if no token
-      router.push('/login');
-    } else {
-      // Optional: Validate token with backend
-      validateToken(token);
-    }
-  }, []);
-
-  const validateToken = async (token) => {
+  const validateToken = useCallback(async (token) => {
     try {
       const response = await fetch(`${apiBaseUrl}/auth/validate-token`, {
         method: 'POST',
@@ -81,11 +69,23 @@ export default function DashboardLayout ({ children }) {
         setIsAuthenticated(true);
       }
     } catch (error) {
-      console.error('Token validation failed');
+      console.error(`Token validation failed, ${error}`);
       localStorage.removeItem('token');
       router.push('/login');
     }
-  };
+  }, [router]);
+
+  useEffect(() => {
+    // Check authentication on component mount
+    const token = localStorage.getItem('token');
+    if (!token) {
+      // Redirect to login if no token
+      router.push('/login');
+    } else {
+      // Optional: Validate token with backend
+      validateToken(token);
+    }
+  }, [validateToken, router]);
 
   // Rest of your existing DashboardLayout code...
   if (!isAuthenticated) {

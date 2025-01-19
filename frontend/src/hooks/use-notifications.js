@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { apiBaseUrl } from '@/config';
 
 export const useNotifications = () => {
@@ -6,6 +6,10 @@ export const useNotifications = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [userView, setUserView] = useState(null);
+
+    if(userView){
+      //console.log("")
+    }
 
     // Fetch user_view from localStorage
     const fetchUserView = () => {
@@ -18,7 +22,7 @@ export const useNotifications = () => {
         }
     };
   
-    const fetchNotifications = async () => {
+    const fetchNotifications = useCallback(async () => {
       const currentUserView = fetchUserView();
         if (!currentUserView) {
             console.error('No active user found. Skipping notification fetch.');
@@ -49,7 +53,7 @@ export const useNotifications = () => {
         setError(err.message);
         setLoading(false);
       }
-    };
+    }, []);
   
     const markAsRead = async (notificationId) => {
       try {
@@ -92,7 +96,7 @@ export const useNotifications = () => {
       fetchNotifications();
       const interval = setInterval(fetchNotifications, 30000);
       return () => clearInterval(interval);
-    }, []);
+    }, [fetchNotifications]);
   
     return {
       notifications,

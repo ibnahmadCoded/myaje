@@ -32,7 +32,7 @@ export default function AdminLogin() {
     } catch (error) {
       toast({
         title: "Login Failed",
-        description: "Invalid credentials",
+        description: `Invalid credentials, ${error}`,
         variant: "destructive",
       });
     }

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import DashboardLayout from '@/components/DashboardLayout';
 import {
@@ -29,6 +29,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { apiBaseUrl } from '@/config';
+import { useRouter } from 'next/navigation';
 
 
 const DashboardPage = () => {
@@ -44,36 +45,14 @@ const DashboardPage = () => {
     message: '' 
   });
   const { toast } = useToast();
-
-  useEffect(() => {
-    const userDataStr = localStorage.getItem('user');
-    let active_view = null;
-
-    if (userDataStr) {
-      const user = JSON.parse(userDataStr);
-      active_view = user.active_view; // Ensure activeView is defined here
-      setActiveView(active_view)
-    }
-
-    updateDateTime();
-    fetchMetrics(active_view);
-    
-    const timer = setInterval(updateDateTime, 1000);
-    // Refresh metrics every 5 minutes
-    const metricsTimer = setInterval(fetchMetrics, 300000);
-    
-    return () => {
-      clearInterval(timer);
-      clearInterval(metricsTimer);
-    };
-  }, []);
+  const router = useRouter();
 
   const updateDateTime = () => {
     const now = new Date();
     setCurrentDateTime(now.toLocaleString());
   };
 
-  const fetchMetrics = async (activeView = null) => {
+  const fetchMetrics = useCallback(async (activeView = null) => {
     try {
       const token = localStorage.getItem('token'); // Or however you store your auth token
       const response = await fetch(`${apiBaseUrl}/dashboard/metrics?active_view=${activeView}`, {
@@ -96,13 +75,36 @@ const DashboardPage = () => {
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to load dashboard metrics",
+        description: `Failed to load dashboard metrics, ${error}`,
         variant: "destructive",
       });
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast, router, activeView]);
+
+  useEffect(() => {
+    const userDataStr = localStorage.getItem('user');
+    let active_view = null;
+
+    if (userDataStr) {
+      const user = JSON.parse(userDataStr);
+      active_view = user.active_view; // Ensure activeView is defined here
+      setActiveView(active_view)
+    }
+
+    updateDateTime();
+    fetchMetrics(active_view);
+    
+    const timer = setInterval(updateDateTime, 1000);
+    // Refresh metrics every 5 minutes
+    const metricsTimer = setInterval(fetchMetrics, 300000);
+    
+    return () => {
+      clearInterval(timer);
+      clearInterval(metricsTimer);
+    };
+  }, [fetchMetrics]);
 
   const businessNews = [
     {
@@ -216,7 +218,7 @@ const DashboardPage = () => {
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to submit feedback. Please try again.",
+        description: `Failed to submit feedback. Please try again., ${error}`,
         variant: "destructive",
       });
     }
@@ -300,7 +302,7 @@ const DashboardPage = () => {
         <Card className="bg-gradient-to-r from-purple-50 to-blue-50">
           <CardContent className="p-6">
             <p className="text-lg font-medium text-gray-800">
-              "Success is not final, failure is not fatal: it is the courage to continue that counts."
+              Success is not final, failure is not fatal: it is the courage to continue that counts.
             </p>
             <p className="text-sm text-gray-600 mt-2">— Winston Churchill</p>
           </CardContent>

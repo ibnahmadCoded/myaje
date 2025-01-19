@@ -48,12 +48,7 @@ const UserPayoutsPage = () => {
     }
   };
 
-
-  useEffect(() => {
-    fetchPayouts();
-  }, [statusFilter]);
-
-  const fetchPayouts = async () => {
+  const fetchPayouts = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
       const url = `${apiBaseUrl}/payouts/get_payouts${statusFilter !== 'all' ? `?status=${statusFilter}` : ''}`;
@@ -70,13 +65,17 @@ const UserPayoutsPage = () => {
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to fetch payouts",
+        description: `Failed to fetch payouts, ${error}`,
         variant: "destructive",
       });
     } finally {
       setLoading(false);
     }
-  };
+  }, [statusFilter, toast]);
+
+  useEffect(() => {
+    fetchPayouts();
+  }, [fetchPayouts]);
 
   const filteredPayouts = payouts.filter(payout => 
     payout.order_details.customer_name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -171,7 +170,7 @@ const UserPayoutsPage = () => {
       } catch (error) {
         toast({
           title: "Error",
-          description: "Failed to save bank details",
+          description: `Failed to save bank details, ${error}`,
           variant: "destructive",
         });
       } finally {

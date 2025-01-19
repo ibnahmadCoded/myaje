@@ -43,6 +43,10 @@ export const TransactionsTab = () => {
 
     const currentDate = new Date().toISOString().split('T')[0];
 
+    if (loading){
+      //console.log("")
+    }
+
     const handleStartDateChange = (e) => {
       const newStartDate = e.target.value;
       if (endDate && newStartDate > endDate) {
@@ -69,7 +73,7 @@ export const TransactionsTab = () => {
       setEndDate(newEndDate);
     };
 
-    const fetchTransactions = async () => {
+    const fetchTransactions = useCallback(async () => {
       try {
         const userDataStr = localStorage.getItem('user');
         const userData = JSON.parse(userDataStr);
@@ -94,17 +98,17 @@ export const TransactionsTab = () => {
       } catch (error) {
         toast({
           title: "Error",
-          description: "Failed to load transactions",
+          description: `Failed to load transactions, ${error}`,
           variant: "destructive"
         });
       } finally {
         setLoading(false);
       }
-    };
+    }, [startDate, endDate, transactionType, transactionTag]);
 
     useEffect(() => {
       fetchTransactions();
-    }, [startDate, endDate, transactionType, transactionTag]);
+    }, [fetchTransactions]);
 
     const totals = transactions.reduce((acc, transaction) => {
       if (transaction.type === 'credit') {
@@ -212,7 +216,7 @@ export const TransactionsTab = () => {
               </SelectTrigger>
               <SelectContent>
                 {Object.entries(TRANSACTION_TAGS).map(([key, value]) => (
-                  <SelectItem key={value} value={value}>
+                  <SelectItem key={key} value={value}>
                     {TAG_DISPLAY_NAMES[value]}
                   </SelectItem>
                 ))}

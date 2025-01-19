@@ -66,7 +66,7 @@ const InventoryManagement = () => {
           setError('Failed to delete product');
         }
       } catch (error) {
-        setError('Failed to delete product');
+        setError(`Failed to delete product, ${error}`);
       }
     }
   };
@@ -352,7 +352,7 @@ const ProductForm = ({ onSuccess, onClose }) => {
         alert(data.message);
       }
     } catch (error) {
-      alert('Failed to add product');
+      alert(`Failed to add product, ${error}`);
     }
   };
 
@@ -479,7 +479,6 @@ const EditProductForm = ({ product, onSuccess, onClose }) => {
     
     setSelectedFiles(prevFiles => {
       const updatedFiles = [...prevFiles, ...files];
-      console.log("Updated selected files:", updatedFiles);
       return updatedFiles;
     });
 
@@ -528,7 +527,7 @@ const EditProductForm = ({ product, onSuccess, onClose }) => {
     formDataToSubmit.append('existing_images', JSON.stringify(existingImages));
 
     // Append new files
-    selectedFiles.forEach((file, index) => {
+    selectedFiles.forEach((file) => {
       formDataToSubmit.append('images', file);
     });
 

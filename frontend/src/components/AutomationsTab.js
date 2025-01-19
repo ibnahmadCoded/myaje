@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Plus, Clock, Pencil, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose, DialogAction } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -385,14 +385,14 @@ const AutomationForm = ({ isOpen, onClose, onSuccess, pools, accountType }) => {
                 {formData.bank_type === 'bam' ? (
                   <>
                     <div className="space-y-2">
-                      <Label>Recipient's Phone Number</Label>
+                      <Label>`Recipient's Phone Number`</Label>
                       <PhoneNumberInput
                         value={formData.destination_phone}
                         onChange={(value) => setFormData(prev => ({...prev, destination_phone: value}))}
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label>Recipient's Account Type</Label>
+                      <Label>`Recipient's Account Type`</Label>
                       <Select
                         value={formData.destination_account_type}
                         onValueChange={(value) => setFormData(prev => ({...prev, destination_account_type: value}))}
@@ -684,7 +684,7 @@ const EditAutomationForm = ({ isOpen, onClose, onSuccess, automation }) => {
         <DialogHeader>
           <DialogTitle>Edit Automation Schedule</DialogTitle>
           <DialogDescription>
-            Modify the schedule for "{automation?.name}"
+            `Modify the schedule for {automation?.name}`
           </DialogDescription>
         </DialogHeader>
         
@@ -728,22 +728,22 @@ export const AutomationTab = ({ accountType }) => {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [selectedAutomation, setSelectedAutomation] = useState(null);
   const [pools, setPools] = useState([]);
-  const [formData, setFormData] = useState({
-    name: '',
-    type: '',
-    schedule: '',
-    amount: '',
-    percentage: '',
-    source_pool_id: '',
-    transfer_type: '',
-    bank_type: '',
-    destination_phone: '',
-    destination_account_type: '',
-    destination_bank_name: '',
-    destination_account_number: '',
-    destination_account_name: '',
-    destination_pool_id: ''
-  });
+  //const [formData, setFormData] = useState({
+  //  name: '',
+  //  type: '',
+  //  schedule: '',
+  //  amount: '',
+  //  percentage: '',
+  //  source_pool_id: '',
+  //  transfer_type: '',
+  //  bank_type: '',
+  //  destination_phone: '',
+  //  destination_account_type: '',
+  //  destination_bank_name: '',
+  //  destination_account_number: '',
+  //  destination_account_name: '',
+  //  destination_pool_id: ''
+  //});
   const { toast } = useToast();
 
   const fetchAutomations = useCallback(async () => {

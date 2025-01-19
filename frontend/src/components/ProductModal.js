@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, Store, ShoppingCart, Plus, Minus, Share2, Heart, PackageSearch, MessageSquare } from 'lucide-react';
@@ -22,7 +22,7 @@ const ProductImagePlaceholder = ({ onClick }) => (
   </div>
 );
 
-export const ProductModal = ({ product, isOpen, onClose, onAddToCart }) => {
+export const ProductModal = ({ product, isOpen, onClose }) => {
   const [isBusinessWarningOpen, setIsBusinessWarningOpen] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [quantity, setQuantity] = useState(1);
@@ -40,7 +40,7 @@ export const ProductModal = ({ product, isOpen, onClose, onAddToCart }) => {
   const totalImages = product?.images?.length || 0;
 
   // Group all data fetching functions
-  const fetchProductData = async () => {
+  const fetchProductData = useCallback(async () => {
     try {
       setIsLoading(true);
       const [reviewsResponse, statsResponse] = await Promise.all([
@@ -72,15 +72,15 @@ export const ProductModal = ({ product, isOpen, onClose, onAddToCart }) => {
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to load product data",
+        description: `Failed to load product data, ${error}`,
         variant: "destructive"
       });
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [product?.id]);
 
-  const recordView = async () => {
+  const recordView = useCallback(async () => {
     try {
       await fetch(`${apiBaseUrl}/marketplace/${product.id}/view`, {
         method: 'POST',
@@ -91,7 +91,7 @@ export const ProductModal = ({ product, isOpen, onClose, onAddToCart }) => {
     } catch (error) {
       console.error('Failed to record view:', error);
     }
-  };
+  }, [product?.id]);
 
   // Place all useEffect hooks together
   useEffect(() => {
@@ -105,7 +105,7 @@ export const ProductModal = ({ product, isOpen, onClose, onAddToCart }) => {
       fetchProductData();
       recordView();
     }
-  }, [isOpen, product]);
+  }, [isOpen, product, recordView, fetchProductData]);
 
   // Group all event handlers
   const nextImage = () => {

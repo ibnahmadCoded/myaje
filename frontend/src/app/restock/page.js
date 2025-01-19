@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { format } from 'date-fns';
 import DashboardLayout from '@/components/DashboardLayout';
 import { Package, Plus, Truck, Search, RefreshCw, Clock, CheckCircle2, PackageCheck } from 'lucide-react';
 import { Card } from "@/components/ui/card";
@@ -71,9 +70,12 @@ const RestockRequestPage = () => {
     }
   };
 
+  if(loading){
+    //console.log("Fetching Products")
+  }
+
   const handleSubmit = async () => {
     try {
-      console.log(formData)
       const response = await fetch(`${apiBaseUrl}/restock/requests`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token')}` },

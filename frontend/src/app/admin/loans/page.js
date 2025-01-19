@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -19,11 +19,7 @@ export default function AdminLoans () {
   const [rejectionReason, setRejectionReason] = useState('');
   const { toast } = useToast();
 
-  useEffect(() => {
-    fetchLoans();
-  }, []);
-
-  const fetchLoans = async () => {
+  const fetchLoans = useCallback(async () => {
     try {
       const response = await fetch(`${apiBaseUrl}/admin/loans`, {
         headers: {
@@ -37,11 +33,15 @@ export default function AdminLoans () {
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to fetch loans",
+        description: `Failed to fetch loans, ${error}`,
         variant: "destructive"
       });
     }
-  };
+  }, [toast]);
+
+  useEffect(() => {
+    fetchLoans();
+  }, [fetchLoans]);
 
   const handleAction = async () => {
     try {

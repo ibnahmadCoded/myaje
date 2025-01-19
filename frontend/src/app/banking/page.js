@@ -3,9 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
     Building2, CreditCard, Clock, Wallet, Settings,
-    ArrowDownCircle, ArrowUpCircle, BanknoteIcon,
-    Pencil, Plus, Trash2, 
-} from 'lucide-react';
+    ArrowDownCircle, ArrowUpCircle, BanknoteIcon} from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -15,7 +13,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import DashboardLayout from '@/components/DashboardLayout';
 import { apiBaseUrl } from '@/config';
 import { BankingTransactionsView } from '@/components/BankingTransactionsView'
@@ -55,7 +52,7 @@ const BankingPage = () => {
   });
   const { toast } = useToast();
 
-  const fetchAccountDetails = async () => {
+  const fetchAccountDetails = useCallback(async () => {
     try {
       const response = await fetch(`${apiBaseUrl}/banking/accounts/${userData?.active_view === 'business' ? 'business' : 'personal'}`, {
         headers: {
@@ -82,7 +79,13 @@ const BankingPage = () => {
     } catch (error) {
       console.error('Error fetching account details:', error);
     }
-  };
+  }, [userData]);
+
+  useEffect(() => {
+    if (userData) {
+      fetchAccountDetails();
+    }
+  }, [fetchAccountDetails]);
   
   useEffect(() => {
     const userDataStr = localStorage.getItem('user');
@@ -100,12 +103,6 @@ const BankingPage = () => {
       }
     }
   }, []); // Initial load
-  
-  useEffect(() => {
-    if (userData) {
-      fetchAccountDetails();
-    }
-  }, [userData]);
 
   // Get current account details based on active view
   const getCurrentAccountDetails = () => {

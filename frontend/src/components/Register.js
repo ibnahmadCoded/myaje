@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import LoadingScreen from '@/components/LoadingScreen';
-import { User, Mail, Lock, Check, X, Loader2, Building2, Phone } from 'lucide-react';
+import { Mail, Lock, Check, X, Loader2, Building2, Phone } from 'lucide-react';
 import { apiBaseUrl } from '@/config';
 import { OTPVerification } from '@/components/OTPVerificationScreen'
 
@@ -29,6 +29,10 @@ export default function Register() {
       special: false,
       capital: false
     });
+
+    if(isAuthenticated){
+      //console.log("")
+    }
 
     // Email validation pattern
     const emailPattern = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6}$/;

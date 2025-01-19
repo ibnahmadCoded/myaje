@@ -83,7 +83,7 @@ export const AccountToggle = ({ activeView, hasBusinessAccount, onViewChange }) 
         setError(error.detail);
       }
     } catch (error) {
-      setError('Failed to setup business account');
+      setError(`Failed to setup business account, ${error}`);
     } finally {
       setIsLoading(false);
     }

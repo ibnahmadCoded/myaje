@@ -52,7 +52,7 @@ const StorefrontManagement = () => {
       const data = await response.json();
       setInventoryProducts(data);
     } catch (error) {
-      setError('Failed to fetch inventory products');
+      setError(`Failed to fetch inventory products, ${error}`);
     }
   };
 
@@ -71,7 +71,7 @@ const StorefrontManagement = () => {
         setStoreProducts(data);
       }
     } catch (error) {
-      setError('Failed to fetch store products');
+      setError(`Failed to fetch store products, ${error}`);
     }
   };
 
@@ -85,7 +85,7 @@ const StorefrontManagement = () => {
       const data = await response.json();
       setOrders(data);
     } catch (error) {
-      setError('Failed to fetch orders');
+      setError(`Failed to fetch orders, ${error}`);
     }
   };
 
@@ -156,7 +156,7 @@ const StorefrontManagement = () => {
           fetchStoreDetails
         ]);
       } catch (error) {
-        setError('Failed to load data');
+        setError(`Failed to load data, ${error}`);
       } finally {
         setLoading(false);
       }
@@ -185,7 +185,7 @@ const StorefrontManagement = () => {
       setEditingProduct(null);
       setProductPrices({});
     } catch (error) {
-      setError('Failed to update product price');
+      setError(`Failed to update product price, ${error}`);
     }
   };
 
@@ -199,7 +199,7 @@ const StorefrontManagement = () => {
       });
       fetchOrders();
     } catch (error) {
-      setError('Failed to fulfill order');
+      setError(`Failed to fulfill order, ${error}`);
     }
   };
 
@@ -214,9 +214,13 @@ const StorefrontManagement = () => {
       setOrderToDelete(null);
       fetchOrders();
     } catch (error) {
-      setError('Failed to delete order');
+      setError(`Failed to delete order, ${error}`);
     }
   };
+
+  if(isEditingStoreDetails){
+    //console.log("Editing store front")
+  }
 
   const OrdersList = () => {
     return (
@@ -348,7 +352,7 @@ const StorefrontManagement = () => {
         setSelectedProducts([]);
         setProductPrices({});
       } catch (error) {
-        setError('Failed to add products to store');
+        setError(`Failed to add products to store, ${error}`);
       }
     };
   
@@ -420,7 +424,7 @@ const StorefrontManagement = () => {
       fetchStoreProducts();
       setDeleteConfirmation(null);
     } catch (error) {
-      setError('Failed to remove product from store');
+      setError(`Failed to remove product from store, ${error}`);
     }
   };
 
@@ -451,7 +455,7 @@ const StorefrontManagement = () => {
       );
     };
 
-    const fetchProductStats = async () => {
+    const fetchProductStats = useCallback(async () => {
         try {
           const response = await fetch(`${apiBaseUrl}/marketplace/${product.id}/stats`, {
             headers: {
@@ -468,11 +472,11 @@ const StorefrontManagement = () => {
         } catch (error) {
           console.error('Failed to load product stats:', error);
         }
-      };
+      }, [product.id]);
     
       useEffect(() => {
         fetchProductStats();
-      }, [product.id]);
+      }, [fetchProductStats]);
   
     return (
       <div className="bg-white rounded-lg shadow-md hover:shadow-lg transition-all duration-300 flex flex-col">
@@ -779,7 +783,7 @@ const StorefrontManagement = () => {
               <DialogHeader>
                 <DialogTitle>Remove Product from Store</DialogTitle>
                 <DialogDescription>
-                  Are you sure you want to remove "{deleteConfirmation.name}" from your store?
+                  Are you sure you want to remove {deleteConfirmation.name} from your store?
                   This action can't be undone.
                 </DialogDescription>
               </DialogHeader>

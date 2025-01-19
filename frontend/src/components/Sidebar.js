@@ -6,9 +6,7 @@ import {
   LayoutGrid, 
   Package, 
   Store, 
-  LineChart,
   X,
-  Search,
   Bell,
   NotebookIcon,
   PackageOpen,
@@ -16,7 +14,7 @@ import {
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+//import { Input } from '@/components/ui/input';
 import { formatDistanceToNow } from 'date-fns';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { AccountToggle } from '@/components/AccountToggle'
@@ -39,10 +37,22 @@ const Sidebar = ({
     const user = JSON.parse(localStorage.getItem('user') || '{}');
     return user.active_view || 'personal';
   });
-  const [hasBusinessAccount, setHasBusinessAccount] = useState(() => {
-    const user = JSON.parse(localStorage.getItem('user') || '{}');
-    return user.has_business_account || false;
-  });
+
+  //const [hasBusinessAccount, setHasBusinessAccount] = useState(() => {
+  //  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  //  return user.has_business_account || false;
+  //});
+
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  const hasBusinessAccount = user.has_business_account || false;
+
+  if(searchQuery){
+    //console.log("")
+  }
+
+  if (onSearchChange){
+    //console.log("")
+  }
 
   const personalRoutes = ['/dashboard', '/banking', '/my-items'];
   const businessRoutes = ['/dashboard', '/banking', '/inventory', '/storefront', '/invoicing', '/restock'];

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   PiggyBank, Pencil, Plus, Trash2, Save,
   ChevronDown, BanknoteIcon
@@ -35,6 +35,14 @@ export const FinancialsTab = () => {
       }
     }, []); // Initial load
 
+  if(selectedTemplate){
+    //console.log("")
+  }
+
+  if(editingPool){
+    //console.log("")
+  }
+
   const templates = {
     personal: {
       name: 'Personal Template',
@@ -56,7 +64,7 @@ export const FinancialsTab = () => {
     }
   };
 
-  const fetchPools = async () => {
+  const fetchPools = useCallback(async () => {
     try {
       const userDataStr = localStorage.getItem('user');
       if (!userDataStr) return;
@@ -84,7 +92,7 @@ export const FinancialsTab = () => {
         variant: "destructive"
       });
     }
-  };
+  }, []);
 
   const handleToggleLock = (poolId) => {
     const updatedPools = pools.map((pool) =>
@@ -95,7 +103,7 @@ export const FinancialsTab = () => {
 
   useEffect(() => {
     fetchPools();
-  }, []);
+  }, [fetchPools]);
 
   const handleTemplateSelect = (value) => {
     setSelectedTemplate(value);

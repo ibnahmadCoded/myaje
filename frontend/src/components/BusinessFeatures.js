@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import * as LucideIcons from 'lucide-react';
-import { Brain, ArrowRight, Users, Zap, Building2, Clock, Check, X, HelpCircle, PackageSearch, Shield, Building, Landmark } from 'lucide-react';
+import { Brain, ArrowRight, Users, Zap, Building2, Clock, Check, X, HelpCircle, PackageSearch, Shield } from 'lucide-react';
 
 // Enhanced HeroStats with better design
 const HeroStats = () => (
@@ -129,6 +129,10 @@ const BusinessFeatures = () => {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  if(scrolled){
+    //console.log("scrolled")
+  }
 
   // Features data remains the same as in your original code
   const features = {

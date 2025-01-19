@@ -1,32 +1,33 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Search, ShoppingCart, MessageCircle, Store } from 'lucide-react';
+import { ShoppingCart, MessageCircle } from 'lucide-react';
 import MarketplaceView from '@/components/Marketplace';
 import BusinessFeatures from '@/components/BusinessFeatures';
 import { useRouter } from 'next/navigation';
 import Logo from '@/components/ui/logo'
+import { useCart } from '@/app/providers/cart-provider';
 
 export default function Home() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [activeTab, setActiveTab] = useState('marketplace');
-  const [cartItems, setCartItems] = useState([]);
   const [showChat, setShowChat] = useState(false);
 
   const router = useRouter();
+  const { cartItems } = useCart();
 
   useEffect(() => {
-      const userDataStr = localStorage.getItem('user');
-      const token = localStorage.getItem('token');
-        
-      if (userDataStr && token) {
-        try {
-          setIsAuthenticated(true);
-        } catch (error) {
-          console.error("Error in initialization:", error);
-        }
+    const userDataStr = localStorage.getItem('user');
+    const token = localStorage.getItem('token');
+      
+    if (userDataStr && token) {
+      try {
+        setIsAuthenticated(true);
+      } catch (error) {
+        console.error("Error in initialization:", error);
       }
-    }, [router])
+    }
+  }, [router])
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -54,7 +55,6 @@ export default function Home() {
             </div>
             
             <div className="flex items-center space-x-4">
-
               {activeTab === 'marketplace' && (
                 <button className="p-2 text-gray-600 hover:text-green-600 relative">
                   <ShoppingCart size={20} />
@@ -81,7 +81,6 @@ export default function Home() {
                   Sign In
                 </button>
               )}
-
             </div>
           </div>
         </div>
@@ -90,16 +89,16 @@ export default function Home() {
       {/* Main Content Area */}
       <main className="flex-1">
         {activeTab === 'marketplace' ? (
-          <MarketplaceView />
+          <MarketplaceView showMobileChat={showChat} onCloseMobileChat={() => setShowChat(false)} />
         ) : (
-            <BusinessFeatures />
+          <BusinessFeatures />
         )}
       </main>
 
       {/* Floating Chat Button (Mobile) */}
       {activeTab === 'marketplace' && (
         <button
-          onClick={() => setShowChat(true)}
+          onClick={() => setShowChat(prev => !prev)}
           className="fixed bottom-4 right-4 lg:hidden bg-green-600 text-white p-4 rounded-full shadow-lg hover:bg-green-700"
         >
           <MessageCircle size={24} />

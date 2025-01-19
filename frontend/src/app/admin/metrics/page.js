@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/admin/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -24,14 +24,7 @@ export default function AdminMetrics() {
   const router = useRouter();
   const { toast } = useToast();
 
-  useEffect(() => {
-    fetchMetrics();
-    // Refresh metrics every 5 minutes
-    const metricsTimer = setInterval(fetchMetrics, 300000);
-    return () => clearInterval(metricsTimer);
-  }, []);
-
-  const fetchMetrics = async () => {
+  const fetchMetrics = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
       const response = await fetch(`${apiBaseUrl}/admin/metrics`, {
@@ -52,13 +45,20 @@ export default function AdminMetrics() {
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to load admin metrics",
+        description: `Failed to load admin metrics, ${error}`,
         variant: "destructive",
       });
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast]);
+
+  useEffect(() => {
+    fetchMetrics();
+    // Refresh metrics every 5 minutes
+    const metricsTimer = setInterval(fetchMetrics, 300000);
+    return () => clearInterval(metricsTimer);
+  }, [fetchMetrics]);
 
   if (loading) {
     return (

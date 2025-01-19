@@ -24,6 +24,10 @@ const Button = React.forwardRef(({
   children,
   ...props
 }, ref) => {
+  if (asChild) {
+    //console.log("asChild prop is true");
+  }
+  
   return (
     <button
       className={`

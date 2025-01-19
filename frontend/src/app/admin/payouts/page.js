@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useToast } from "@/hooks/use-toast";
 import DashboardLayout from '@/components/admin/DashboardLayout';
@@ -27,11 +27,7 @@ export default function AdminPayoutManagement() {
   const router = useRouter();
   const { toast } = useToast();
 
-  useEffect(() => {
-    fetchPayouts();
-  }, [statusFilter]);
-
-  const fetchPayouts = async () => {
+  const fetchPayouts = useCallback(async () => {
     setIsLoading(true);
     try {
       const token = localStorage.getItem('token');
@@ -52,14 +48,18 @@ export default function AdminPayoutManagement() {
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to fetch payouts",
+        description: `Failed to fetch payouts, ${error}`,
         variant: "destructive",
       });
       setPayouts([]);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [statusFilter, router, toast]);
+
+  useEffect(() => {
+    fetchPayouts();
+  }, [fetchPayouts]);
 
   const markPayoutAsCompleted = async (payoutId) => {
     try {
@@ -83,7 +83,7 @@ export default function AdminPayoutManagement() {
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to update payout status",
+        description: `Failed to update payout status, ${error}`,
         variant: "destructive",
       });
     }

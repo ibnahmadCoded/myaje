@@ -26,6 +26,10 @@ export const RadioGroupItem = ({
   // Remove `selectedValue` from props before passing to the input
   const { selectedValue: _, ...rest } = props;
 
+  if(_){
+    //console.log("")
+  }
+
   return (
     <label className="flex items-center space-x-2">
       <input

@@ -26,7 +26,7 @@ const CurrencyInput = ({ value, onChange, ...props }) => {
     const unformatted = unformatNumber(digits); // Remove commas for raw numeric value
 
     if (unformatted === '' || /^\d+$/.test(unformatted)) {
-      const formatted = formatNumber(unformatted); // Add commas for display
+      //const formatted = formatNumber(unformatted); // Add commas for display
       onChange(unformatted); // Pass the raw numeric value to parent
     }
   };
@@ -65,9 +65,8 @@ export const LoanForm = ({
       return;
     }
 
-    console.log(loanAmount)
     const amount = parseFloat(loanAmount);
-    console.log(amount)
+
     if (amount > availableAmount) {
       toast({
         title: "Error",
@@ -146,11 +145,7 @@ export const LoansTab = ({ accountType }) => {
     const [loanPurpose, setLoanPurpose] = useState('');
     const { toast } = useToast();
     
-    useEffect(() => {
-        fetchLoansData();
-    }, [accountType]);
-    
-    const fetchLoansData = async () => {
+    const fetchLoansData = useCallback(async () => {
         try {
             const token = localStorage.getItem('token'); // Retrieve token from localStorage
 
@@ -199,7 +194,7 @@ export const LoansTab = ({ accountType }) => {
                 variant: "destructive"
             });
         }
-    };
+    }, [accountType]);
     
     const handleLoanRequest = async () => {
         try {
@@ -239,6 +234,10 @@ export const LoansTab = ({ accountType }) => {
             });
         }
     };
+
+    useEffect(() => {
+      fetchLoansData();
+  }, [fetchLoansData]);
   
     return (
       <div className="space-y-6">

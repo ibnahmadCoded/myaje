@@ -17,6 +17,10 @@ export const BankingTransactionsView = () => {
     }
   }, []);
 
+  if(showMoneyRequests){
+    //console.log("showing money requests")
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">

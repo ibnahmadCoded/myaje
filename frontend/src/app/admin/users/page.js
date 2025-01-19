@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useToast } from "@/hooks/use-toast";
 import DashboardLayout from '@/components/admin/DashboardLayout';
@@ -37,11 +37,7 @@ export default function AdminUsers() {
   const router = useRouter();
   const { toast } = useToast();
 
-  useEffect(() => {
-    fetchAdminUsers();
-  }, []);
-
-  const fetchAdminUsers = async () => {
+  const fetchAdminUsers = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
       const response = await fetch(`${apiBaseUrl}/admin/get_admin_users`, {
@@ -70,11 +66,15 @@ export default function AdminUsers() {
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to fetch admin users",
+        description: `Failed to fetch admin users, ${error}`,
         variant: "destructive",
       });
     }
-  };
+  }, [toast]);
+
+  useEffect(() => {
+    fetchAdminUsers();
+  }, [fetchAdminUsers]);
 
   const handleCreateUser = async () => {
     try {

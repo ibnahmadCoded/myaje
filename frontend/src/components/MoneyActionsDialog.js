@@ -184,7 +184,7 @@ const MoneyActionsDialog = () => {
             : "If you want to send money from your personal account, please switch to the personal account.";
         setInfoMessage(message);
       }
-    }, []);
+    }, [formData]);
 
     useEffect(() => {
       const fetchPools = async () => {
@@ -247,7 +247,7 @@ const MoneyActionsDialog = () => {
           throw new Error('Transfer failed');
         }
 
-        const result = await response.json();
+        //const result = await response.json();
         toast({
           title: "Success",
           description: "Transfer completed successfully",
@@ -302,7 +302,7 @@ const MoneyActionsDialog = () => {
             {recipientType === 'bam' ? (
             <>
                 <div className="space-y-2">
-                  <Label>Recipient's Phone Number</Label>
+                  <Label>`Recipient's Phone Number`</Label>
                   <PhoneNumberInput
                     value={formData.recipient_identifier}
                     onChange={(value) => setFormData({
@@ -312,7 +312,7 @@ const MoneyActionsDialog = () => {
                   />
                 </div>
                 <div className="space-y-2">
-                <Label>Recipient's Account Type</Label>
+                <Label>`Recipient's Account Type`</Label>
                 <Select 
                     value={formData.recipient_account_type}
                     onValueChange={(value) => setFormData({
@@ -436,6 +436,10 @@ const MoneyActionsDialog = () => {
     const [activeView, setActiveView] = useState("");
     const [infoMessage, setInfoMessage] = useState("");
 
+    if(activeView){
+      //console.log("")
+    }
+
     useEffect(() => {
       const userDataStr = localStorage.getItem('user');
       if (userDataStr) {
@@ -452,7 +456,7 @@ const MoneyActionsDialog = () => {
             : "If you want to request and receive money in your personal account, please switch to the personal account.";
         setInfoMessage(message);
       }
-    }, []);
+    }, [formData]);
 
     const handleSubmit = async (e) => {
       e.preventDefault();
@@ -480,7 +484,7 @@ const MoneyActionsDialog = () => {
           throw new Error('Request failed');
         }
 
-        const result = await response.json();
+        //const result = await response.json();
         toast({
           title: "Success",
           description: `Money request sent successfully to ${formData.recipient_phone}'s ${formData.request_from_account_type} account`,

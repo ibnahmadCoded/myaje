@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useToast } from "@/hooks/use-toast";
 import DashboardLayout from '@/components/admin/DashboardLayout';
@@ -27,11 +27,7 @@ export default function AdminRestockManagement() {
   const router = useRouter();
   const { toast } = useToast();
 
-  useEffect(() => {
-    fetchRestockRequests();
-  }, [statusFilter]);
-
-  const fetchRestockRequests = async () => {
+  const fetchRestockRequests = useCallback(async () => {
     setIsLoading(true);
     try {
       const token = localStorage.getItem('token');
@@ -52,14 +48,18 @@ export default function AdminRestockManagement() {
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to fetch restock requests",
+        description: `Failed to fetch restock requests, ${error}`,
         variant: "destructive",
       });
       setRestockRequests([]);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [statusFilter, router, toast]);
+
+  useEffect(() => {
+    fetchRestockRequests();
+  }, [fetchRestockRequests]);
 
   const updateRestockStatus = async () => {
     if (!selectedRequest) return;
@@ -91,7 +91,7 @@ export default function AdminRestockManagement() {
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to update restock request status",
+        description: `Failed to update restock request status, ${error}`,
         variant: "destructive",
       });
     }

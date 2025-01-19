@@ -1,7 +1,7 @@
 'use client';
 
 import DashboardLayout from '@/components/DashboardLayout';
-import React, { useState, useEffect, useCallback, memo } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Search, FileText, Mail, Download, Loader2, PenLine, AlertCircle, RefreshCw, Building, Building2, CreditCard, Hash, Wallet } from 'lucide-react';
 import { Table } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
@@ -40,13 +40,7 @@ const InvoicingPage = () => {
 
   const { toast } = useToast();
 
-
-  useEffect(() => {
-    fetchInvoices();
-    fetchBankDetails();
-  }, []); 
-
-  const fetchInvoices = async () => {
+  const fetchInvoices = useCallback(async () => {
     try {
       const response = await fetch(`${apiBaseUrl}/invoicing/requests`, {
         headers: {
@@ -60,13 +54,13 @@ const InvoicingPage = () => {
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to fetch invoices. Please try again.",
+        description: `Failed to fetch invoices. Please try again., ${error}`,
         variant: "destructive",
       });
     }
-  };
+  }, [toast]);
 
-  const fetchBankDetails = async () => {
+  const fetchBankDetails = useCallback(async () => {
     try {
       const response = await fetch(`${apiBaseUrl}/invoicing/get_bank_details`, {
         headers: {
@@ -74,18 +68,21 @@ const InvoicingPage = () => {
         },
       });
       const data = await response.json();
-      console.log(data)
       setAccountDetails(data);
-      console.log(accountDetails)
 
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to fetch account. Please try again.",
+        description: `Failed to fetch account. Please try again., ${error}`,
         variant: "destructive",
       });
     }
-  };
+  }, [toast]);
+
+  useEffect(() => {
+    fetchInvoices();
+    fetchBankDetails();
+  }, [fetchBankDetails, fetchInvoices]); 
 
   const handleGenerateInvoice = async (requestId) => {
     setGenerateInvoiceId(requestId);
@@ -147,7 +144,7 @@ const InvoicingPage = () => {
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to send email",
+        description: `Failed to send email, ${error}`,
         variant: "destructive",
       });
     } finally {
@@ -174,6 +171,8 @@ const InvoicingPage = () => {
 
   // Function to generate PDF from invoice data
   const handleDownloadPDF = (invoice) => {
+    setIsDownloading(true);
+
     // Create a printable div
     const printContent = `
       <!DOCTYPE html>
@@ -258,6 +257,8 @@ const InvoicingPage = () => {
       document.body.removeChild(printFrame);
       URL.revokeObjectURL(url);
     };
+
+    setIsDownloading(false);
   };
 
   const StatusCard = ({ title, count, color, icon: Icon }) => (
@@ -449,6 +450,15 @@ const InvoicingPage = () => {
           <div className="mt-2 p-3 bg-gray-50 rounded-lg border">
             <p className="font-medium">{accountDetails.accountType || "Not set"}</p>
           </div>
+        </div>
+        {/* Edit Button */}
+        <div className="mt-4">
+          <button
+            onClick={onEdit}  // This triggers the edit mode
+            className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+          >
+            Edit
+          </button>
         </div>
       </div>
     </Card>
