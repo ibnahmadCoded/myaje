@@ -39,6 +39,8 @@ export const ProductModal = ({ product, isOpen, onClose }) => {
   const { toast } = useToast();
   const totalImages = product?.images?.length || 0;
 
+  if(isLoading){}
+
   // Group all data fetching functions
   const fetchProductData = useCallback(async () => {
     try {

@@ -16,6 +16,8 @@ export default function Login() {
     password: ''
   });
 
+  if(isAuthenticated){}
+
   // Password validation criteria
   const validatePassword = (password) => {
     const minLength = 8;
@@ -200,7 +202,7 @@ export default function Login() {
           </div>
 
           <p className="text-center text-sm text-stone-600">
-            Don't have an account?{' '}
+            `Don't have an account?{' '}`
             <button
               type="button"
               disabled={isLoading}

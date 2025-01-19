@@ -112,7 +112,7 @@ export const OTPVerification = ({ email, phone, onSuccess, onResend }) => {
       )}
 
       <div className="text-sm text-stone-600 mb-6">
-        `We've sent a verification code to:`<br />
+          `We've sent a verification code to:<br />`
         <span className="font-medium">Email: {email}</span><br />
         <span className="font-medium">Phone: {phone}</span>
       </div>

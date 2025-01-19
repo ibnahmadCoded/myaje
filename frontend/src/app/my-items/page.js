@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useToast } from "@/hooks/use-toast";
 
-import { Search, Calendar, ShoppingCart, Star, PackageSearch } from 'lucide-react';
+import { Search, ShoppingCart, Star, PackageSearch } from 'lucide-react';
 import { ProductCard } from '@/components/ProductCard'; // We'll create this 
 import DashboardLayout from '@/components/DashboardLayout';
 import { apiBaseUrl } from '@/config';
