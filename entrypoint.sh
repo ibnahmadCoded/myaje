@@ -1,4 +1,7 @@
-#!/bin/bash
+#!/bin/
+
+# Add Alembic to PATH
+export PATH=$PATH:/usr/local/lib/python3.10/site-packages/bin
 
 # Wait for postgres
 ./wait-for-it.sh myaje-postgres:5432
