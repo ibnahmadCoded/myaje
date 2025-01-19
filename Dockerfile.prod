@@ -14,9 +14,15 @@ COPY --from=builder /install /usr/local/lib/python3.10/site-packages/
 COPY alembic.ini .
 COPY alembic/ /app/alembic/
 COPY backend/ /app/backend/
-COPY wait-for-it.sh entrypoint.sh ./
-COPY check_migrations.sh /usr/local/bin/
 
-RUN chmod +x /app/wait-for-it.sh /app/entrypoint.sh /usr/local/bin/check_migrations.sh
+# Copy the wait-for-it script
+COPY wait-for-it.sh /app/wait-for-it.sh
+COPY entrypoint.sh /app/entrypoint.sh
+
+# Make sure the wait-for-it script is executable
+RUN chmod +x /app/wait-for-it.sh /app/entrypoint.sh
+
+COPY check_migrations.sh /usr/local/bin/check_migrations.sh
+RUN chmod +x /usr/local/bin/check_migrations.sh
 
 CMD ["./entrypoint.sh"]
